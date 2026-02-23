@@ -1,8 +1,8 @@
 {
-    'name': 'Proyect',
+    'name': 'BillNova',
     'version': '1.0.0',
-    'summary': 'Modulo base Proyect',
-    'description': 'Estructura inicial del modulo Proyect.',
+    'summary': 'Modulo base BillNova',
+    'description': 'Estructura inicial del modulo BillNova.',
     'author': 'Wilkins',
     'category': 'Tools',
     'license': 'LGPL-3',

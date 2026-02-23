@@ -1,8 +1,8 @@
 import { useRouter } from 'expo-router';
 
-import { RegisterScreen } from '../src/features/auth/screens/RegisterScreen';
+import { RegisterScreen } from '../../src/features/auth/screens/RegisterScreen';
 
-export default function ModalScreen() {
+export default function RegisterRoute() {
   const router = useRouter();
 
   return (
