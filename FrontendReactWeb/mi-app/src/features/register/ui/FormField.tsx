@@ -21,6 +21,24 @@ interface FormFieldProps {
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
 }
 
+function getAutoComplete(name: string, type: string): string {
+  if (type === "password") return "new-password";
+  switch (name) {
+    case "name":
+      return "name";
+    case "login":
+      return "username";
+    case "email":
+      return "email";
+    case "phone":
+      return "tel";
+    case "address":
+      return "street-address";
+    default:
+      return "on";
+  }
+}
+
 export function FormField({
   name,
   label,
@@ -68,7 +86,7 @@ export function FormField({
             onChange={onChange}
             placeholder={placeholder}
             required={required}
-            autoComplete={name}
+            autoComplete={getAutoComplete(name, type)}
             className={`${inputBase} ${borderColor}`}
           />
         )}

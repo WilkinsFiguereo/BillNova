@@ -1,13 +1,15 @@
-/* ─────────────────────────────────────────
-   REGISTER FEATURE — Data / API
-   Comunicación exclusiva con Odoo
-───────────────────────────────────────── */
+﻿import type { RegisterPayload, RegisterResponse } from "../types/register.types";
 
-import type { RegisterPayload, RegisterResponse } from "../types/register.types";
+const ODOO_URL = (process.env.NEXT_PUBLIC_ODOO_URL ?? "http://localhost:8079").replace(/\/+$/, "");
 
-const ODOO_URL = process.env.NEXT_PUBLIC_ODOO_URL ?? "http://localhost:8069";
+async function parseJsonSafe<TRes>(response: Response): Promise<TRes> {
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    throw new Error("Respuesta no JSON desde el backend");
+  }
+  return response.json() as Promise<TRes>;
+}
 
-/** Helper genérico para POST JSON */
 async function odooPost<TRes>(path: string, body: unknown): Promise<TRes> {
   const response = await fetch(`${ODOO_URL}${path}`, {
     method: "POST",
@@ -20,15 +22,10 @@ async function odooPost<TRes>(path: string, body: unknown): Promise<TRes> {
     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
   }
 
-  return response.json() as Promise<TRes>;
+  return parseJsonSafe<TRes>(response);
 }
 
-/* ── Endpoints expuestos por la feature ── */
 export const registerApi = {
-  /**
-   * POST /api/auth/register
-   * Crea res.users + proyect.app.user en Odoo
-   */
   register: (payload: RegisterPayload): Promise<RegisterResponse> =>
     odooPost<RegisterResponse>("/api/auth/register", payload),
 };

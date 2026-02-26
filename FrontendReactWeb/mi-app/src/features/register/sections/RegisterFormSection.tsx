@@ -1,14 +1,10 @@
-"use client";
+﻿"use client";
 
-/* ─────────────────────────────────────────
-   REGISTER FEATURE — Sections / RegisterFormSection
-   Sección principal del formulario
-───────────────────────────────────────── */
-
-import { FormField }        from "../ui/FormField";
-import { SubmitButton }     from "../ui/SubmitButton";
+import Link from "next/link";
+import { FormField } from "../ui/FormField";
+import { SubmitButton } from "../ui/SubmitButton";
 import { ServerErrorAlert } from "../ui/ServerErrorAlert";
-import { REGISTER_FIELDS }  from "../data/constants";
+import { REGISTER_FIELDS } from "../data/constants";
 import type { RegisterFormState } from "../types/register.types";
 
 interface RegisterFormSectionProps {
@@ -22,13 +18,9 @@ export function RegisterFormSection({ state, onChange, onSubmit }: RegisterFormS
 
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-5">
-      {/* Grid de campos generado desde constants */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         {REGISTER_FIELDS.map((field) => (
-          <div
-            key={field.name}
-            className={field.colSpan === "full" ? "sm:col-span-2" : ""}
-          >
+          <div key={field.name} className={field.colSpan === "full" ? "sm:col-span-2" : ""}>
             <FormField
               name={field.name}
               label={field.label}
@@ -43,23 +35,20 @@ export function RegisterFormSection({ state, onChange, onSubmit }: RegisterFormS
         ))}
       </div>
 
-      {/* Error servidor */}
       {serverError && <ServerErrorAlert message={serverError} />}
 
-      {/* Submit */}
       <div className="pt-1">
         <SubmitButton isLoading={isLoading} />
       </div>
 
-      {/* Login link */}
       <p className="text-center text-xs text-[#3d5166]">
         ¿Ya tienes cuenta?{" "}
-        <a
+        <Link
           href="/login"
-          className="text-[#4f8ef7] hover:text-[#6ba3ff] transition-colors underline underline-offset-2"
+          className="text-[#4f8ef7] underline underline-offset-2 transition-colors hover:text-[#6ba3ff]"
         >
           Inicia sesión
-        </a>
+        </Link>
       </p>
     </form>
   );
