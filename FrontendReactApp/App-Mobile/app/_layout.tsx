@@ -8,7 +8,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export const unstable_settings = {
   anchor: '(tabs)',
-  initialRouteName: 'modal',
+  initialRouteName: '(auth)',
 };
 
 export default function RootLayout() {
@@ -17,7 +17,7 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AuthProvider>
-        <Stack initialRouteName="modal">
+        <Stack initialRouteName="(auth)">
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Registro' }} />
@@ -27,3 +27,4 @@ export default function RootLayout() {
     </ThemeProvider>
   );
 }
+

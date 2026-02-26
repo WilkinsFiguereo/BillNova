@@ -1,10 +1,12 @@
-import { RegisterScreen } from '../features/auth/screens/RegisterScreen';
+import { useRouter } from 'expo-router';
+import { AuthScreen } from '../../src/features/auth/screens/AuthScreen';
 
-export default function IndexPage() {
+export default function AuthRoute() {
+  const router = useRouter();
+
   return (
-    <RegisterScreen
-      onNavigateToLogin={() => {}}
-      onRegisterSuccess={() => {}}
+    <AuthScreen
+      onLoginSuccess={() => router.replace('../(tabs)')}
     />
   );
 }

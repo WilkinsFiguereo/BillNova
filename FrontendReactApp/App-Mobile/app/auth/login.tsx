@@ -7,8 +7,10 @@ export default function LoginRoute() {
 
   return (
     <LoginScreen
-      onNavigateToRegister={() => router.replace('../(auth)/register')}
-      onLoginSuccess={() => router.replace('../(tabs)')}
+      onNavigateToRegister={() => router.push('/register')}
+      onLoginSuccess={() => router.replace('/(tabs)')}
     />
   );
 }
+
+
