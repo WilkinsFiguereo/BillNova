@@ -4,8 +4,10 @@ export const colors = {
     50:  '#EFF6FF',
     100: '#DBEAFE',
     400: '#3B82F6',
+    500: '#2563EB',
     600: '#1E3A8A',
     700: '#1A2F73',
+    900: '#0F1F4D',
   },
 
   // Fondos
@@ -19,6 +21,7 @@ export const colors = {
   text: {
     primary:   '#1F2937',
     secondary: '#4B5563',
+    tertiary:  '#64748B',
     disabled:  '#9CA3AF',
     inverse:   '#FFFFFF',
   },
