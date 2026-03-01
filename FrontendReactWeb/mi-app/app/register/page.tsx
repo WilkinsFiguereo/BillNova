@@ -1,10 +1,5 @@
-import type { Metadata } from "next";
-import { RegisterPage } from "./../../src/features/register";
+import { RegisterPage as RegisterFeaturePage } from "@/features/register";
 
-export const metadata: Metadata = {
-  title: "Register",
-};
-
-export default function Page() {
-  return <RegisterPage />;
+export default function RegisterPage() {
+  return <RegisterFeaturePage />;
 }

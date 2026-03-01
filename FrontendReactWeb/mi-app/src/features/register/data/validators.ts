@@ -1,57 +1,35 @@
-/* ─────────────────────────────────────────
-   REGISTER FEATURE — Data / Validators
-   Reglas de validación del formulario
-───────────────────────────────────────── */
-
-import type { RegisterPayload, PasswordStrength } from "../types/register.types";
+import type { PasswordStrength, RegisterPayload } from "../types/register.types";
 
 type ValidationErrors = Partial<Record<keyof RegisterPayload, string>>;
 
 export function validateRegisterForm(v: RegisterPayload): ValidationErrors {
   const err: ValidationErrors = {};
 
-  /* name */
-  if (!v.name.trim())
-    err.name = "El nombre es requerido";
-  else if (v.name.trim().length < 2)
-    err.name = "Mínimo 2 caracteres";
+  if (!v.name.trim()) err.name = "El nombre es requerido";
+  else if (v.name.trim().length < 2) err.name = "Minimo 2 caracteres";
 
-  /* login */
-  if (!v.login.trim())
-    err.login = "El usuario es requerido";
-  else if (v.login.length < 3)
-    err.login = "Mínimo 3 caracteres";
-  else if (!/^[a-zA-Z0-9._@-]+$/.test(v.login))
-    err.login = "Solo letras, números y ._@-";
+  if (!v.gmail.trim()) err.gmail = "El Gmail es requerido";
+  else if (!/^[^\s@]+@gmail\.com$/i.test(v.gmail.trim())) err.gmail = "Debe ser un correo Gmail valido";
 
-  /* email */
-  if (!v.email.trim())
-    err.email = "El email es requerido";
-  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email))
-    err.email = "Email inválido";
+  if (!v.username.trim()) err.username = "El nombre de usuario es requerido";
+  else if (v.username.trim().length < 3) err.username = "Minimo 3 caracteres";
+  else if (!/^[a-zA-Z0-9._-]+$/.test(v.username.trim())) err.username = "Solo letras, numeros, punto, guion y guion bajo";
 
-  /* password */
-  if (!v.password)
-    err.password = "La contraseña es requerida";
-  else if (v.password.length < 8)
-    err.password = "Mínimo 8 caracteres";
-  else if (!/(?=.*[A-Z])/.test(v.password))
-    err.password = "Debe incluir al menos una mayúscula";
-  else if (!/(?=.*[0-9])/.test(v.password))
-    err.password = "Debe incluir al menos un número";
-
-  /* phone (opcional) */
-  if (v.phone && !/^\+?[\d\s\-()]{7,15}$/.test(v.phone))
-    err.phone = "Teléfono inválido";
+  if (!v.password) err.password = "La contrasena es requerida";
+  else if (v.password.length < 10) err.password = "Minimo 10 caracteres";
+  else if (!/(?=.*[a-z])/.test(v.password)) err.password = "Debe incluir al menos una minuscula";
+  else if (!/(?=.*[A-Z])/.test(v.password)) err.password = "Debe incluir al menos una mayuscula";
+  else if (!/(?=.*[0-9])/.test(v.password)) err.password = "Debe incluir al menos un numero";
+  else if (!/(?=.*[^a-zA-Z0-9])/.test(v.password)) err.password = "Debe incluir al menos un caracter especial";
+  else if (/\s/.test(v.password)) err.password = "No debe incluir espacios";
 
   return err;
 }
 
-/** Calcula fortaleza de contraseña 0-4 */
 export function getPasswordStrength(password: string): PasswordStrength {
   if (!password) return 0;
   let score = 0;
-  if (password.length >= 8)  score++;
+  if (password.length >= 8) score++;
   if (password.length >= 12) score++;
   if (/[A-Z]/.test(password) && /[a-z]/.test(password)) score++;
   if (/[0-9]/.test(password)) score++;

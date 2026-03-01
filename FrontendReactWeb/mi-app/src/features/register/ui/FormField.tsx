@@ -1,13 +1,7 @@
 "use client";
 
-/* ─────────────────────────────────────────
-   REGISTER FEATURE — UI / FormField
-   Campo atómico reutilizable
-───────────────────────────────────────── */
-
 import { FieldIcon } from "./FieldIcon";
 import { PasswordStrengthBar } from "./PasswordStrengthBar";
-import { inputBase, labelBase } from "../theme/register.theme";
 import { FIELD_ICONS } from "../data/constants";
 
 interface FormFieldProps {
@@ -31,21 +25,19 @@ export function FormField({
   error,
   onChange,
 }: FormFieldProps) {
-  const isTextarea  = type === "textarea";
-  const isPassword  = type === "password";
-  const iconName    = FIELD_ICONS[name] ?? "user";
-  const borderColor = error ? "border-[#f47c7c] focus:border-[#f47c7c] focus:ring-[#f47c7c]/20" : "";
+  const isTextarea = type === "textarea";
+  const isPassword = type === "password";
+  const iconName = FIELD_ICONS[name] ?? "user";
 
   return (
-    <div className="flex flex-col gap-0">
-      <label htmlFor={name} className={labelBase}>
+    <div className="field">
+      <label htmlFor={name} className="field-label">
         {label}
-        {required && <span className="text-[#4f8ef7] ml-1">*</span>}
+        {required && <span className="req">*</span>}
       </label>
 
-      <div className="relative">
-        {/* Icon */}
-        <span className="absolute left-3 top-3 text-[#3d5166] transition-colors duration-200 pointer-events-none [input:focus~&]:text-[#4f8ef7]">
+      <div className="field-wrap">
+        <span className="field-icon" aria-hidden>
           <FieldIcon name={iconName} />
         </span>
 
@@ -56,8 +48,9 @@ export function FormField({
             value={value}
             onChange={onChange}
             placeholder={placeholder}
+            required={required}
             rows={3}
-            className={`${inputBase} ${borderColor}`}
+            className={`input${error ? " err" : ""}`}
           />
         ) : (
           <input
@@ -69,24 +62,16 @@ export function FormField({
             placeholder={placeholder}
             required={required}
             autoComplete={name}
-            className={`${inputBase} ${borderColor}`}
+            className={`input${error ? " err" : value ? " ok" : ""}`}
           />
         )}
       </div>
 
-      {/* Password strength */}
       {isPassword && <PasswordStrengthBar password={value} />}
 
-      {/* Error */}
-      {error && (
-        <p role="alert" className="mt-1.5 flex items-center gap-1 text-[11px] text-[#f47c7c]">
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
-            <circle cx="6" cy="6" r="5" stroke="#f47c7c" strokeWidth="1.2" />
-            <path d="M6 3.5v3M6 7.5v.5" stroke="#f47c7c" strokeWidth="1.2" strokeLinecap="round" />
-          </svg>
-          {error}
-        </p>
-      )}
+      <p className={`field-err${error ? " show" : ""}`} role="alert">
+        {error}
+      </p>
     </div>
   );
 }

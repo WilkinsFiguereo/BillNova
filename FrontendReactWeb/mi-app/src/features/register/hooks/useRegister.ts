@@ -1,34 +1,39 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { registerApi } from "../data/api";
 import { validateRegisterForm } from "../data/validators";
-import type { RegisterPayload, RegisterFormState } from "../types/register.types";
+import type { RegisterFormState, RegisterPayload } from "../types/register.types";
 
 const INITIAL_VALUES: RegisterPayload = {
-  name: "", login: "", password: "", email: "", phone: "", address: "",
+  name: "",
+  gmail: "",
+  username: "",
+  password: "",
 };
 
 const INITIAL_STATE: RegisterFormState = {
-  values: INITIAL_VALUES, errors: {}, isLoading: false, serverError: null, success: false,
+  values: INITIAL_VALUES,
+  errors: {},
+  isLoading: false,
+  serverError: null,
+  success: false,
 };
 
 export function useRegister() {
   const router = useRouter();
   const [state, setState] = useState<RegisterFormState>(INITIAL_STATE);
 
-  const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      const { name, value } = e.target;
-      setState((prev) => ({
-        ...prev,
-        values: { ...prev.values, [name]: value },
-        errors: { ...prev.errors, [name]: undefined },
-        serverError: null,
-      }));
-    }, []
-  );
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setState((prev) => ({
+      ...prev,
+      values: { ...prev.values, [name]: value },
+      errors: { ...prev.errors, [name]: undefined },
+      serverError: null,
+    }));
+  }, []);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
@@ -38,25 +43,30 @@ export function useRegister() {
         setState((prev) => ({ ...prev, errors }));
         return;
       }
+
       setState((prev) => ({ ...prev, isLoading: true, serverError: null }));
       try {
         const res = await registerApi.register(state.values);
         if (res.ok) {
           setState((prev) => ({ ...prev, isLoading: false, success: true }));
-          setTimeout(() => router.push("/login"), 2200);
+          const nextEmail = encodeURIComponent(state.values.gmail.trim().toLowerCase());
+          setTimeout(() => router.push(`/verify-email?email=${nextEmail}`), 1600);
         } else {
           setState((prev) => ({
-            ...prev, isLoading: false,
+            ...prev,
+            isLoading: false,
             serverError: res.error ?? "Error al registrar la cuenta",
           }));
         }
       } catch {
         setState((prev) => ({
-          ...prev, isLoading: false,
+          ...prev,
+          isLoading: false,
           serverError: "No se pudo conectar con el servidor.",
         }));
       }
-    }, [state.values, router]
+    },
+    [state.values, router],
   );
 
   return { state, handleChange, handleSubmit };
