@@ -1,2 +1,2 @@
-from . import auth_controller
+from . import auth_controller, users_controller
 from . import product_controller

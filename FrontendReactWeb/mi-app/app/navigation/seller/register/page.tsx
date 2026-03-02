@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { RegisterPage } from "./../../src/features/register";
+import { RegisterPage } from "../../../../src/features/register";
 
 export const metadata: Metadata = {
   title: "Register",
