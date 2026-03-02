@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { DashboardPage } from "@/features/dashboard";
+import { ProductosPage } from "@/features/product";
 
 export const metadata: Metadata = {
-  title: "Dashboard vendedor",
+  title: "Productos",
 };
 
 export default function Page() {
-  return <DashboardPage />;
+  return <ProductosPage />;
 }
