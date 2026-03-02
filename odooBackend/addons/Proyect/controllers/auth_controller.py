@@ -69,7 +69,12 @@ class AuthApiController(http.Controller):
             'login': login,
             'password': password,
             'email': email,
+<<<<<<< HEAD
         })
+=======
+        }
+        user = user_model.create(user_vals)
+>>>>>>> 9b20841fbda8274bac4f2d75f013286081fa82aa
 
         mobile_user = request.env['billnova.user'].sudo().create({
             'name': name,
