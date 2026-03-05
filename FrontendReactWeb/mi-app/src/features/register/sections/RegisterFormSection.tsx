@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { FormField } from "../ui/FormField";
@@ -16,39 +16,42 @@ interface RegisterFormSectionProps {
 export function RegisterFormSection({ state, onChange, onSubmit }: RegisterFormSectionProps) {
   const { values, errors, isLoading, serverError } = state;
 
+  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    onSubmit(e);
+  };
+
   return (
-    <form onSubmit={onSubmit} noValidate className="space-y-5">
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-        {REGISTER_FIELDS.map((field) => (
-          <div key={field.name} className={field.colSpan === "full" ? "sm:col-span-2" : ""}>
-            <FormField
-              name={field.name}
-              label={field.label}
-              type={field.type}
-              placeholder={field.placeholder}
-              required={field.required}
-              value={values[field.name] ?? ""}
-              error={errors[field.name]}
-              onChange={onChange}
-            />
-          </div>
-        ))}
+    <form onSubmit={handleFormSubmit} noValidate className="form" method="post">
+      <div>
+        <div className="section-head">
+          <p className="section-title">Registro</p>
+          <span className="section-opt">Datos de acceso</span>
+        </div>
+
+        <div className="grid-1">
+          {REGISTER_FIELDS.map((field) => (
+            <div key={field.name} className={field.colSpan === "full" ? "span-2" : undefined}>
+              <FormField
+                name={field.name}
+                label={field.label}
+                type={field.type}
+                placeholder={field.placeholder}
+                required={field.required}
+                value={values[field.name] ?? ""}
+                error={errors[field.name]}
+                onChange={onChange}
+              />
+            </div>
+          ))}
+        </div>
       </div>
 
       {serverError && <ServerErrorAlert message={serverError} />}
+      <SubmitButton isLoading={isLoading} />
 
-      <div className="pt-1">
-        <SubmitButton isLoading={isLoading} />
-      </div>
-
-      <p className="text-center text-xs text-[#3d5166]">
-        ¿Ya tienes cuenta?{" "}
-        <Link
-          href="/login"
-          className="text-[#4f8ef7] underline underline-offset-2 transition-colors hover:text-[#6ba3ff]"
-        >
-          Inicia sesión
-        </Link>
+      <p className="terms">
+        Ya tienes cuenta? <a href="/login">Inicia sesion</a>
       </p>
     </form>
   );

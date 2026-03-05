@@ -1,26 +1,21 @@
-/* ─────────────────────────────────────────
-   REGISTER FEATURE — Types
-   Fuente única de verdad para interfaces
-───────────────────────────────────────── */
-
-/** Payload que se envía al endpoint Odoo POST /api/auth/register */
 export interface RegisterPayload {
   name: string;
-  login: string;
+  email: string;      // 👈 antes gmail
+  username: string;   // 👈 se mapeará a login
   password: string;
-  email: string;
   phone?: string;
   address?: string;
 }
 
-/** Respuesta del endpoint de registro */
 export interface RegisterResponse {
   ok: boolean;
   user_id?: number;
+  email?: string;
+  requires_verification?: boolean;
+  dev_code?: string;
   error?: string;
 }
 
-/** Estado interno del formulario */
 export interface RegisterFormState {
   values: RegisterPayload;
   errors: Partial<Record<keyof RegisterPayload, string>>;
@@ -29,15 +24,13 @@ export interface RegisterFormState {
   success: boolean;
 }
 
-/** Configuración declarativa de cada campo del form */
 export interface FieldConfig {
   name: keyof RegisterPayload;
   label: string;
-  type: "text" | "email" | "password" | "tel" | "textarea";
+  type: "text" | "email" | "password";
   placeholder: string;
   required: boolean;
   colSpan?: "full" | "half";
 }
 
-/** Nivel de fortaleza de contraseña */
 export type PasswordStrength = 0 | 1 | 2 | 3 | 4;

@@ -1,16 +1,22 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Plus_Jakarta_Sans, Sora } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({
+const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  display: "swap",
-  variable: "--font-sans",
+  weight: ["300", "400", "500", "600", "700", "800"],
+  variable: "--font-jakarta",
+});
+
+const sora = Sora({
+  subsets: ["latin"],
+  weight: ["400", "600", "700", "800"],
+  variable: "--font-sora",
 });
 
 export const metadata: Metadata = {
-  title: "MyApp",
-  description: "Plataforma conectada con Odoo",
+  title: "BillNova",
+  description: "Plataforma financiera conectada con Odoo",
 };
 
 export default function RootLayout({
@@ -19,8 +25,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es">
-      <body className={inter.variable}>{children}</body>
+    <html lang="es" className={`${jakarta.variable} ${sora.variable}`}>
+      <body style={{ fontFamily: "var(--font-jakarta), system-ui, sans-serif" }}>
+        {children}
+      </body>
     </html>
   );
 }
