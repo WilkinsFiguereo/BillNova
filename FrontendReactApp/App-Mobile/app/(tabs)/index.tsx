@@ -6,10 +6,7 @@ export default function HomeTab() {
   const router = useRouter();
 
   const handleProductPress = (product: Product) => {
-    router.push({
-      pathname: '/products',
-      params: { id: product.id },
-    });
+    router.push(`./product-detail/${product.id}`);
   };
 
   const handleSeeAllProducts = () => {
