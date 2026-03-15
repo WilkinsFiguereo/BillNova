@@ -4,6 +4,7 @@ import {
   ActivityIndicator, Text, TouchableOpacity,
 } from 'react-native';
 import { useAuth } from '../auth/hooks/useAuth';
+import { useCart } from '../cart/hooks/useCart';
 import { useProducts, useProductSearch } from './hooks/useHome';
 import { HeroSection } from './sections/hero';
 import { CategoriesSection } from './sections/categories';
@@ -33,6 +34,7 @@ export function HomeScreen({
   onAddToCart,
 }: HomeScreenProps) {
   const { user } = useAuth();
+  const { totalItems } = useCart();
   const { products, featured, isLoading, error, refreshing, refresh, toggleFavorite } = useProducts();
   const { query, setQuery, activeCategory, setActive, filtered } = useProductSearch(products);
 
@@ -79,6 +81,7 @@ export function HomeScreen({
         user={user}
         onMenuPress={openLeft}
         onCartPress={openRight}
+        cartCount={totalItems}
       />
 
       {/* 📜 Main Content */}

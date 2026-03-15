@@ -113,6 +113,18 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused }) => <TabIcon name="profile" focused={focused} />,
         }}
       />
+      <Tabs.Screen
+        name="cart"
+        options={{
+          href: null
+        }}
+      />
+      <Tabs.Screen
+        name="product-detail/[id]"
+        options={{
+          href: null
+        }}
+      />
     </Tabs>
   );
 }
