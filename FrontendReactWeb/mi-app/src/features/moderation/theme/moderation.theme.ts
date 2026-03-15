@@ -1,1 +1,0 @@
-export { dashboardTheme as moderationTheme, globalStyles } from "../../dashboard/theme/dashboard.theme";
