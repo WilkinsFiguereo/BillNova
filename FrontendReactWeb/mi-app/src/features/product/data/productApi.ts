@@ -29,13 +29,13 @@ async function checkResponse<T>(res: Response): Promise<T> {
 // ───────────────────────────
 
 export async function apiListProductos(): Promise<Producto[]> {
-  const res = await fetch(`${baseUrl}/api/product`, {
+  const res = await fetch(`${baseUrl}/api/products`, {
     headers: jsonHeaders(),
   });
 
   const data = await checkResponse<any>(res);
 
-  return data.items.map((p: any) => {
+  return data.map((p: any) => {
     const stock = p.quantity_on_hand ?? p.stock ?? 0;
 
     return {

@@ -7,10 +7,12 @@ import {
   SafeAreaView,
   TouchableOpacity,
   StatusBar,
+  Alert,
 } from 'react-native';
 
 import { useCart } from './hooks/useCart';
 import { cartTheme as t } from './theme/cart.theme';
+import { submitPosOrder } from './data/checkoutApi';  // 👈
 
 import { CartItemCard } from './ui/CartItemCard';
 import { EmptyCart } from './ui/EmptyCart';
@@ -18,11 +20,9 @@ import { CheckoutBar } from './ui/CheckoutBar';
 import { FreeShippingBanner } from './sections/FreeShippingBanner';
 import { PromoCodeInput } from './sections/PromoCodeInput';
 import { OrderSummary } from './sections/OrderSummary';
-
-import {
-  IconChevronRight,
-  IconShoppingBag,
-} from '../../shared/ui/Icons';
+// En CartPage.tsx
+// En ProductDetailPage.tsx  
+import { IconChevronRight, IconShoppingBag } from '../../shared/ui/Icons';
 
 type Props = {
   navigation?: { goBack: () => void };
@@ -131,7 +131,14 @@ export function CartPage({ navigation }: Props) {
           <CheckoutBar
             total={total}
             totalItems={totalItems}
-            onCheckout={() => console.log('Proceed to checkout')}
+            onCheckout={async () => {
+              const result = await submitPosOrder(items, tax, total);
+              if (result.ok) {
+                Alert.alert('¡Pedido creado!', `Orden #${result.order_id}`);
+              } else {
+                Alert.alert('Error', result.error ?? 'No se pudo crear el pedido');
+              }
+            }}
           />
         </>
       )}
