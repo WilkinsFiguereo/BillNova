@@ -74,9 +74,9 @@ export interface NavItemData {
 }
 
 export const NAV_ITEMS: NavItemData[] = [
-  { id: "dashboard", Icon: LayoutDashboard, label: "Dashboard",     href: "/navigation/seller/dashboard"  },
-  { id: "productos", Icon: Package,         label: "Productos",     href: "/navigation/seller/product"  },
-  { id: "facturas",  Icon: FileText,        label: "Facturas",      href: "/navigation/seller/bill"   },
-  { id: "reportes",  Icon: BarChart2,       label: "Reportes",      href: "/navigation/seller/reports"   },
-  { id: "config",    Icon: Settings,        label: "Configuración", href: "/navigation/seller/config"     },
+  { id: "dashboard", Icon: LayoutDashboard, label: "Dashboard",     href: "/navigation/seller/dashboard/page"  },
+  { id: "productos", Icon: Package,         label: "Productos",     href: "/navigation/seller/product/page"  },
+  { id: "facturas",  Icon: FileText,        label: "Facturas",      href: "/navigation/seller/bill/page"   },
+  { id: "reportes",  Icon: BarChart2,       label: "Reportes",      href: "/navigation/seller/reports/page"   },
+  { id: "config",    Icon: Settings,        label: "Configuración", href: "/navigation/seller/config/page"     },
 ];
