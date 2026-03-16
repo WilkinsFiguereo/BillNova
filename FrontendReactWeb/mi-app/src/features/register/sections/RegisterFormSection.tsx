@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 ﻿"use client";
+=======
+"use client";
+>>>>>>> d5a70c78988b43655bd9da58bea46a376cb4ef8a
 
 import Link from "next/link";
 import { FormField } from "../ui/FormField";
@@ -16,6 +20,7 @@ interface RegisterFormSectionProps {
 export function RegisterFormSection({ state, onChange, onSubmit }: RegisterFormSectionProps) {
   const { values, errors, isLoading, serverError } = state;
 
+<<<<<<< HEAD
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-5">
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -49,6 +54,44 @@ export function RegisterFormSection({ state, onChange, onSubmit }: RegisterFormS
         >
           Inicia sesión
         </Link>
+=======
+  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    onSubmit(e);
+  };
+
+  return (
+    <form onSubmit={handleFormSubmit} noValidate className="form" method="post">
+      <div>
+        <div className="section-head">
+          <p className="section-title">Registro</p>
+          <span className="section-opt">Datos de acceso</span>
+        </div>
+
+        <div className="grid-1">
+          {REGISTER_FIELDS.map((field) => (
+            <div key={field.name} className={field.colSpan === "full" ? "span-2" : undefined}>
+              <FormField
+                name={field.name}
+                label={field.label}
+                type={field.type}
+                placeholder={field.placeholder}
+                required={field.required}
+                value={values[field.name] ?? ""}
+                error={errors[field.name]}
+                onChange={onChange}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {serverError && <ServerErrorAlert message={serverError} />}
+      <SubmitButton isLoading={isLoading} />
+
+      <p className="terms">
+        Ya tienes cuenta? <a href="/login">Inicia sesion</a>
+>>>>>>> d5a70c78988b43655bd9da58bea46a376cb4ef8a
       </p>
     </form>
   );

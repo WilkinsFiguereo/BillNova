@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React from 'react';
 import {
   View, Text, StyleSheet, ActivityIndicator,
@@ -102,3 +103,30 @@ const styles = StyleSheet.create({
   },
   retryText: { color: '#fff', fontSize: 13.5, fontWeight: '600' },
 });
+=======
+import React from "react";
+import { useRouter } from "expo-router";
+import { ProductsScreen } from "../../src/features/products/ProductsScreen";
+import { useCart } from "../../src/features/cart/hooks/useCart";
+import type { Product } from "../../src/features/home/types/home.types";
+
+export default function ProductsTab() {
+  const router = useRouter();
+  const { addToCart } = useCart();
+
+  const handleProductPress = (product: Product) => {
+    router.push(`/product-detail/${product.id}`);
+  };
+
+  const handleAddToCart = (product: Product) => {
+    addToCart({ product, quantity: 1 });
+  };
+
+  return (
+    <ProductsScreen
+      onProductPress={handleProductPress}
+      onAddToCart={handleAddToCart}
+    />
+  );
+}
+>>>>>>> d5a70c78988b43655bd9da58bea46a376cb4ef8a

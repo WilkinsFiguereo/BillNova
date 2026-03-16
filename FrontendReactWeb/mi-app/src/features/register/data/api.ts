@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ﻿import type { RegisterPayload, RegisterResponse } from "../types/register.types";
 
 const ODOO_URL = (process.env.NEXT_PUBLIC_ODOO_URL ?? "http://localhost:8079").replace(/\/+$/, "");
@@ -29,3 +30,24 @@ export const registerApi = {
   register: (payload: RegisterPayload): Promise<RegisterResponse> =>
     odooPost<RegisterResponse>("/api/auth/register", payload),
 };
+=======
+import type { RegisterPayload, RegisterResponse } from "../types/register.types";
+import { authPath, odooPost } from "@/lib/odooApi";
+
+export const registerApi = {
+  register: (payload: RegisterPayload): Promise<RegisterResponse> => {
+    return odooPost<RegisterResponse>(
+      authPath("/register"),
+      {
+        name: payload.name.trim(),
+        login: payload.username.trim(),                
+        password: payload.password,
+        email: payload.email.trim().toLowerCase(),      
+        phone: payload.phone?.trim() || null,           // 👈 opcional
+        address: payload.address?.trim() || null,       // 👈 opcional
+      },
+      { allowedStatuses: [400, 409] }
+    );
+  },
+};
+>>>>>>> d5a70c78988b43655bd9da58bea46a376cb4ef8a

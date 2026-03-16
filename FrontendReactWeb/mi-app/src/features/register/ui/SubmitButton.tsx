@@ -1,18 +1,27 @@
 "use client";
 
+<<<<<<< HEAD
 /* ─────────────────────────────────────────
    REGISTER FEATURE — UI / SubmitButton
 ───────────────────────────────────────── */
 
+=======
+>>>>>>> d5a70c78988b43655bd9da58bea46a376cb4ef8a
 interface SubmitButtonProps {
   isLoading: boolean;
 }
 
 export function SubmitButton({ isLoading }: SubmitButtonProps) {
+<<<<<<< HEAD
+=======
+  console.log("🔄 SubmitButton render - isLoading:", isLoading);
+
+>>>>>>> d5a70c78988b43655bd9da58bea46a376cb4ef8a
   return (
     <button
       type="submit"
       disabled={isLoading}
+<<<<<<< HEAD
       className="
         w-full relative overflow-hidden group
         bg-[#4f8ef7] hover:bg-[#6ba3ff]
@@ -44,6 +53,22 @@ export function SubmitButton({ isLoading }: SubmitButtonProps) {
           </>
         )}
       </span>
+=======
+      className="btn-submit"
+      onClick={() => console.log("🟢 Botón presionado")}
+    >
+      {isLoading ? (
+        <>
+          <svg className="spin" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
+            <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.4" strokeOpacity="0.3" />
+            <path d="M14 8A6 6 0 0 0 8 2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+          </svg>
+          Creando cuenta...
+        </>
+      ) : (
+        "Crear cuenta"
+      )}
+>>>>>>> d5a70c78988b43655bd9da58bea46a376cb4ef8a
     </button>
   );
 }

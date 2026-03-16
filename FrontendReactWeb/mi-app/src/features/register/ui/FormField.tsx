@@ -1,5 +1,6 @@
 "use client";
 
+<<<<<<< HEAD
 /* ─────────────────────────────────────────
    REGISTER FEATURE — UI / FormField
    Campo atómico reutilizable
@@ -8,6 +9,9 @@
 import { FieldIcon } from "./FieldIcon";
 import { PasswordStrengthBar } from "./PasswordStrengthBar";
 import { inputBase, labelBase } from "../theme/register.theme";
+=======
+import { FieldIcon } from "./FieldIcon";
+>>>>>>> d5a70c78988b43655bd9da58bea46a376cb4ef8a
 import { FIELD_ICONS } from "../data/constants";
 
 interface FormFieldProps {
@@ -26,7 +30,11 @@ function getAutoComplete(name: string, type: string): string {
   switch (name) {
     case "name":
       return "name";
+<<<<<<< HEAD
     case "login":
+=======
+    case "username":
+>>>>>>> d5a70c78988b43655bd9da58bea46a376cb4ef8a
       return "username";
     case "email":
       return "email";
@@ -49,6 +57,7 @@ export function FormField({
   error,
   onChange,
 }: FormFieldProps) {
+<<<<<<< HEAD
   const isTextarea  = type === "textarea";
   const isPassword  = type === "password";
   const iconName    = FIELD_ICONS[name] ?? "user";
@@ -64,6 +73,20 @@ export function FormField({
       <div className="relative">
         {/* Icon */}
         <span className="absolute left-3 top-3 text-[#3d5166] transition-colors duration-200 pointer-events-none [input:focus~&]:text-[#4f8ef7]">
+=======
+  const isTextarea = type === "textarea";
+  const iconName = FIELD_ICONS[name] ?? "user";
+
+  return (
+    <div className="field">
+      <label htmlFor={name} className="field-label">
+        {label}
+        {required && <span className="req">*</span>}
+      </label>
+
+      <div className="field-wrap">
+        <span className="field-icon" aria-hidden>
+>>>>>>> d5a70c78988b43655bd9da58bea46a376cb4ef8a
           <FieldIcon name={iconName} />
         </span>
 
@@ -74,8 +97,14 @@ export function FormField({
             value={value}
             onChange={onChange}
             placeholder={placeholder}
+<<<<<<< HEAD
             rows={3}
             className={`${inputBase} ${borderColor}`}
+=======
+            required={required}
+            rows={3}
+            className={`input${error ? " err" : ""}`}
+>>>>>>> d5a70c78988b43655bd9da58bea46a376cb4ef8a
           />
         ) : (
           <input
@@ -87,11 +116,16 @@ export function FormField({
             placeholder={placeholder}
             required={required}
             autoComplete={getAutoComplete(name, type)}
+<<<<<<< HEAD
             className={`${inputBase} ${borderColor}`}
+=======
+            className={`input${error ? " err" : value ? " ok" : ""}`}
+>>>>>>> d5a70c78988b43655bd9da58bea46a376cb4ef8a
           />
         )}
       </div>
 
+<<<<<<< HEAD
       {/* Password strength */}
       {isPassword && <PasswordStrengthBar password={value} />}
 
@@ -105,6 +139,11 @@ export function FormField({
           {error}
         </p>
       )}
+=======
+      <p className={`field-err${error ? " show" : ""}`} role="alert">
+        {error}
+      </p>
+>>>>>>> d5a70c78988b43655bd9da58bea46a376cb4ef8a
     </div>
   );
 }

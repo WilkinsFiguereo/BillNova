@@ -49,7 +49,11 @@ class ProductApiController(http.Controller):
     # ========================
     # GET ONE
     # ========================
+<<<<<<< HEAD
     @http.route('/api/products/<int:product_id>', type='http',auth='user', methods=['GET', 'OPTIONS'], csrf=False)
+=======
+    @http.route('/api/products/<int:product_id>', type='http', auth='public', methods=['GET', 'OPTIONS'], csrf=False)
+>>>>>>> d5a70c78988b43655bd9da58bea46a376cb4ef8a
     def get_product(self, product_id):
 
         if request.httprequest.method == 'OPTIONS':
@@ -69,11 +73,18 @@ class ProductApiController(http.Controller):
             }
         })
 
+<<<<<<< HEAD
 
     # ========================
     # CREATE
     # ========================
     @http.route('/api/products/create', type='http',auth='user', methods=['POST', 'OPTIONS'], csrf=False)
+=======
+    # ========================
+    # CREATE
+    # ========================
+    @http.route('/api/products/create', type='http',auth='public', methods=['POST', 'OPTIONS'], csrf=False)
+>>>>>>> d5a70c78988b43655bd9da58bea46a376cb4ef8a
     def create_product(self):
 
         if request.httprequest.method == 'OPTIONS':
