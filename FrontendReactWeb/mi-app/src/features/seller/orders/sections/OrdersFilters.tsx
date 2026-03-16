@@ -1,6 +1,7 @@
 "use client";
 // src/feature/orders/sections/OrdersFilters.tsx
 
+import { Search } from "lucide-react";
 import { OrderStatus } from "../types/order.types";
 import T from "../theme/ordersTheme";
 
@@ -51,19 +52,22 @@ export default function OrdersFilters({ counts, filter, setFilter, search, setSe
         })}
       </div>
 
-      <input
-        type="text"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="🔍  Buscar pedido, cliente..."
-        style={{
-          padding: "8px 14px", borderRadius: 8, border: `1px solid ${T.border}`,
-          fontSize: 13, color: T.text1, background: T.bgCard,
-          outline: "none", width: 230, fontFamily: "inherit",
-        }}
-        onFocus={(e)  => (e.currentTarget.style.borderColor = T.brand400)}
-        onBlur={(e)   => (e.currentTarget.style.borderColor = T.border)}
-      />
+      <div style={{ position: "relative" }}>
+        <Search size={14} color={T.text3} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar pedido, cliente..."
+          style={{
+            padding: "8px 14px 8px 30px", borderRadius: 8, border: `1px solid ${T.border}`,
+            fontSize: 13, color: T.text1, background: T.bgCard,
+            outline: "none", width: 230, fontFamily: "inherit",
+          }}
+          onFocus={(e)  => (e.currentTarget.style.borderColor = T.brand400)}
+          onBlur={(e)   => (e.currentTarget.style.borderColor = T.border)}
+        />
+      </div>
     </div>
   );
 }

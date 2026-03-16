@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { MapPin } from "lucide-react";
 import { C } from '../theme/companyRegisterTheme';
 import { CompanyFormData } from '../types/companyRegister.types';
 import { COUNTRY_OPTIONS } from '../data/companyRegisterData';
@@ -20,7 +21,7 @@ export const AddressSection: React.FC<Props> = ({ formData, getFieldError, updat
   return (
     <div>
       <div style={{ textAlign:'center', marginBottom:28 }}>
-        <div style={{ fontSize:48, marginBottom:10 }}>📍</div>
+        <MapPin size={48} color={C.brand600} style={{ marginBottom:10 }} />
         <h2 style={{ fontSize:20, fontWeight:600, color:C.textPrimary, margin:'0 0 4px' }}>Dirección Fiscal</h2>
         <p style={{ fontSize:14, color:C.textSecondary, margin:0 }}>Ubicación legal registrada de tu empresa.</p>
       </div>

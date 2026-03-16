@@ -1,4 +1,4 @@
-// 📁 src/feature/orders/theme/ordersTheme.js
+// src/feature/orders/theme/ordersTheme.js
 // Paleta centralizada — Azul Profesional SaaS
 
 const T = {

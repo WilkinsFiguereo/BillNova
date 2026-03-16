@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, InputHTMLAttributes } from 'react';
+import { AlertTriangle } from "lucide-react";
 import { C } from '../theme/companyRegisterTheme';
 
 interface InputFieldProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -48,7 +49,12 @@ export const InputField: React.FC<InputFieldProps> = ({
       </div>
 
       {error
-        ? <p style={{ fontSize: 12, color: C.error,        margin: '4px 0 0' }}>⚠ {error}</p>
+        ? (
+        <p style={{ fontSize: 12, color: C.error, margin: '4px 0 0', display:'flex', alignItems:'center', gap:6 }}>
+          <AlertTriangle size={14} />
+          {error}
+        </p>
+      )
         : hint
         ? <p style={{ fontSize: 12, color: C.textDisabled, margin: '4px 0 0' }}>{hint}</p>
         : null}

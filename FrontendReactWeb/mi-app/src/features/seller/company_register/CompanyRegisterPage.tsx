@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { Globe, Mail, PartyPopper } from "lucide-react";
 import { FORM_STEPS }         from './data/companyRegisterData';
 import { useCompanyRegister } from './hooks/useCompanyRegister';
 import { C }                  from './theme/companyRegisterTheme';
@@ -36,7 +37,7 @@ export default function CompanyRegisterPage() {
             width:96, height:96, borderRadius:'50%', backgroundColor:C.successBg,
             display:'flex', alignItems:'center', justifyContent:'center',
             margin:'0 auto 24px', fontSize:44,
-          }}>🎉</div>
+          }}><PartyPopper size={44} color={C.success} /></div>
 
           <h1 style={{ fontSize:26, fontWeight:700, color:C.textPrimary, margin:'0 0 8px' }}>
             ¡Empresa Registrada!
@@ -57,8 +58,14 @@ export default function CompanyRegisterPage() {
             backgroundColor:C.bgAlt, borderRadius:10, padding:'14px 16px',
             textAlign:'left', marginBottom:32,
           }}>
-            <p style={{ fontSize:13, color:C.textSecondary, margin:'0 0 4px' }}>📧  {formData.adminEmail}</p>
-            <p style={{ fontSize:13, color:C.textSecondary, margin:0 }}>🌎  {formData.country}</p>
+            <p style={{ fontSize:13, color:C.textSecondary, margin:'0 0 4px', display:'flex', alignItems:'center', gap:6 }}>
+              <Mail size={14} />
+              {formData.adminEmail}
+            </p>
+            <p style={{ fontSize:13, color:C.textSecondary, margin:0, display:'flex', alignItems:'center', gap:6 }}>
+              <Globe size={14} />
+              {formData.country}
+            </p>
           </div>
 
           <button style={{

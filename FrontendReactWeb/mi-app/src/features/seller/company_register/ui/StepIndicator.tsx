@@ -31,6 +31,7 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({ steps, currentStep
       {steps.map(step => {
         const done   = step.id < currentStep;
         const active = step.id === currentStep;
+        const Icon = step.icon;
         return (
           <div key={step.id} style={{ display:'flex', flexDirection:'column', alignItems:'center', flex:1 }}>
             <div style={{
@@ -43,7 +44,13 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({ steps, currentStep
             }}>
               {done
                 ? <span style={{ color:'white', fontWeight:'bold', fontSize:14 }}>✓</span>
-                : <span style={{ fontSize:18, opacity: active ? 1 : 0.45 }}>{step.icon}</span>
+                : (
+                  <Icon
+                    size={18}
+                    color={active ? C.brand600 : C.textDisabled}
+                    style={{ opacity: active ? 1 : 0.6 }}
+                  />
+                )
               }
             </div>
             <span style={{

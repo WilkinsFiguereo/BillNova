@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { Building2 } from "lucide-react";
 import { C } from '../theme/companyRegisterTheme';
 import { CompanyFormData } from '../types/companyRegister.types';
 import { INDUSTRY_OPTIONS, COMPANY_SIZE_OPTIONS } from '../data/companyRegisterData';
@@ -15,7 +16,7 @@ interface Props {
 export const CompanyInfoSection: React.FC<Props> = ({ formData, getFieldError, updateField }) => (
   <div>
     <div style={{ textAlign:'center', marginBottom:28 }}>
-      <div style={{ fontSize:48, marginBottom:10 }}>🏢</div>
+      <Building2 size={48} color={C.brand600} style={{ marginBottom:10 }} />
       <h2 style={{ fontSize:20, fontWeight:600, color:C.textPrimary, margin:'0 0 4px' }}>Datos de la Empresa</h2>
       <p style={{ fontSize:14, color:C.textSecondary, margin:0 }}>Ingresa la información principal de tu negocio.</p>
     </div>

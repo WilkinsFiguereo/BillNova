@@ -1,17 +1,18 @@
 "use client";
 // src/feature/orders/ui/StatCard.tsx
 
+import { type LucideIcon } from "lucide-react";
 import T from "../theme/ordersTheme";
 
 interface Props {
   label:   string;
   value:   string | number;
-  icon:    string;
+  Icon:    LucideIcon;
   accent:  string;
   trend?:  string;
 }
 
-export default function StatCard({ label, value, icon, accent, trend }: Props) {
+export default function StatCard({ label, value, Icon, accent, trend }: Props) {
   return (
     <div style={{
       background: T.bgCard, border: `1px solid ${T.border}`,
@@ -23,7 +24,7 @@ export default function StatCard({ label, value, icon, accent, trend }: Props) {
         <span style={{ fontSize: 11, fontWeight: 700, color: T.text3, textTransform: "uppercase", letterSpacing: "0.06em" }}>
           {label}
         </span>
-        <span style={{ fontSize: 18, color: accent }}>{icon}</span>
+        <Icon size={18} color={accent} />
       </div>
       <div style={{ fontSize: 26, fontWeight: 700, color: T.text1, lineHeight: 1 }}>{value}</div>
       {trend && <div style={{ fontSize: 12, color: T.text3 }}>{trend}</div>}

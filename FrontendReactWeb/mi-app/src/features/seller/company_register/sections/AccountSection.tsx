@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { Eye, EyeOff, Lock } from "lucide-react";
 import { C } from '../theme/companyRegisterTheme';
 import { CompanyFormData, PasswordStrength } from '../types/companyRegister.types';
 import { InputField } from '../ui/InputField';
@@ -30,7 +31,7 @@ export const AccountSection: React.FC<Props> = ({
 }) => (
   <div>
     <div style={{ textAlign:'center', marginBottom:28 }}>
-      <div style={{ fontSize:48, marginBottom:10 }}>🔐</div>
+      <Lock size={48} color={C.brand600} style={{ marginBottom:10 }} />
       <h2 style={{ fontSize:20, fontWeight:600, color:C.textPrimary, margin:'0 0 4px' }}>Seguridad de la Cuenta</h2>
       <p style={{ fontSize:14, color:C.textSecondary, margin:0 }}>Crea una contraseña fuerte para proteger tu empresa.</p>
     </div>
@@ -45,7 +46,7 @@ export const AccountSection: React.FC<Props> = ({
       rightSlot={
         <button type="button" onClick={toggleShowPassword}
           style={{ background:'none', border:'none', cursor:'pointer', fontSize:18, opacity:0.6, padding:0 }}>
-          {showPassword ? '🙈' : '👁'}
+          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
         </button>
       }
     />
@@ -78,7 +79,7 @@ export const AccountSection: React.FC<Props> = ({
       rightSlot={
         <button type="button" onClick={toggleShowConfirm}
           style={{ background:'none', border:'none', cursor:'pointer', fontSize:18, opacity:0.6, padding:0 }}>
-          {showConfirm ? '🙈' : '👁'}
+          {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
         </button>
       }
     />

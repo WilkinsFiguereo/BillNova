@@ -1,10 +1,11 @@
+import { Building2, Factory, Leaf, Lock, MapPin, Store, User, type LucideIcon } from "lucide-react";
 import { CompanyFormData, FormStep, IndustryType, CompanySize } from '../types/companyRegister.types';
 
 export const FORM_STEPS: FormStep[] = [
-  { id: 1, title: 'Empresa',   subtitle: 'Datos generales',     icon: '🏢' },
-  { id: 2, title: 'Contacto',  subtitle: 'Responsable admin',   icon: '👤' },
-  { id: 3, title: 'Dirección', subtitle: 'Ubicación fiscal',    icon: '📍' },
-  { id: 4, title: 'Acceso',    subtitle: 'Seguridad de cuenta', icon: '🔐' },
+  { id: 1, title: 'Empresa',   subtitle: 'Datos generales',     icon: Building2 },
+  { id: 2, title: 'Contacto',  subtitle: 'Responsable admin',   icon: User },
+  { id: 3, title: 'Dirección', subtitle: 'Ubicación fiscal',    icon: MapPin },
+  { id: 4, title: 'Acceso',    subtitle: 'Seguridad de cuenta', icon: Lock },
 ];
 
 export const INDUSTRY_OPTIONS: { label: string; value: IndustryType }[] = [
@@ -19,11 +20,11 @@ export const INDUSTRY_OPTIONS: { label: string; value: IndustryType }[] = [
   { label: 'Otro',                    value: 'other'         },
 ];
 
-export const COMPANY_SIZE_OPTIONS: { label: string; value: CompanySize; range: string; emoji: string }[] = [
-  { label: 'Micro',   value: 'micro',  range: '1–10 empleados',   emoji: '🌱' },
-  { label: 'Pequeña', value: 'small',  range: '11–50 empleados',  emoji: '🏪' },
-  { label: 'Mediana', value: 'medium', range: '51–200 empleados', emoji: '🏬' },
-  { label: 'Grande',  value: 'large',  range: '200+ empleados',   emoji: '🏭' },
+export const COMPANY_SIZE_OPTIONS: { label: string; value: CompanySize; range: string; Icon: LucideIcon }[] = [
+  { label: 'Micro',   value: 'micro',  range: '1–10 empleados',   Icon: Leaf },
+  { label: 'Pequeña', value: 'small',  range: '11–50 empleados',  Icon: Store },
+  { label: 'Mediana', value: 'medium', range: '51–200 empleados', Icon: Building2 },
+  { label: 'Grande',  value: 'large',  range: '200+ empleados',   Icon: Factory },
 ];
 
 export const COUNTRY_OPTIONS = [

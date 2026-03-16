@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { AlertTriangle, type LucideIcon } from "lucide-react";
 import { C } from '../theme/companyRegisterTheme';
 
 // ─── SelectField ──────────────────────────────────────────────────────────────
@@ -42,12 +43,17 @@ export const SelectField: React.FC<SelectFieldProps> = ({
         </option>
       ))}
     </select>
-    {error && <p style={{ fontSize:12, color:C.error, margin:'4px 0 0' }}>⚠ {error}</p>}
+    {error && (
+      <p style={{ fontSize:12, color:C.error, margin:'4px 0 0', display:'flex', alignItems:'center', gap:6 }}>
+        <AlertTriangle size={14} />
+        {error}
+      </p>
+    )}
   </div>
 );
 
 // ─── SizeSelector ─────────────────────────────────────────────────────────────
-interface SizeOption { label: string; value: string; range: string; emoji: string }
+interface SizeOption { label: string; value: string; range: string; Icon: LucideIcon }
 interface SizeSelectorProps {
   options: SizeOption[];
   value: string;
@@ -77,7 +83,7 @@ export const SizeSelector: React.FC<SizeSelectorProps> = ({ options, value, onCh
               transition: 'all 0.15s',
             }}
           >
-            <span style={{ fontSize: 22, marginBottom: 4 }}>{opt.emoji}</span>
+            <opt.Icon size={22} color={active ? C.brand600 : C.textDisabled} style={{ marginBottom: 4 }} />
             <span style={{ fontSize:14, fontWeight:600, color: active ? C.brand600 : C.textPrimary }}>
               {opt.label}
             </span>
@@ -88,7 +94,12 @@ export const SizeSelector: React.FC<SizeSelectorProps> = ({ options, value, onCh
         );
       })}
     </div>
-    {error && <p style={{ fontSize:12, color:C.error, margin:'4px 0 0' }}>⚠ {error}</p>}
+    {error && (
+      <p style={{ fontSize:12, color:C.error, margin:'4px 0 0', display:'flex', alignItems:'center', gap:6 }}>
+        <AlertTriangle size={14} />
+        {error}
+      </p>
+    )}
   </div>
 );
 
@@ -117,6 +128,11 @@ export const CheckboxField: React.FC<CheckboxFieldProps> = ({ value, onChange, e
       </div>
       <span style={{ fontSize:13, color:C.textSecondary, lineHeight:'20px' }}>{children}</span>
     </label>
-    {error && <p style={{ fontSize:12, color:C.error, margin:'4px 0 0 30px' }}>⚠ {error}</p>}
+    {error && (
+      <p style={{ fontSize:12, color:C.error, margin:'4px 0 0 30px', display:'flex', alignItems:'center', gap:6 }}>
+        <AlertTriangle size={14} />
+        {error}
+      </p>
+    )}
   </div>
 );

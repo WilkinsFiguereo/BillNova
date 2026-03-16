@@ -1,6 +1,7 @@
 "use client";
 // src/feature/orders/sections/OrdersHeader.tsx
 
+import { Download } from "lucide-react";
 import T from "../theme/ordersTheme";
 
 interface Props {
@@ -21,9 +22,14 @@ export default function OrdersHeader({ totalOrders }: Props) {
       <div style={{ display: "flex", gap: 10 }}>
         <button
           onClick={() => alert("Exportando...")}
-          style={{ background: T.bgAlt, border: `1px solid ${T.border}`, borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, color: T.text2, cursor: "pointer", fontFamily: "inherit" }}
+          style={{
+            background: T.bgAlt, border: `1px solid ${T.border}`, borderRadius: 8,
+            padding: "9px 16px", fontSize: 13, fontWeight: 600, color: T.text2,
+            cursor: "pointer", fontFamily: "inherit",
+            display: "inline-flex", alignItems: "center", gap: 6,
+          }}
         >
-          📥 Exportar CSV
+          <Download size={14} /> Exportar CSV
         </button>
         <button
           style={{ background: T.brand600, border: "none", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, color: "#fff", cursor: "pointer", fontFamily: "inherit" }}

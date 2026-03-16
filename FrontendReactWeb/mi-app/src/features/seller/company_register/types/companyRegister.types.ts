@@ -1,3 +1,5 @@
+import { type LucideIcon } from "lucide-react";
+
 export type CompanySize = 'micro' | 'small' | 'medium' | 'large';
 export type IndustryType = 'technology' | 'finance' | 'retail' | 'health' | 'education' | 'manufacturing' | 'services' | 'other';
 export type FormStatus = 'idle' | 'loading' | 'success' | 'error';
@@ -28,7 +30,7 @@ export interface FormStep {
   id: number;
   title: string;
   subtitle: string;
-  icon: string;
+  icon: LucideIcon;
 }
 
 export interface FieldError {
