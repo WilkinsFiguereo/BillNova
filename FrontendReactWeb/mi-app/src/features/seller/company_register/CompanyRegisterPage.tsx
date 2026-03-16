@@ -1,6 +1,9 @@
 'use client';
 import React from 'react';
 import { Globe, Mail, PartyPopper } from "lucide-react";
+import { Sidebar } from "../dashboard/dashboards";
+import { NAV_ITEMS } from "../dashboard/data/chart.data";
+import { dashboardTheme, globalStyles } from "../dashboard/theme/dashboard.theme";
 import { FORM_STEPS }         from './data/companyRegisterData';
 import { useCompanyRegister } from './hooks/useCompanyRegister';
 import { C }                  from './theme/companyRegisterTheme';
@@ -19,20 +22,20 @@ export default function CompanyRegisterPage() {
     toggleShowPassword, toggleShowConfirm,
   } = useCompanyRegister();
 
-  const font = "'Segoe UI', system-ui, -apple-system, sans-serif";
+  const font = "'DM Sans', 'Segoe UI', sans-serif";
 
   /* ── Success ────────────────────────────────────────────────────── */
   if (formStatus === 'success') {
     return (
-      <div style={{
-        minHeight:'100vh', backgroundColor:C.bgPrimary, display:'flex',
-        alignItems:'center', justifyContent:'center', padding:16, fontFamily:font,
-      }}>
-        <div style={{
-          backgroundColor:C.bgSecondary, borderRadius:20, padding:'48px 40px',
-          maxWidth:460, width:'100%', textAlign:'center',
-          boxShadow:'0 4px 32px rgba(30,58,138,0.1)',
-        }}>
+      <div style={{ display:'flex', minHeight:'100vh', backgroundColor:C.bgPrimary, fontFamily:font }}>
+        <style>{globalStyles(dashboardTheme)}</style>
+        <Sidebar navItems={NAV_ITEMS} />
+        <main style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
+          <div style={{
+            backgroundColor:C.bgSecondary, borderRadius:20, padding:'48px 40px',
+            maxWidth:460, width:'100%', textAlign:'center',
+            boxShadow:'0 4px 32px rgba(30,58,138,0.1)',
+          }}>
           <div style={{
             width:96, height:96, borderRadius:'50%', backgroundColor:C.successBg,
             display:'flex', alignItems:'center', justifyContent:'center',
@@ -76,6 +79,7 @@ export default function CompanyRegisterPage() {
             Ir al Dashboard →
           </button>
         </div>
+        </main>
       </div>
     );
   }
@@ -102,7 +106,10 @@ export default function CompanyRegisterPage() {
   const isLoading = formStatus === 'loading';
 
   return (
-    <div style={{ minHeight:'100vh', backgroundColor:C.bgPrimary, display:'flex', flexDirection:'column', fontFamily:font }}>
+    <div style={{ display:'flex', minHeight:'100vh', backgroundColor:C.bgPrimary, fontFamily:font }}>
+      <style>{globalStyles(dashboardTheme)}</style>
+      <Sidebar navItems={NAV_ITEMS} />
+      <main style={{ flex:1, display:'flex', flexDirection:'column' }}>
 
       {/* ── Header ─────────────────────────────────────────────── */}
       <header style={{
@@ -122,7 +129,7 @@ export default function CompanyRegisterPage() {
       </header>
 
       {/* ── Main ───────────────────────────────────────────────── */}
-      <main style={{
+      <div style={{
         flex:1, display:'flex', alignItems:'flex-start',
         justifyContent:'center', padding:'32px 16px',
       }}>
@@ -196,6 +203,7 @@ export default function CompanyRegisterPage() {
             </a>
           </p>
         </div>
+      </div>
       </main>
     </div>
   );

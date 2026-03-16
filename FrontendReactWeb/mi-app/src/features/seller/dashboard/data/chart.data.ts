@@ -7,6 +7,8 @@ import {
   DollarSign,
   LayoutDashboard,
   BarChart2,
+  ShoppingCart,
+  Building2,
   Settings,
   type LucideIcon,
 } from "lucide-react";
@@ -76,7 +78,9 @@ export interface NavItemData {
 export const NAV_ITEMS: NavItemData[] = [
   { id: "dashboard", Icon: LayoutDashboard, label: "Dashboard",     href: "/navigation/seller/dashboard/page"  },
   { id: "productos", Icon: Package,         label: "Productos",     href: "/navigation/seller/product/page"  },
+  { id: "orders",    Icon: ShoppingCart,    label: "Pedidos",       href: "/navigation/seller/orders/page"   },
   { id: "facturas",  Icon: FileText,        label: "Facturas",      href: "/navigation/seller/bill/page"   },
+  { id: "registro",  Icon: Building2,       label: "Registro",      href: "/navigation/seller/company_register/page" },
   { id: "reportes",  Icon: BarChart2,       label: "Reportes",      href: "/navigation/seller/reports/page"   },
   { id: "config",    Icon: Settings,        label: "Configuración", href: "/navigation/seller/config/page"     },
 ];

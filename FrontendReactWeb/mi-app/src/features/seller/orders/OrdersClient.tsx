@@ -32,6 +32,7 @@ import DetailModal   from "./ui/DetailModal";
 
 import { Sidebar } from "../dashboard/dashboards";
 import { NAV_ITEMS } from "../dashboard/data/chart.data";
+import { dashboardTheme, globalStyles } from "../dashboard/theme/dashboard.theme";
 
 
 
@@ -119,9 +120,10 @@ export default function OrdersClient() {
         color: T.text1,
       }}
     >
+      <style>{globalStyles(dashboardTheme)}</style>
       <Sidebar navItems={NAV_ITEMS} />
 
-      <main style={{ flex: 1, overflow: "auto", padding: "28px 24px" }}>
+      <main style={{ flex: 1, overflow: "auto", padding: "32px" }}>
         <OrdersHeader totalOrders={orders.length} />
         <OrdersStats  orders={orders} />
         <OrdersFilters
