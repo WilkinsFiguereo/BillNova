@@ -2,25 +2,15 @@
  
 
 import React from 'react';
-import { FileText } from 'lucide-react';
 import { colors } from './theme/reportes.theme';
 import { Sidebar } from '../../seller/dashboard/dashboards';
 import { dashboardTheme as t, globalStyles } from '../../seller/dashboard/theme/dashboard.theme';
-import { NavItemData } from '../../seller/dashboard/data/chart.data';
+import { MODERATOR_NAV_ITEMS } from '../moderationNav';
 import { useReportes } from './hooks/useReportes';
 import { ReportesHeader } from './sections/ReportesHeader';
 import { ReportesFilters } from './sections/ReportesFilters';
 import { ReportesTable } from './sections/ReportesTable';
 import { ReporteDetailModal } from './sections/ReporteDetailModal';
-
-const NAV_ITEMS: NavItemData[] = [
-  {
-    id: 'reportes',
-    Icon: FileText,
-    label: 'Reportes',
-    href: '/navigation/moderation/reports/page',
-  },
-];
 
 export function ReportesPage() {
   const {
@@ -49,7 +39,7 @@ export function ReportesPage() {
     >
       <style>{globalStyles(t)}</style>
 
-      <Sidebar navItems={NAV_ITEMS} />
+      <Sidebar navItems={MODERATOR_NAV_ITEMS} />
 
       <main style={{ flex: 1, overflow: 'auto', padding: '32px 28px' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>

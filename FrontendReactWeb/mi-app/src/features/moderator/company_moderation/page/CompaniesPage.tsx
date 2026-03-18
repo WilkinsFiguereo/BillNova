@@ -8,7 +8,7 @@ import { CompaniesHeaderSection } from "../sections/CompaniesHeaderSection";
 import { CompaniesListSection } from "../sections/CompaniesListSection";
 import { CompaniesDetailPanel } from "../sections/CompaniesDetailPanel";
 import { Sidebar } from "../../../seller/dashboard/dashboards";
-import { NAV_ITEMS } from "../../../seller/dashboard/data/chart.data";
+import { MODERATOR_NAV_ITEMS } from "../../moderationNav";
 
 export default function CompaniesPage() {
   const {
@@ -47,7 +47,7 @@ export default function CompaniesPage() {
     >
       <style>{globalStyles(t)}</style>
 
-      <Sidebar navItems={NAV_ITEMS} />
+      <Sidebar navItems={MODERATOR_NAV_ITEMS} />
 
       <main
         style={{

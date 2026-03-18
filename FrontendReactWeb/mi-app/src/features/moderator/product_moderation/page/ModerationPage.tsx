@@ -8,7 +8,7 @@ import { ModerationHeaderSection } from "../sections/ModerationHeaderSection";
 import { ModerationListaSection } from "../sections/ModerationListSection";
 import { ModerationDetallePanel } from "../sections/ModerationDetailPanel";
 import { Sidebar } from "../../../seller/dashboard/dashboards";
-import { NAV_ITEMS } from "../../../seller/dashboard/data/chart.data";
+import { MODERATOR_NAV_ITEMS } from "../../moderationNav";
 
 export default function ModerationPage() {
   const {
@@ -45,7 +45,7 @@ export default function ModerationPage() {
     >
       <style>{globalStyles(t)}</style>
 
-      <Sidebar navItems={NAV_ITEMS} />
+      <Sidebar navItems={MODERATOR_NAV_ITEMS} />
 
       {/* Main — se encoge cuando el panel detalle está abierto */}
       <main
