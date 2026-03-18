@@ -1,3 +1,5 @@
+"use client";
+
 import { Empresa, EstadisticasGlobales } from '../types/estadisticas.types';
 
 const meses = ['Ago','Sep','Oct','Nov','Dic','Ene','Feb','Mar'];
