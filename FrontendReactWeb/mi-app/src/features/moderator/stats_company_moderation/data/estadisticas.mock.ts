@@ -4,10 +4,18 @@ import { Empresa, EstadisticasGlobales } from '../types/estadisticas.types';
 
 const meses = ['Ago','Sep','Oct','Nov','Dic','Ene','Feb','Mar'];
 
+function prng(seed: number) {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}
+
 function genMeses(base: number, crecimiento: number) {
   return meses.map((mes, i) => ({
     mes,
-    ventas: Math.round(base * (1 + (crecimiento / 100) * (i / meses.length)) + Math.random() * base * 0.1),
+    ventas: Math.round(
+      base * (1 + (crecimiento / 100) * (i / meses.length)) +
+      prng(base * 97 + crecimiento * 131 + i * 17) * base * 0.1
+    ),
     ingresos: Math.round(base * 150 * (1 + (crecimiento / 100) * (i / meses.length))),
   }));
 }

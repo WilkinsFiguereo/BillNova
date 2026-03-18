@@ -4,22 +4,30 @@ import { Producto, EstadisticasGlobales } from '../types/productos.types';
 
 const meses = ['Ago', 'Sep', 'Oct', 'Nov', 'Dic', 'Ene', 'Feb', 'Mar'];
 
+function prng(seed: number) {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}
+
 function gm(baseV: number, crec: number, precio: number) {
   return meses.map((mes, i) => {
     const factor = 1 + (crec / 100) * (i / meses.length);
-    const ventas = Math.max(1, Math.round(baseV * factor + (Math.random() - 0.5) * baseV * 0.12));
+    const jitter = (prng(baseV * 73 + crec * 29 + precio * 11 + i * 19) - 0.5) * baseV * 0.12;
+    const ventas = Math.max(1, Math.round(baseV * factor + jitter));
     return {
       mes,
       ventas,
       ingresos: ventas * precio,
-      vistas: Math.round(ventas * (8 + Math.random() * 10)),
+      vistas: Math.round(ventas * (8 + prng(precio * 31 + baseV * 13 + i * 23) * 10)),
     };
   });
 }
 
 function rd(cal: number): { estrellas: number; cantidad: number }[] {
-  const total = Math.round(50 + Math.random() * 500);
-  const pesos = [0.03, 0.05, 0.1, 0.28, 0.54].map(p => p + (cal - 3.5) * 0.05 * (Math.random() - 0.5));
+  const total = Math.round(50 + prng(cal * 101) * 500);
+  const pesos = [0.03, 0.05, 0.1, 0.28, 0.54].map((p, i) =>
+    p + (cal - 3.5) * 0.05 * (prng(cal * 59 + i * 7) - 0.5)
+  );
   const norm = pesos.map(p => Math.max(0.01, p));
   const sum = norm.reduce((a, b) => a + b, 0);
   return [1, 2, 3, 4, 5].map((e, i) => ({ estrellas: e, cantidad: Math.round(total * norm[i] / sum) }));
