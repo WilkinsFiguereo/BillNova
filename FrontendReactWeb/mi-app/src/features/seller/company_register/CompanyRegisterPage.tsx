@@ -123,9 +123,9 @@ export default function CompanyRegisterPage() {
           </div>
           <span style={{ fontSize:12, color:C.textDisabled }}>Registro de Empresa</span>
         </div>
-        <a href="/login" style={{ fontSize:13, color:C.brand400, fontWeight:500, textDecoration:'none' }}>
-          ¿Ya tienes cuenta?
-        </a>
+        <span style={{ fontSize:13, color:C.textSecondary }}>
+          Crea tu empresa para continuar
+        </span>
       </header>
 
       {/* ── Main ───────────────────────────────────────────────── */}
@@ -197,9 +197,9 @@ export default function CompanyRegisterPage() {
 
           {/* Bottom link */}
           <p style={{ textAlign:'center', fontSize:13, color:C.textSecondary, marginTop:20 }}>
-            ¿Ya tienes cuenta?{' '}
-            <a href="/login" style={{ color:C.brand400, fontWeight:600, textDecoration:'none' }}>
-              Iniciar sesión
+            ¿Necesitas ayuda?{' '}
+            <a href="#" style={{ color:C.brand400, fontWeight:600, textDecoration:'none' }}>
+              Contáctanos
             </a>
           </p>
         </div>
