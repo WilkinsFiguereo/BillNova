@@ -123,8 +123,8 @@ export function HomeScreen({
 
      
       {/* 📂 Drawers */}
-      <LeftDrawer visible={leftOpen} onClose={closeAll} />
-      <RightDrawer visible={rightOpen} onClose={closeAll} />
+      <LeftDrawer open={leftOpen} onClose={closeAll} />
+      <RightDrawer open={rightOpen} onClose={closeAll} />
 
       {/* 🌑 Overlay */}
       <DrawerOverlay visible={leftOpen || rightOpen} onPress={closeAll} />

@@ -120,11 +120,8 @@ export function ProductDetailPage({ productId = null, navigation }: Props) {
           onSizeSelect={setSelectedSize}
         />
         <View style={s.divider} />
-        <ReviewsSection
-          reviews={product.reviews}
-          rating={product.rating}
-          reviewCount={product.reviewCount}
-        />
+        
+        <ReviewsSection productId={productId} />
       </ScrollView>
 
       <AddToCartBar

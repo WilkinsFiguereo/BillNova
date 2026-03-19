@@ -9,7 +9,9 @@ import { TopNav } from '../../features/navigation/ui/topNav';
 import { BottomNav } from '../../features/navigation/ui/bottomNav';
 import type { TabName } from '../../features/navigation/hooks/useNavDrawer';
 import type { Order } from './types/orders.types';
-
+import { LeftDrawer } from '../navigation/ui/leftDrawer';
+import { RightDrawer } from '../navigation/ui/rightDrawer';
+import { useNavDrawer } from '../navigation/hooks/useNavDrawer';
 type Props = {
   activeTab: TabName;
   onTabPress: (tab: TabName) => void;
@@ -28,7 +30,13 @@ export function OrdersPage({
   userInitials = 'U', onPressOrder = () => {},
 }: Props) {
   const { orders, totalOrders, loading, error, activeFilter, setActiveFilter, search, setSearch } = useOrders();
-
+  const {
+      leftOpen,
+      rightOpen,
+      openLeft,
+      openRight,
+      closeAll,
+    } = useNavDrawer();
   return (
     <SafeAreaView style={s.safe}>
       <StatusBar barStyle="dark-content" backgroundColor={t.colors.bgCard} />
@@ -59,6 +67,10 @@ export function OrdersPage({
           onPressOrder={onPressOrder}
         />
       </ScrollView>
+
+      {/* 📂 Drawers */}
+      <LeftDrawer open={leftOpen} onClose={closeAll} />
+      <RightDrawer open={rightOpen} onClose={closeAll} />
 
     </SafeAreaView>
   );

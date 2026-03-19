@@ -1,6 +1,6 @@
 import { tokenStorage } from '../storage/tokenStorage';
 
-const BASE_URL = process.env.EXPO_PUBLIC_ODOO_URL || 'http://192.168.100.219:8079';
+const BASE_URL = process.env.EXPO_PUBLIC_ODOO_URL || 'http://192.168.43.4:8079';
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
