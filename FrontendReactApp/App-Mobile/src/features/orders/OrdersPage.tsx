@@ -60,7 +60,6 @@ export function OrdersPage({
         />
       </ScrollView>
 
-      <BottomNav active={activeTab} onPress={onTabPress} />
     </SafeAreaView>
   );
 }

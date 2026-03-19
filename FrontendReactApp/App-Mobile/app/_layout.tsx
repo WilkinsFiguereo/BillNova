@@ -6,8 +6,17 @@ import 'react-native-reanimated';
 import { AuthProvider } from '../src/core/providers/AuthProvider';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+import { useEffect } from 'react';
+import * as NavigationBar from 'expo-navigation-bar';
+
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+
+  useEffect(() => {
+    // 🔥 Modo inmersivo Android
+    NavigationBar.setVisibilityAsync('hidden');
+    NavigationBar.setBehaviorAsync('overlay-swipe');
+  }, []);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
@@ -25,7 +34,9 @@ export default function RootLayout() {
           />
         </Stack>
       </AuthProvider>
-      <StatusBar style="auto" />
+
+      {/* 🔥 Oculta barra superior */}
+      <StatusBar hidden />
     </ThemeProvider>
   );
 }
