@@ -46,16 +46,35 @@ class PosApiController(http.Controller):
         if not session:
             return self._json_response({'ok': False, 'error': 'No POS session open'}, 400)
 
-        order_lines = [(0, 0, {
-            'product_id': int(line['product_id']),
-            'qty': line['qty'],
-            'price_unit': line['price_unit'],
-        }) for line in lines]
+        order_lines = []
+        amount_total = 0.0
+
+        for line in lines:
+            product_id = int(line['product_id'])
+            qty = float(line['qty'])
+            price = float(line['price_unit'])
+
+            subtotal = qty * price
+
+            # (Opcional pero recomendado) obtener impuestos del producto
+            product = request.env['product.product'].sudo().browse(product_id)
+            taxes = product.taxes_id
+
+            order_lines.append((0, 0, {
+                'product_id': product_id,
+                'qty': qty,
+                'price_unit': price,
+                'tax_ids': [(6, 0, taxes.ids)],  # importante si usas impuestos
+                'price_subtotal': subtotal,
+                'price_subtotal_incl': subtotal,
+            }))
+
+            amount_total += subtotal
 
         order = request.env['pos.order'].sudo().create({
             'session_id': session.id,
             'lines': order_lines,
-            'amount_total': payload.get('amount_total', 0),
+            'amount_total': amount_total,
             'amount_tax': payload.get('amount_tax', 0),
             'amount_paid': 0,
             'amount_return': 0,

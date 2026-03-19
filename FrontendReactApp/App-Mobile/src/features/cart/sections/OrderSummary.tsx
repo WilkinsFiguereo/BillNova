@@ -1,132 +1,87 @@
+// src/features/cart/sections/OrderSummary.tsx
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { cartTheme as t } from '../theme/cart.theme';
-import { IconShield } from '../../../shared/ui/Icons';
 
 type Props = {
-  subtotal: number;
+  subtotal:    number;
   promoSaving: number;
-  shipping: number;
-  tax: number;
-  total: number;
+  shipping:    number;
+  tax:         number;
+  total:       number;
 };
 
 function Row({
-  label,
-  value,
-  highlight,
-  saving,
+  label, value, highlight,
 }: {
-  label: string;
-  value: string;
-  highlight?: boolean;
-  saving?: boolean;
+  label: string; value: string; highlight?: boolean;
 }) {
   return (
     <View style={s.row}>
-      <Text style={[s.rowLabel, highlight && s.labelBold]}>{label}</Text>
-      <Text
-        style={[
-          s.rowValue,
-          highlight && s.valueBold,
-          saving && s.valueSaving,
-        ]}
-      >
-        {value}
-      </Text>
+      <Text style={[s.rowLabel, highlight && s.rowLabelBold]}>{label}</Text>
+      <Text style={[s.rowValue, highlight && s.rowValueBold]}>{value}</Text>
     </View>
   );
 }
 
 export function OrderSummary({ subtotal, promoSaving, shipping, tax, total }: Props) {
   return (
-    <View style={s.root}>
-      <Text style={s.title}>Order Summary</Text>
+    <View style={s.card}>
+      <Text style={s.title}>Resumen del pedido</Text>
 
-      <Row label="Subtotal" value={`$${subtotal.toFixed(2)}`} />
+      <Row label="Subtotal"     value={`$${subtotal.toFixed(2)}`} />
       {promoSaving > 0 && (
-        <Row label="Promo discount" value={`-$${promoSaving.toFixed(2)}`} saving />
+        <Row label="Descuento"  value={`-$${promoSaving.toFixed(2)}`} />
       )}
-      <Row
-        label="Shipping"
-        value={shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}
-        saving={shipping === 0}
-      />
-      <Row label={`Tax (7%)`} value={`$${tax.toFixed(2)}`} />
+      <Row label="Envío"        value={shipping === 0 ? 'Gratis' : `$${shipping.toFixed(2)}`} />
+      <Row label="ITBIS (18%)"  value={`$${tax.toFixed(2)}`} />
 
       <View style={s.divider} />
-
-      <Row label="Total" value={`$${total.toFixed(2)}`} highlight />
-
-      {/* Trust note */}
-      <View style={s.trust}>
-        <IconShield size={13} color={t.colors.primaryLight} />
-        <Text style={s.trustText}>Secure checkout · SSL encrypted</Text>
-      </View>
+      <Row label="Total"        value={`$${total.toFixed(2)}`} highlight />
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  root: {
+  card: {
     backgroundColor: t.colors.bgCard,
     borderRadius: t.radius.lg,
-    padding: t.spacing.xl,
-    borderWidth: 1,
-    borderColor: t.colors.borderLight,
+    padding: t.spacing.lg,
+    gap: t.spacing.sm,
     ...t.shadow.card,
-    marginBottom: t.spacing.lg,
   },
   title: {
-    fontSize: t.font.lg,
+    fontSize: t.font.md,
     fontWeight: '700',
     color: t.colors.textPrimary,
-    marginBottom: t.spacing.lg,
+    marginBottom: t.spacing.xs,
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: t.spacing.md,
   },
   rowLabel: {
     fontSize: t.font.md,
     color: t.colors.textSecondary,
-    fontWeight: '400',
   },
-  labelBold: {
+  rowLabelBold: {
     fontWeight: '700',
     color: t.colors.textPrimary,
     fontSize: t.font.lg,
   },
   rowValue: {
     fontSize: t.font.md,
-    fontWeight: '600',
-    color: t.colors.textPrimary,
+    color: t.colors.textSecondary,
+    fontWeight: '500',
   },
-  valueBold: {
-    fontSize: t.font.xl,
+  rowValueBold: {
     fontWeight: '800',
     color: t.colors.primary,
-  },
-  valueSaving: {
-    color: t.colors.success,
+    fontSize: t.font.lg,
   },
   divider: {
     height: 1,
     backgroundColor: t.colors.borderLight,
-    marginVertical: t.spacing.md,
-  },
-  trust: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: t.spacing.xs,
-    marginTop: t.spacing.md,
-  },
-  trustText: {
-    fontSize: t.font.xs,
-    color: t.colors.textDisabled,
-    fontWeight: '500',
+    marginVertical: t.spacing.xs,
   },
 });

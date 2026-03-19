@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   ActivityIndicator,
   SafeAreaView,
@@ -9,18 +9,18 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 
 import { useProductDetail } from './hooks/useProductDetail';
 import { productDetailTheme as t } from './theme/productDetail.theme';
 
-import { AddToCartBar } from './ui/AddToCartBar';
+import { AddToCartBar }      from './ui/AddToCartBar';
 import { ColorSizeSelector } from './sections/ColorSizeSelector';
-import { ImageGallery } from './sections/ImageGallery';
-import { ProductInfo } from './sections/ProductInfo';
-import { ReviewsSection } from './sections/ReviewsSection';
-
+import { ImageGallery }      from './sections/ImageGallery';
+import { ProductInfo }       from './sections/ProductInfo';
+import { ReviewsSection }    from './sections/ReviewsSection';
+import { useAddToCart }      from '../cart/hooks/useAddToCart';
 import { IconChevronRight, IconShoppingBag } from '../../shared/ui/Icons';
-import { useCart } from '../cart/hooks/useCart';
 
 type Props = {
   productId?: number | null;
@@ -28,37 +28,34 @@ type Props = {
 };
 
 export function ProductDetailPage({ productId = null, navigation }: Props) {
+  const router = useRouter(); // 👈
+
   const {
     product,
     loading,
     error,
-    selectedImage,
-    setSelectedImage,
-    selectedColor,
-    setSelectedColor,
-    selectedSize,
-    setSelectedSize,
+    selectedImage,   setSelectedImage,
+    selectedColor,   setSelectedColor,
+    selectedSize,    setSelectedSize,
     quantity,
-    incrementQty,
-    decrementQty,
-    isWishlisted,
-    toggleWishlist,
+    incrementQty,    decrementQty,
+    isWishlisted,    toggleWishlist,
     addToCart: enqueueDetailCart,
     cartAdded,
     discountedPrice,
   } = useProductDetail(productId);
-  const { addToCart: addToCartContext } = useCart();
 
-  const handleAddToCart = () => {
+  const { add } = useAddToCart();
+
+  const handleAddToCart = useCallback(() => {
+    add({ product, quantity, color: selectedColor, size: selectedSize });
     enqueueDetailCart();
-    addToCartContext({
-      product,
-      quantity,
-      color: selectedColor,
-      size: selectedSize,
-      imageUri: product.images[0]?.uri,
-    });
-  };
+  }, [add, product, quantity, selectedColor, selectedSize, enqueueDetailCart]);
+
+  // 👈 navega al carrito sin recargar la página
+  const handleGoToCart = useCallback(() => {
+    router.push('/(tabs)/cart');
+  }, [router]);
 
   if (loading) {
     return (
@@ -86,7 +83,12 @@ export function ProductDetailPage({ productId = null, navigation }: Props) {
 
         <Text style={s.headerTitle} numberOfLines={1}>Product</Text>
 
-        <TouchableOpacity activeOpacity={0.75} style={s.headerBtn}>
+        {/* ✅ Ahora navega al carrito correctamente */}
+        <TouchableOpacity
+          onPress={handleGoToCart}
+          activeOpacity={0.75}
+          style={s.headerBtn}
+        >
           <IconShoppingBag size={20} color={t.colors.textPrimary} />
         </TouchableOpacity>
       </View>
@@ -103,15 +105,12 @@ export function ProductDetailPage({ productId = null, navigation }: Props) {
           selectedIndex={selectedImage}
           onSelect={setSelectedImage}
         />
-
         <ProductInfo
           product={product}
           isWishlisted={isWishlisted}
           onToggleWishlist={toggleWishlist}
         />
-
         <View style={s.divider} />
-
         <ColorSizeSelector
           colors={product.colors}
           sizes={product.sizes}
@@ -120,9 +119,7 @@ export function ProductDetailPage({ productId = null, navigation }: Props) {
           onColorSelect={setSelectedColor}
           onSizeSelect={setSelectedSize}
         />
-
         <View style={s.divider} />
-
         <ReviewsSection
           reviews={product.reviews}
           rating={product.rating}
@@ -143,10 +140,7 @@ export function ProductDetailPage({ productId = null, navigation }: Props) {
 }
 
 const s = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: t.colors.bgCard,
-  },
+  safe:       { flex: 1, backgroundColor: t.colors.bgCard },
   safeLoading: {
     flex: 1,
     backgroundColor: t.colors.bgMain,
@@ -154,10 +148,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
   },
-  loadingText: {
-    fontSize: t.font.md,
-    color: t.colors.textSecondary,
-  },
+  loadingText: { fontSize: t.font.md, color: t.colors.textSecondary },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -190,15 +181,8 @@ const s = StyleSheet.create({
     paddingHorizontal: t.spacing.xl,
     paddingVertical: t.spacing.sm,
   },
-  errorBannerText: {
-    color: t.colors.error,
-    fontSize: t.font.sm,
-    fontWeight: '600',
-  },
-  scroll: {
-    flex: 1,
-    backgroundColor: t.colors.bgMain,
-  },
+  errorBannerText: { color: t.colors.error, fontSize: t.font.sm, fontWeight: '600' },
+  scroll:  { flex: 1, backgroundColor: t.colors.bgMain },
   divider: {
     height: 1,
     backgroundColor: t.colors.borderLight,

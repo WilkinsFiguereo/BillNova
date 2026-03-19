@@ -14,6 +14,7 @@ import {
 } from '../../../shared/ui/Icons';
 import { useLogin, useRegister } from '../hooks/useAuth';
 import { colors } from '../../../shared/theme/colors';
+import { TextInput } from 'react-native';
 
 interface AuthScreenProps {
   onLoginSuccess: () => void;
@@ -124,7 +125,8 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
       >
         <ScrollView
           contentContainerStyle={styles.scroll}
-          keyboardShouldPersistTaps="handled"
+          keyboardShouldPersistTaps="always"
+          keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
           {/* Hero — title changes with tab */}
@@ -177,25 +179,47 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
                     </View>
                   )}
 
-                  <Input
-                    label="Usuario"
-                    LeftIcon={IconAt}
-                    placeholder="usuario@empresa.com"
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                    value={loginForm.login}
-                    onChangeText={updateLogin('login')}
-                    error={loginErrors.login}
-                  />
-                  <Input
-                    label="Contraseña"
-                    LeftIcon={IconLock}
-                    placeholder="••••••••"
-                    isPassword
-                    value={loginForm.password}
-                    onChangeText={updateLogin('password')}
-                    error={loginErrors.password}
-                  />
+                  
+                  <Text style={{ marginBottom: 4 }}>Usuario</Text>
+                    <TextInput
+                      style={{
+                        borderWidth: 1,
+                        borderColor: '#ccc',
+                        borderRadius: 8,
+                        padding: 12,
+                        marginBottom: 10,
+                      }}
+                      placeholder="usuario@empresa.com"
+                      autoCapitalize="none"
+                      keyboardType="email-address"
+                      value={loginForm.login}
+                      onChangeText={updateLogin('login')}
+                    />
+                    {loginErrors.login ? (
+                      <Text style={{ color: 'red', marginBottom: 8 }}>
+                        {loginErrors.login}
+                      </Text>
+                    ) : null}
+
+                    <Text style={{ marginBottom: 4 }}>Contraseña</Text>
+                    <TextInput
+                      style={{
+                        borderWidth: 1,
+                        borderColor: '#ccc',
+                        borderRadius: 8,
+                        padding: 12,
+                        marginBottom: 10,
+                      }}
+                      placeholder="••••••••"
+                      secureTextEntry
+                      value={loginForm.password}
+                      onChangeText={updateLogin('password')}
+                    />
+                    {loginErrors.password ? (
+                      <Text style={{ color: 'red', marginBottom: 8 }}>
+                        {loginErrors.password}
+                      </Text>
+                    ) : null}
 
                   <TouchableOpacity style={styles.forgotRow}>
                     <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>

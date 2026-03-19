@@ -1,6 +1,6 @@
 import { tokenStorage } from '../storage/tokenStorage';
 
-const BASE_URL = process.env.EXPO_PUBLIC_ODOO_URL ?? 'http://localhost:8079';
+const BASE_URL = process.env.EXPO_PUBLIC_ODOO_URL || 'http://192.168.100.219:8079';
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
@@ -29,9 +29,7 @@ async function request<T>(
 
   if (requiresAuth) {
     const token = await tokenStorage.getToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
+    if (token) headers['Authorization'] = `Bearer ${token}`;
   }
 
   try {
@@ -39,9 +37,21 @@ async function request<T>(
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,
+      credentials: 'omit',
     });
 
-    const data = await response.json();
+    const text = await response.text();
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return {
+        data: null,
+        error: 'Respuesta no es JSON',
+        status: response.status,
+      };
+    }
 
     if (!response.ok) {
       return {
@@ -52,6 +62,7 @@ async function request<T>(
     }
 
     return { data, error: null, status: response.status };
+
   } catch (err) {
     return {
       data: null,

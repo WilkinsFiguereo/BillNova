@@ -3,7 +3,6 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
-import { CartProvider } from '../src/features/cart/context/CartContext';
 import { AuthProvider } from '../src/core/providers/AuthProvider';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -13,27 +12,19 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AuthProvider>
-        <CartProvider>
-          <Stack screenOptions={{ headerShown: false }}>
-            {/* Grupo de autenticación */}
-            <Stack.Screen name="(auth)" />
-
-            {/* Tabs principales */}
-            <Stack.Screen name="(tabs)" />
-
-            {/* Modal de registro */}
-            <Stack.Screen
-              name="modal"
-              options={{
-                presentation: 'modal',
-                title: 'Registro',
-                headerShown: true,
-              }}
-            />
-          </Stack>
-        </CartProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen
+            name="modal"
+            options={{
+              presentation: 'modal',
+              title: 'Registro',
+              headerShown: true,
+            }}
+          />
+        </Stack>
       </AuthProvider>
-
       <StatusBar style="auto" />
     </ThemeProvider>
   );
