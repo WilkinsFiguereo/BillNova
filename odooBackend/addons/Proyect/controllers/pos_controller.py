@@ -81,3 +81,25 @@ class PosApiController(http.Controller):
         })
 
         return self._json_response({'ok': True, 'order_id': order.id}, 201)
+
+    @http.route('/api/pos/orders', type='http', auth='public', methods=['GET', 'OPTIONS'], csrf=False)
+    def list_pos_orders(self):
+        if request.httprequest.method == 'OPTIONS':
+            return self._options_response()
+
+        orders = request.env['pos.order'].sudo().search([], order='date_order desc', limit=50)
+        data = [{
+            'id': str(o.id),
+            'reference': o.name,
+            'date': o.date_order.strftime('%Y-%m-%d') if o.date_order else '',
+            'status': 'delivered' if o.state == 'done' else 'pending',
+            'total': o.amount_total,
+            'lines': [{
+                'id': str(l.id),
+                'productName': l.product_id.name,
+                'quantity': l.qty,
+                'priceUnit': l.price_unit,
+            } for l in o.lines],
+        } for o in orders]
+
+        return self._json_response({'ok': True, 'data': data})

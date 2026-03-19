@@ -1,36 +1,46 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { colors } from '../../src/shared/theme/colors';
+import React from "react";
+import { useRouter } from "expo-router";
+import { OrdersPage } from "../../src/features/orders/OrdersPage";
+import type { TabName } from "../../src/features/navigation/hooks/useNavDrawer";
+import type { Order } from "../../src/features/orders/types/orders.types";
 
 export default function OrdersTab() {
+  const router = useRouter();
+
+  const handleTabPress = (tab: TabName) => {
+    switch (tab) {
+      case "home":
+        router.push("/");
+        break;
+      case "products":
+        router.push("/products");
+        break;
+      case "orders":
+        router.push("/orders");
+        break;
+      case "cart":
+        router.push("/cart");
+        break;
+      default:
+        break;
+    }
+  };
+
+  const handleOrderPress = (order: Order) => {
+    router.push(`/order-detail/${order.id}` as any);
+  };
+
   return (
-    <View style={styles.root}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Pedidos</Text>
-        <Text style={styles.subtitle}>Historial de tus órdenes</Text>
-      </View>
-      <View style={styles.empty}>
-        <Text style={styles.emptyEmoji}>📋</Text>
-        <Text style={styles.emptyTitle}>Sin pedidos aún</Text>
-        <Text style={styles.emptySub}>
-          Tus pedidos aparecerán aquí cuando realices una compra
-        </Text>
-      </View>
-    </View>
+    <OrdersPage
+      activeTab="orders"
+      onTabPress={handleTabPress}
+      onMenuPress={() => console.log("menu")}
+      onSearchPress={() => console.log("search")}
+      onCartPress={() => router.push("/cart")}
+      onAvatarPress={() => console.log("avatar")}
+      cartCount={2}
+      userInitials="W"
+      onPressOrder={handleOrderPress}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background.primary },
-  header: {
-    backgroundColor: '#fff',
-    paddingTop: 56, paddingHorizontal: 20, paddingBottom: 20,
-    borderBottomWidth: 1, borderBottomColor: colors.border.light,
-  },
-  title: { fontSize: 24, fontWeight: '700', color: colors.text.primary, letterSpacing: -0.4 },
-  subtitle: { fontSize: 13, color: colors.text.tertiary, marginTop: 2 },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 10 },
-  emptyEmoji: { fontSize: 48, marginBottom: 8 },
-  emptyTitle: { fontSize: 17, fontWeight: '700', color: colors.text.primary },
-  emptySub: { fontSize: 13.5, color: colors.text.tertiary, textAlign: 'center', lineHeight: 20 },
-});
