@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Globe, Mail, PartyPopper } from "lucide-react";
 import { Sidebar } from "../dashboard/dashboards";
 import { NAV_ITEMS } from "../dashboard/data/chart.data";
@@ -14,6 +14,15 @@ import { AddressSection }     from './sections/AddressSection';
 import { AccountSection }     from './sections/AccountSection';
 
 export default function CompanyRegisterPage() {
+  const [hasCompany, setHasCompany] = useState(false);
+
+  useEffect(() => {
+    try {
+      const existing = localStorage.getItem('billnova_company_id');
+      if (existing) setHasCompany(true);
+    } catch {}
+  }, []);
+
   const {
     currentStep, totalSteps, formData, formStatus,
     showPassword, showConfirm, progressPercent, passwordStrength,
@@ -23,6 +32,38 @@ export default function CompanyRegisterPage() {
   } = useCompanyRegister();
 
   const font = "'DM Sans', 'Segoe UI', sans-serif";
+
+  /* ── Already Has Company ────────────────────────────────────────── */
+  if (hasCompany) {
+    return (
+      <div style={{ display:'flex', minHeight:'100vh', backgroundColor:C.bgPrimary, fontFamily:font }}>
+        <style>{globalStyles(dashboardTheme)}</style>
+        <Sidebar navItems={NAV_ITEMS} />
+        <main style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
+          <div style={{
+            backgroundColor:C.bgSecondary, borderRadius:20, padding:'40px 36px',
+            maxWidth:520, width:'100%', textAlign:'center',
+            boxShadow:'0 4px 32px rgba(30,58,138,0.1)',
+          }}>
+            <h1 style={{ fontSize:24, fontWeight:700, color:C.textPrimary, margin:'0 0 8px' }}>
+              Ya tienes una empresa registrada
+            </h1>
+            <p style={{ fontSize:14, color:C.textSecondary, lineHeight:'22px', margin:'0 0 24px' }}>
+              Este apartado solo permite registrar una empresa por cuenta.
+            </p>
+            <a href="/navigation/seller/company_config/page" style={{
+              display:'inline-block', width:'100%', height:52, lineHeight:'52px',
+              backgroundColor:C.brand600, color:C.white, fontWeight:700, fontSize:15,
+              border:'none', borderRadius:10, textDecoration:'none',
+              fontFamily:font,
+            }}>
+              Ir a configuración de empresa →
+            </a>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   /* ── Success ────────────────────────────────────────────────────── */
   if (formStatus === 'success') {

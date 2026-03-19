@@ -116,6 +116,12 @@ export const useCompanyRegister = () => {
         return;
       }
 
+      if (res.company_id) {
+        try {
+          localStorage.setItem('billnova_company_id', String(res.company_id));
+        } catch {}
+      }
+
       setFormStatus('success');
     } catch {
       setFormStatus('error');

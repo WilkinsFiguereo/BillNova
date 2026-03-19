@@ -15,6 +15,7 @@ import EmployeesSection   from "./sections/EmployeesSection";
 
 import EditCompanyModal from "./ui/EditCompanyModal";
 import EmployeeModal    from "./ui/EmployeeModal";
+import AccessPasswordModal from "./ui/AccessPasswordModal";
 import Toast            from "@/features/seller/orders/ui/Toast";   // reutilizamos el Toast
 import { Sidebar } from "../dashboard/dashboards";
 import { NAV_ITEMS } from "../dashboard/data/chart.data";
@@ -24,11 +25,14 @@ type ToastType = "success" | "error" | "warning" | "info";
 interface ToastState { msg: string; type: ToastType; }
 
 export default function CompanyClient() {
-  const { company, updateCompany }                      = useCompany();
+  const { company, companyId, isLoading, error, updateCompany } = useCompany();
   const { employees, addEmployee, updateEmployee, toggleStatus } =
-    useEmployees(company.employees);
+    useEmployees(companyId);
 
   const [editCompanyOpen, setEditCompanyOpen] = useState(false);
+  const [accessModalOpen, setAccessModalOpen] = useState(false);
+  const [accessError, setAccessError] = useState<string | null>(null);
+  const [accessLoading, setAccessLoading] = useState(false);
   const [employeeModal,   setEmployeeModal]   = useState<Employee | null | undefined>(undefined);
   // undefined = cerrado, null = nuevo, Employee = editar
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -62,6 +66,32 @@ export default function CompanyClient() {
     );
   }, [employees, toggleStatus, showToast]);
 
+  const handleRequestEdit = useCallback(() => {
+    setAccessError(null);
+    setAccessModalOpen(true);
+  }, []);
+
+  const handleVerifyAccess = useCallback(async (password: string) => {
+    if (!companyId || companyId === "0") return;
+    setAccessLoading(true);
+    setAccessError(null);
+    try {
+      const { companyApi } = await import("./data/companyApi");
+      const res = await companyApi.verifyAccess({ companyId, password });
+      if (res.ok) {
+        setAccessModalOpen(false);
+        setEditCompanyOpen(true);
+      } else {
+        setAccessError(res.error || "Acceso denegado");
+      }
+    } catch (err) {
+      console.error(err);
+      setAccessError("No se pudo validar la contraseña");
+    } finally {
+      setAccessLoading(false);
+    }
+  }, [companyId]);
+
   return (
     <div style={{
       display: "flex",
@@ -83,10 +113,20 @@ export default function CompanyClient() {
         </p>
       </div>
 
-      <CompanyHeader
-        company={{ ...company, employees }}
-        onEdit={() => setEditCompanyOpen(true)}
-      />
+      {isLoading ? (
+        <div style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 12, padding: "24px 28px" }}>
+          Cargando empresa...
+        </div>
+      ) : error ? (
+        <div style={{ background: T.errorBg, border: `1px solid ${T.error}`, borderRadius: 12, padding: "24px 28px", color: T.error }}>
+          {error}
+        </div>
+      ) : (
+        <CompanyHeader
+          company={{ ...company, employees }}
+          onEdit={handleRequestEdit}
+        />
+      )}
 
       {/* Two-column layout: info + chart */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1.6fr", gap: 20, marginBottom: 20 }}>
@@ -107,6 +147,15 @@ export default function CompanyClient() {
           company={company}
           onClose={() => setEditCompanyOpen(false)}
           onSave={handleSaveCompany}
+        />
+      )}
+
+      {accessModalOpen && (
+        <AccessPasswordModal
+          onClose={() => setAccessModalOpen(false)}
+          onConfirm={handleVerifyAccess}
+          isLoading={accessLoading}
+          error={accessError}
         />
       )}
 
