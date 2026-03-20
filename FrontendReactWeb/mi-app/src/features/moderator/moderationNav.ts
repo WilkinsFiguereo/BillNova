@@ -1,7 +1,13 @@
-import { BarChart2, Building2, FileText, LineChart, Package } from "lucide-react";
+import { BarChart2, Building2, FileText, LineChart, LayoutDashboard, Package } from "lucide-react";
 import type { NavItemData } from "../seller/dashboard/data/chart.data";
 
 export const MODERATOR_NAV_ITEMS: NavItemData[] = [
+  {
+    id: "dashboard",
+    Icon: LayoutDashboard,
+    label: "Dashboard",
+    href: "/navigation/moderation/dashboard/page",
+  },
   {
     id: "companies",
     Icon: Building2,
