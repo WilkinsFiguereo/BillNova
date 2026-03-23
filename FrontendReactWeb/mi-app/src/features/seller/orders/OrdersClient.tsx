@@ -29,6 +29,7 @@ import OrdersTable   from "./sections/OrdersTable";
 import Toast         from "./ui/Toast";
 
 import DetailModal   from "./ui/DetailModal";
+import NewOrderModal from "./ui/NewOrderModal";
 
 import { Sidebar } from "../dashboard/dashboards";
 import { NAV_ITEMS } from "../dashboard/data/chart.data";
@@ -66,7 +67,7 @@ const TOAST_MSG: Record<OrderStatus, string> = {
 
 export default function OrdersClient() {
 
-  const { orders, updateStatus, removeOrder } = useOrders();
+  const { orders, loading, error, updateStatus, removeOrder, reload, createNewOrder } = useOrders();
 
   const { filter, setFilter, search, setSearch, filtered, counts } =
 
@@ -77,6 +78,7 @@ export default function OrdersClient() {
   const [toast,  setToast]  = useState<ToastState | null>(null);
 
   const [detail, setDetail] = useState<Order | null>(null);
+  const [newOpen, setNewOpen] = useState(false);
 
 
 
@@ -108,6 +110,24 @@ export default function OrdersClient() {
 
   }, [removeOrder, showToast]);
 
+  const handleCreate = useCallback(async (payload: {
+    client: string;
+    product: string;
+    qty: number;
+    price_unit: number;
+    phone?: string;
+    address?: string;
+    email?: string;
+  }) => {
+    const res = await createNewOrder(payload);
+    if (res.ok) {
+      showToast("Pedido creado", "success");
+    } else {
+      showToast("No se pudo crear el pedido", "error");
+    }
+    return res;
+  }, [createNewOrder, showToast]);
+
 
 
   return (
@@ -124,7 +144,32 @@ export default function OrdersClient() {
       <Sidebar navItems={NAV_ITEMS} />
 
       <main style={{ flex: 1, overflow: "auto", padding: "32px" }}>
-        <OrdersHeader totalOrders={orders.length} />
+        <OrdersHeader totalOrders={orders.length} onNew={() => setNewOpen(true)} />
+        {loading && (
+          <div style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 12, padding: "16px 20px", marginBottom: 16 }}>
+            Cargando pedidos...
+          </div>
+        )}
+        {error && (
+          <div style={{ background: "#FEE2E2", border: "1px solid #EF4444", borderRadius: 12, padding: "12px 16px", marginBottom: 16, color: "#991B1B", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            <span>{error}</span>
+            <button
+              onClick={() => reload()}
+              style={{
+                background: "#EF4444",
+                color: "#fff",
+                border: "none",
+                borderRadius: 8,
+                padding: "6px 12px",
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Reintentar
+            </button>
+          </div>
+        )}
         <OrdersStats  orders={orders} />
         <OrdersFilters
           counts={counts}
@@ -146,6 +191,13 @@ export default function OrdersClient() {
         onClose={() => setDetail(null)}
         onStatus={(id, st) => { handleStatus(id, st); setDetail(null); }}
       />
+
+      {newOpen && (
+        <NewOrderModal
+          onClose={() => setNewOpen(false)}
+          onCreate={handleCreate}
+        />
+      )}
     </div>
   );
 
