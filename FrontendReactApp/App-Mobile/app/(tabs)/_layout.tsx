@@ -113,6 +113,8 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused }) => <TabIcon name="profile" focused={focused} />,
         }}
       />
+<<<<<<< HEAD
+=======
       <Tabs.Screen
         name="cart"
         options={{
@@ -125,6 +127,7 @@ export default function TabsLayout() {
           href: null
         }}
       />
+>>>>>>> d5a70c78988b43655bd9da58bea46a376cb4ef8a
     </Tabs>
   );
 }

@@ -87,7 +87,7 @@ export function useLogin() {
             values.rememberMe
           );
 
-          router.push("/dashboard");
+          router.push("/navigation/seller/dashboard");
           return;
         }
 

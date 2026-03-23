@@ -21,7 +21,7 @@ import { ProductInfo }       from './sections/ProductInfo';
 import { ReviewsSection }    from './sections/ReviewsSection';
 import { useAddToCart }      from '../cart/hooks/useAddToCart';
 import { IconChevronRight, IconShoppingBag } from '../../shared/ui/Icons';
-
+import { useReviews } from '../productDetail/hooks/useReviews';
 type Props = {
   productId?: number | null;
   navigation?: { goBack: () => void };
@@ -46,7 +46,7 @@ export function ProductDetailPage({ productId = null, navigation }: Props) {
   } = useProductDetail(productId);
 
   const { add } = useAddToCart();
-
+  const { stats } = useReviews(productId);
   const handleAddToCart = useCallback(() => {
     add({ product, quantity, color: selectedColor, size: selectedSize });
     enqueueDetailCart();
@@ -109,6 +109,8 @@ export function ProductDetailPage({ productId = null, navigation }: Props) {
           product={product}
           isWishlisted={isWishlisted}
           onToggleWishlist={toggleWishlist}
+          liveRating={stats.avg}           // 👈
+          liveReviewCount={stats.total}    // 👈
         />
         <View style={s.divider} />
         <ColorSizeSelector

@@ -77,7 +77,10 @@ class AuthApiController(http.Controller):
             'phone': phone,
             'address': address,
             'is_mobile_user': True,
+<<<<<<< HEAD
+=======
             'role': 'seller',
+>>>>>>> d5a70c78988b43655bd9da58bea46a376cb4ef8a
             'res_user_id': user.id,
         })
 
