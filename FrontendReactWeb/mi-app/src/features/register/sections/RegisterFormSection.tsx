@@ -51,7 +51,7 @@ export function RegisterFormSection({ state, onChange, onSubmit }: RegisterFormS
       <SubmitButton isLoading={isLoading} />
 
       <p className="terms">
-        Ya tienes cuenta? <a href="/login">Inicia sesion</a>
+        Al crear tu cuenta aceptas los términos de servicio.
       </p>
     </form>
   );

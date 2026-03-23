@@ -16,7 +16,7 @@ export function validateRegisterForm(v: RegisterPayload): ValidationErrors {
   else if (!/^[a-zA-Z0-9._-]+$/.test(v.username.trim())) err.username = "Solo letras, numeros, punto, guion y guion bajo";
 
   if (!v.password) err.password = "La contrasena es requerida";
-  else if (!/^\d{6,}$/.test(v.password)) err.password = "Debe tener al menos 6 digitos";
+  else if (v.password.length < 6) err.password = "Debe tener al menos 6 caracteres";
 
   return err;
 }

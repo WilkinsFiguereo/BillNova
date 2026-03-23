@@ -56,7 +56,7 @@ export function useRegister() {
         if (res.ok) {
           setState((prev) => ({ ...prev, isLoading: false, success: true }));
           const nextEmail = encodeURIComponent(state.values.email.trim().toLowerCase());
-          setTimeout(() => router.push(`/verify-email?email=${nextEmail}`), 1600);
+          setTimeout(() => router.push(`/navigation/auth/verify-email?email=${nextEmail}`), 1600);
         } else {
           setState((prev) => ({
             ...prev,
