@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useVerifyEmail } from "@/features/auth";
+import { useVerifyEmail } from "@/features/auth/login";
 
 export default function VerifyEmailPage() {
   const search = useSearchParams();
@@ -25,13 +25,19 @@ export default function VerifyEmailPage() {
   return (
     <main className="min-h-screen bg-[#080b12] text-[#e4ebf5] flex items-center justify-center p-4">
       <div className="w-full max-w-md border border-[#1a2235] bg-[#0d1117] p-8 rounded-[2px]">
-        <p className="text-[11px] tracking-[0.2em] uppercase text-[#4f8ef7] mb-2">RF-03 / RF-04</p>
+        <p className="text-[11px] tracking-[0.2em] uppercase text-[#4f8ef7] mb-2">
+          RF-03 / RF-04
+        </p>
         <h1 className="text-2xl font-semibold mb-1">Verifica tu correo</h1>
-        <p className="text-sm text-[#7a8fa8] mb-6">Ingresa el codigo OTP recibido por email.</p>
+        <p className="text-sm text-[#7a8fa8] mb-6">
+          Ingresa el codigo OTP recibido por email.
+        </p>
 
         <div className="space-y-4">
           <div>
-            <label className="text-xs uppercase tracking-[0.18em] text-[#7a8fa8]">Email</label>
+            <label className="text-xs uppercase tracking-[0.18em] text-[#7a8fa8]">
+              Email
+            </label>
             <input
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -40,7 +46,9 @@ export default function VerifyEmailPage() {
             />
           </div>
           <div>
-            <label className="text-xs uppercase tracking-[0.18em] text-[#7a8fa8]">Codigo</label>
+            <label className="text-xs uppercase tracking-[0.18em] text-[#7a8fa8]">
+              Codigo
+            </label>
             <input
               value={code}
               onChange={(e) => setCode(e.target.value)}
@@ -66,12 +74,20 @@ export default function VerifyEmailPage() {
             disabled={isResending || cooldown > 0}
             className="w-full border border-[#2a4063] py-3 text-[#9ec2ec] disabled:opacity-60"
           >
-            {cooldown > 0 ? `Reenviar en ${cooldown}s` : isResending ? "Reenviando..." : "Reenviar codigo"}
+            {cooldown > 0
+              ? `Reenviar en ${cooldown}s`
+              : isResending
+                ? "Reenviando..."
+                : "Reenviar codigo"}
           </button>
 
           {error && <p className="text-sm text-[#f47c7c]">{error}</p>}
           {message && <p className="text-sm text-[#9ce5b9]">{message}</p>}
-          {devCode && <p className="text-xs text-[#9fb4d1]">Codigo de desarrollo: {devCode}</p>}
+          {devCode && (
+            <p className="text-xs text-[#9fb4d1]">
+              Codigo de desarrollo: {devCode}
+            </p>
+          )}
         </div>
 
         <div className="mt-5 text-xs text-[#7a8fa8]">
