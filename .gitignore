@@ -1,5 +1,7 @@
 __pycache__/
 *.pyc
 
+# Ignorar carpetas principales
 FrontendReactApp/
-odoobackend/
+odooBackend/
+

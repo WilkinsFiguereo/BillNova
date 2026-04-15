@@ -1,10 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useForgotPassword } from "@/features/auth";
+import { useForgotPassword } from "@/features/auth/login";
 
 export default function ForgotPasswordPage() {
-  const { values, errors, isLoading, serverError, response, onFieldChange, onSubmit } = useForgotPassword();
+  const {
+    values,
+    errors,
+    isLoading,
+    serverError,
+    response,
+    onFieldChange,
+    onSubmit,
+  } = useForgotPassword();
 
   return (
     <main className="page">
@@ -17,7 +25,12 @@ export default function ForgotPasswordPage() {
         <div className="brand">
           <div className="brand-icon" aria-hidden>
             <svg width="16" height="16" viewBox="0 0 14 14" fill="none">
-              <path d="M7 1L13 4v6L7 13 1 10V4L7 1z" stroke="#fff" strokeWidth="1.4" strokeLinejoin="round" />
+              <path
+                d="M7 1L13 4v6L7 13 1 10V4L7 1z"
+                stroke="#fff"
+                strokeWidth="1.4"
+                strokeLinejoin="round"
+              />
             </svg>
           </div>
           <p className="brand-name">
@@ -33,7 +46,9 @@ export default function ForgotPasswordPage() {
           <h1 className="hero-title">
             Recupera tu cuenta de forma <em>segura</em>.
           </h1>
-          <p className="hero-desc">Te enviaremos OTP o enlace de restablecimiento con expiracion corta.</p>
+          <p className="hero-desc">
+            Te enviaremos OTP o enlace de restablecimiento con expiracion corta.
+          </p>
         </div>
 
         <p className="left-foot">RF-06 Recovery</p>
@@ -44,7 +59,12 @@ export default function ForgotPasswordPage() {
           <div className="mob-brand">
             <div className="mob-brand-icon" aria-hidden>
               <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-                <path d="M7 1L13 4v6L7 13 1 10V4L7 1z" stroke="#fff" strokeWidth="1.4" strokeLinejoin="round" />
+                <path
+                  d="M7 1L13 4v6L7 13 1 10V4L7 1z"
+                  stroke="#fff"
+                  strokeWidth="1.4"
+                  strokeLinejoin="round"
+                />
               </svg>
             </div>
             <p className="mob-brand-name">
@@ -67,7 +87,9 @@ export default function ForgotPasswordPage() {
             <div className="card-body">
               <form onSubmit={onSubmit} className="form" noValidate>
                 <div className="field">
-                  <label className="field-label" htmlFor="email">Email</label>
+                  <label className="field-label" htmlFor="email">
+                    Email
+                  </label>
                   <div className="field-wrap">
                     <input
                       id="email"
@@ -79,18 +101,30 @@ export default function ForgotPasswordPage() {
                       className={`input${errors.email ? " err" : values.email ? " ok" : ""}`}
                     />
                   </div>
-                  <p className={`field-err${errors.email ? " show" : ""}`}>{errors.email}</p>
+                  <p className={`field-err${errors.email ? " show" : ""}`}>
+                    {errors.email}
+                  </p>
                 </div>
 
                 <div className="field">
-                  <label className="field-label" htmlFor="method">Metodo</label>
+                  <label className="field-label" htmlFor="method">
+                    Metodo
+                  </label>
                   <div className="field-wrap">
-                    <select id="method" name="method" value={values.method} onChange={onFieldChange} className="input">
+                    <select
+                      id="method"
+                      name="method"
+                      value={values.method}
+                      onChange={onFieldChange}
+                      className="input"
+                    >
                       <option value="link">Link de reseteo</option>
                       <option value="otp">OTP por email</option>
                     </select>
                   </div>
-                  <p className={`field-err${errors.method ? " show" : ""}`}>{errors.method}</p>
+                  <p className={`field-err${errors.method ? " show" : ""}`}>
+                    {errors.method}
+                  </p>
                 </div>
 
                 {serverError && (
@@ -99,19 +133,36 @@ export default function ForgotPasswordPage() {
                   </div>
                 )}
 
-                <button type="submit" disabled={isLoading} className="btn-submit">
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="btn-submit"
+                >
                   {isLoading ? "Enviando..." : "Enviar instrucciones"}
                 </button>
               </form>
 
               {response?.ok && (
-                <div className="info-box" style={{ marginTop: "1rem", alignItems: "flex-start" }}>
+                <div
+                  className="info-box"
+                  style={{ marginTop: "1rem", alignItems: "flex-start" }}
+                >
                   <div>
                     <p className="info-box-text">{response.message}</p>
-                    {response.dev_otp && <p className="info-box-text">OTP de desarrollo: {response.dev_otp}</p>}
-                    {response.dev_token && <p className="info-box-text">Token de desarrollo: {response.dev_token}</p>}
+                    {response.dev_otp && (
+                      <p className="info-box-text">
+                        OTP de desarrollo: {response.dev_otp}
+                      </p>
+                    )}
+                    {response.dev_token && (
+                      <p className="info-box-text">
+                        Token de desarrollo: {response.dev_token}
+                      </p>
+                    )}
                     <p className="fh-sub" style={{ marginTop: "0.25rem" }}>
-                      <Link href="/reset-password">Ir a restablecer contrasena</Link>
+                      <Link href="/reset-password">
+                        Ir a restablecer contrasena
+                      </Link>
                     </p>
                   </div>
                 </div>

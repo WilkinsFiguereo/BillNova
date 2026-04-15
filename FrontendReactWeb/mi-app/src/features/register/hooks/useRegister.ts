@@ -38,6 +38,7 @@ export function useRegister() {
   const handleSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
+
       console.info("[register] submit intercepted", state.values);
 
       const errors = validateRegisterForm(state.values);

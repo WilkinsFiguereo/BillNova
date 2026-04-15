@@ -206,3 +206,44 @@ class AuthApiController(http.Controller):
             # debug opcional
             'debug_info': {'db': db, 'login_used': login}
         }, status=200)
+
+    @http.route('/api/auth/session', type='http', auth='user', methods=['GET', 'OPTIONS'], csrf=False)
+    def session(self):
+        if request.httprequest.method == 'OPTIONS':
+            return self._options_response()
+
+        user = request.env.user
+        if not user or not user.exists():
+            return self._json_response({'ok': False, 'error': 'No hay sesión activa'}, status=401)
+
+        mobile_user = request.env['billnova.user'].sudo().search(
+            [('res_user_id', '=', user.id)], limit=1
+        )
+
+        return self._json_response({
+            'ok': True,
+            'uid': user.id,
+            'name': user.name,
+            'email': user.email,
+            'role': mobile_user.role if mobile_user else 'seller',
+            'session_token': request.session.sid,
+        })
+
+    @http.route('/api/auth/logout', type='http', auth='user', methods=['POST', 'OPTIONS'], csrf=False)
+    def logout(self):
+        if request.httprequest.method == 'OPTIONS':
+            return self._options_response()
+
+        logout_fn = getattr(request.session, "logout", None)
+        try:
+            if callable(logout_fn):
+                logout_fn()
+            else:
+                request.session.uid = False
+                request.session.login = False
+        except Exception:
+            # Aseguramos que la sesión quede invalidada
+            request.session.uid = False
+            request.session.login = False
+
+        return self._json_response({'ok': True})

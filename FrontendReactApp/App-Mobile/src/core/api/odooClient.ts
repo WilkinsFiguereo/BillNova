@@ -1,6 +1,6 @@
 import { tokenStorage } from '../storage/tokenStorage';
 
-const BASE_URL = process.env.EXPO_PUBLIC_ODOO_URL ?? 'http://localhost:8079';
+const BASE_URL = process.env.EXPO_PUBLIC_ODOO_URL ?? 'https://jwfn4vcd-8079.use2.devtunnels.ms/';
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 

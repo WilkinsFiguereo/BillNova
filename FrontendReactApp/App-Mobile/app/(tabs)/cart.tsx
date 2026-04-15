@@ -1,3 +1,4 @@
+// app/(tabs)/cart.tsx
 import React from "react";
 import { useRouter } from "expo-router";
 import { CartPage } from "../../src/features/cart/CartPage";

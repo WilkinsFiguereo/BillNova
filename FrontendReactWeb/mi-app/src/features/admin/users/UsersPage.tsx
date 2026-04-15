@@ -7,7 +7,9 @@ import { UsersStats }      from "./sections/usersStats";
 import { UsersTable }      from "./sections/usersTable";
 import { UserForm }        from "./sections/userForm";
 import { Modal }           from "./ui/Modal";
+import { UsersSidebar }    from "./ui/UsersSidebar";
 import { colors, font, radius } from "./theme/tokens";
+import { USERS_NAV_ITEMS } from "./data/usersNavigation.data";
 import type { UserModalState } from "./types/user.types";
 
 const CLOSED: UserModalState = { open: false, mode: "create" };
@@ -31,12 +33,31 @@ export function UsersPage() {
   const closeModal = () => setModal(CLOSED);
 
   return (
-    <div style={{
-      padding:    "32px 36px",
-      maxWidth:   1080,
-      margin:     "0 auto",
-      fontFamily: font.family,
-    }}>
+    <div
+      style={{
+        display: "flex",
+        minHeight: "100vh",
+        background: colors.bg.primary,
+        fontFamily: font.family,
+      }}
+    >
+      {/* ── Sidebar ── */}
+      <UsersSidebar navItems={USERS_NAV_ITEMS} />
+
+      {/* ── Main Content ── */}
+      <main
+        style={{
+          flex: 1,
+          overflow: "auto",
+          padding: "32px 36px",
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 1080,
+            margin: "0 auto",
+          }}
+        >
 
       <UsersHeader
         total={resUsers.length}
@@ -127,6 +148,8 @@ export function UsersPage() {
           onCancel={closeModal}
         />
       </Modal>
+        </div>
+      </main>
     </div>
   );
 }
