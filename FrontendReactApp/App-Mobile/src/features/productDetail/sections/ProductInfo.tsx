@@ -8,6 +8,8 @@ type Props = {
   product: Product;
   isWishlisted: boolean;
   onToggleWishlist: () => void;
+  liveRating?: number;        // 👈
+  liveReviewCount?: number;   // 👈
 };
 
 function StarRow({ rating }: { rating: number }) {
@@ -24,7 +26,9 @@ function StarRow({ rating }: { rating: number }) {
   );
 }
 
-export function ProductInfo({ product, isWishlisted, onToggleWishlist }: Props) {
+export function ProductInfo({ product, isWishlisted, onToggleWishlist, liveRating, liveReviewCount }: Props) {
+  const rating      = liveRating      ?? product.rating;
+  const reviewCount = liveReviewCount ?? product.reviewCount;
   return (
     <View style={s.root}>
       {/* Brand + wishlist */}
@@ -46,9 +50,9 @@ export function ProductInfo({ product, isWishlisted, onToggleWishlist }: Props) 
 
       {/* Rating */}
       <View style={s.ratingRow}>
-        <StarRow rating={product.rating} />
-        <Text style={s.ratingNum}>{product.rating}</Text>
-        <Text style={s.reviewCount}>({product.reviewCount.toLocaleString()} reviews)</Text>
+        <StarRow rating={rating} />
+        <Text style={s.ratingNum}>{rating.toFixed(1)}</Text>
+        <Text style={s.reviewCount}>({reviewCount.toLocaleString()} reviews)</Text>
       </View>
 
       {/* Price */}

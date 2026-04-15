@@ -1,28 +1,19 @@
-import React from 'react';
+// src/features/cart/CartPage.tsx
+import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  SafeAreaView,
-  TouchableOpacity,
-  StatusBar,
+  View, Text, ScrollView, StyleSheet,
+  SafeAreaView, TouchableOpacity, StatusBar, Alert,
 } from 'react-native';
 
-import { useCart } from './hooks/useCart';
-import { cartTheme as t } from './theme/cart.theme';
-
-import { CartItemCard } from './ui/CartItemCard';
-import { EmptyCart } from './ui/EmptyCart';
-import { CheckoutBar } from './ui/CheckoutBar';
+import { useCart }            from './hooks/useCart';
+import { cartTheme as t }     from './theme/cart.theme';
+import { submitPosOrder }     from './data/checkoutApi';
+import { CartItemCard }       from './ui/CartItemCard';
+import { EmptyCart }          from './ui/EmptyCart';
+import { CheckoutBar }        from './ui/CheckoutBar';
 import { FreeShippingBanner } from './sections/FreeShippingBanner';
-import { PromoCodeInput } from './sections/PromoCodeInput';
-import { OrderSummary } from './sections/OrderSummary';
-
-import {
-  IconChevronRight,
-  IconShoppingBag,
-} from '../../shared/ui/Icons';
+import { PromoCodeInput }     from './sections/PromoCodeInput';
+import { OrderSummary }       from './sections/OrderSummary';
 
 type Props = {
   navigation?: { goBack: () => void };
@@ -31,17 +22,36 @@ type Props = {
 export function CartPage({ navigation }: Props) {
   const {
     items,
-    promoInput, setPromoInput,
+    promoInput,   setPromoInput,
     appliedPromo, promoError,
     removingId,
-    increment, decrement, removeItem,
-    applyPromo, removePromo,
-    subtotal, promoSaving, shipping, tax, total,
-    totalItems, freeShippingRemaining, SHIPPING_THRESHOLD,
+    increment,    decrement, removeItem,
+    applyPromo,   removePromo,
+    subtotal,     promoSaving, shipping, tax, total,
+    totalItems,   freeShippingRemaining, SHIPPING_THRESHOLD,
+    clearCart,
   } = useCart();
-
+  
   const isEmpty = items.length === 0;
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
+  const handleCheckout = async () => {
+    if (isCheckingOut) return;
+    setIsCheckingOut(true);
+    try {
+      const result = await submitPosOrder(items, tax, total);
+      if (result.ok) {
+        clearCart();
+        Alert.alert('¡Pedido creado!', `Orden #${result.order_id ?? '—'}`);
+      } else {
+        Alert.alert('Error', result.error ?? 'No se pudo crear el pedido');
+      }
+    } finally {
+      setIsCheckingOut(false);
+    }
+  };
+
+  
   return (
     <SafeAreaView style={s.safe}>
       <StatusBar barStyle="dark-content" backgroundColor={t.colors.bgCard} />
@@ -53,13 +63,11 @@ export function CartPage({ navigation }: Props) {
           activeOpacity={0.75}
           style={s.headerBtn}
         >
-          <View style={{ transform: [{ rotate: '180deg' }] }}>
-            <IconChevronRight size={20} color={t.colors.textPrimary} strokeWidth={2.2} />
-          </View>
+          <Text style={s.backArrow}>‹</Text>
         </TouchableOpacity>
 
         <View style={s.headerCenter}>
-          <Text style={s.headerTitle}>My Cart</Text>
+          <Text style={s.headerTitle}>Mi Carrito</Text>
           {!isEmpty && (
             <View style={s.countBadge}>
               <Text style={s.countText}>{totalItems}</Text>
@@ -67,9 +75,7 @@ export function CartPage({ navigation }: Props) {
           )}
         </View>
 
-        <View style={s.headerBtn}>
-          <IconShoppingBag size={20} color={t.colors.primaryLight} />
-        </View>
+        <View style={s.headerBtn} />
       </View>
 
       {isEmpty ? (
@@ -82,15 +88,13 @@ export function CartPage({ navigation }: Props) {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {/* Free shipping progress */}
             <FreeShippingBanner
               remaining={freeShippingRemaining}
               threshold={SHIPPING_THRESHOLD}
             />
 
-            {/* Cart items */}
             <Text style={s.sectionLabel}>
-              {items.length} item{items.length !== 1 ? 's' : ''}
+              {items.length} producto{items.length !== 1 ? 's' : ''}
             </Text>
 
             {items.map((item) => (
@@ -104,9 +108,8 @@ export function CartPage({ navigation }: Props) {
               />
             ))}
 
-            {/* Promo code */}
             <View style={s.promoWrap}>
-              <Text style={s.sectionLabel}>Promo Code</Text>
+              <Text style={s.sectionLabel}>Código de descuento</Text>
               <PromoCodeInput
                 value={promoInput}
                 onChange={setPromoInput}
@@ -117,7 +120,6 @@ export function CartPage({ navigation }: Props) {
               />
             </View>
 
-            {/* Order summary */}
             <OrderSummary
               subtotal={subtotal}
               promoSaving={promoSaving}
@@ -127,11 +129,11 @@ export function CartPage({ navigation }: Props) {
             />
           </ScrollView>
 
-          {/* Sticky checkout */}
           <CheckoutBar
             total={total}
             totalItems={totalItems}
-            onCheckout={() => console.log('Proceed to checkout')}
+            onCheckout={handleCheckout}
+            loading={isCheckingOut}
           />
         </>
       )}
@@ -142,7 +144,7 @@ export function CartPage({ navigation }: Props) {
 const s = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: t.colors.bgCard,
+    backgroundColor: t.colors.bgMain,
   },
   header: {
     flexDirection: 'row',
@@ -161,6 +163,12 @@ const s = StyleSheet.create({
     backgroundColor: t.colors.bgAlt,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  backArrow: {
+    fontSize: 26,
+    color: t.colors.textPrimary,
+    lineHeight: 30,
+    fontWeight: '300',
   },
   headerCenter: {
     flexDirection: 'row',

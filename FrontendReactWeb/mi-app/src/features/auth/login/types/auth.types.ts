@@ -1,7 +1,10 @@
+export type AuthRole = "admin" | "moderation" | "seller" | "user";
+
 export interface AuthUser {
   uid: number;
   name: string;
   email: string;
+  role?: AuthRole;
   sessionToken?: string;
   sessionExpiresAt?: string;
 }
@@ -31,7 +34,27 @@ export interface SessionResponse {
   email?: string;
   session_token?: string;
   session_expires_at?: string;
+<<<<<<< HEAD:FrontendReactWeb/mi-app/src/features/auth/login/types/auth.types.ts
   session_id?: string;
+=======
+  role?: AuthRole;
+  error?: string;
+}
+
+export interface LogoutResponse {
+  ok: boolean;
+  error?: string;
+}
+
+export interface SessionsListResponse {
+  ok: boolean;
+  sessions?: ActiveSession[];
+  error?: string;
+}
+
+export interface RevokeSessionResponse {
+  ok: boolean;
+>>>>>>> dff76de22c0a24dc5ae37d61aec817b910d4b235:FrontendReactWeb/mi-app/src/features/auth/types/auth.types.ts
   error?: string;
 }
 

@@ -1,8 +1,9 @@
 'use client';
 import { useState, useCallback, useMemo } from 'react';
-import { CompanyFormData, FieldError, FormStatus, PasswordStrength } from '../types/companyRegister.types';
+import { CompanyFormData, CompanyRegisterResponse, FieldError, FormStatus, PasswordStrength } from '../types/companyRegister.types';
 import { INITIAL_FORM_DATA } from '../data/companyRegisterData';
 import { C } from '../theme/companyRegisterTheme';
+import { odooPost } from '@/lib/odooApi';
 
 const TOTAL_STEPS = 4;
 
@@ -83,12 +84,49 @@ export const useCompanyRegister = () => {
     if (!validateStep(TOTAL_STEPS)) return;
     setFormStatus('loading');
     try {
-      await new Promise(res => setTimeout(res, 2000));
+      const payload = {
+        companyName: formData.companyName.trim(),
+        taxId: formData.taxId.trim(),
+        industryType: formData.industryType,
+        companySize: formData.companySize,
+        foundedYear: formData.foundedYear.trim(),
+        website: formData.website.trim(),
+        adminFullName: formData.adminFullName.trim(),
+        adminEmail: formData.adminEmail.trim().toLowerCase(),
+        adminPhone: formData.adminPhone.trim(),
+        adminPosition: formData.adminPosition.trim(),
+        country: formData.country,
+        state: formData.state.trim(),
+        city: formData.city.trim(),
+        address: formData.address.trim(),
+        postalCode: formData.postalCode.trim(),
+        password: formData.password,
+        acceptTerms: formData.acceptTerms,
+        acceptMarketing: formData.acceptMarketing,
+      };
+
+      const res = await odooPost<CompanyRegisterResponse>(
+        '/api/company/register',
+        payload,
+        { allowedStatuses: [400, 409] }
+      );
+
+      if (!res.ok) {
+        setFormStatus('error');
+        return;
+      }
+
+      if (res.company_id) {
+        try {
+          localStorage.setItem('billnova_company_id', String(res.company_id));
+        } catch {}
+      }
+
       setFormStatus('success');
     } catch {
       setFormStatus('error');
     }
-  }, [validateStep]);
+  }, [formData, validateStep]);
 
   const progressPercent = useMemo(() => ((currentStep - 1) / (TOTAL_STEPS - 1)) * 100, [currentStep]);
   const passwordStrength = useMemo(() => calcPasswordStrength(formData.password), [formData.password]);

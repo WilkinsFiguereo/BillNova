@@ -1,9 +1,9 @@
+// FrontendReactApp\App-Mobile\src\features\cart\context\CartContext.tsx
 import React, { createContext, useCallback, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 
 import type { CartItem, CartProduct, PromoCode } from '../types/cart.types';
 import {
-  mockCartItems,
   validPromoCodes,
   SHIPPING_THRESHOLD,
   SHIPPING_COST,
@@ -43,6 +43,7 @@ interface CartContextValue {
   freeShippingRemaining: number;
   SHIPPING_THRESHOLD: number;
   addToCart: (payload: AddToCartPayload) => void;
+  clearCart: () => void;
 }
 
 export const CartContext = createContext<CartContextValue | null>(null);
@@ -85,12 +86,12 @@ function normalizeProduct(payload: AddToCartPayload): CartProduct {
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>(mockCartItems);
+  const [items, setItems] = useState<CartItem[]>([]);
   const [promoInput, setPromoInput] = useState('');
   const [appliedPromo, setAppliedPromo] = useState<null | PromoCode>(null);
   const [promoError, setPromoError] = useState('');
   const [removingId, setRemovingId] = useState<string | null>(null);
-
+  console.log('🏗️ [CartProvider] NUEVA INSTANCIA CREADA', new Error().stack?.split('\n')[2]);
   const increment = useCallback((id: string) => {
     setItems((prev) =>
       prev.map((item) =>
@@ -139,14 +140,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setPromoError('');
   }, []);
 
+  const clearCart = useCallback(() => {
+    setItems([]);
+  }, []);
+
+  // CartContext.tsx — solo reemplaza la función addToCart y el useMemo del subtotal
+
   const addToCart = useCallback((payload: AddToCartPayload) => {
+    console.log('🛒 [CartContext] addToCart llamado con:', JSON.stringify(payload, null, 2));
     const normalized = normalizeProduct(payload);
+    console.log('🛒 [CartContext] normalized:', JSON.stringify(normalized, null, 2));
+
     const quantityToAdd = Math.min(
       Math.max(payload.quantity ?? 1, MIN_QUANTITY),
       MAX_QUANTITY
     );
 
     setItems((prev) => {
+      console.log('🛒 [CartContext] items antes:', prev.length);
+
       const existingIndex = prev.findIndex(
         (item) =>
           item.product.id === normalized.id &&
@@ -155,17 +167,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
       );
 
       if (existingIndex >= 0) {
-        return prev.map((item, index) =>
+        const updated = prev.map((item, index) =>
           index === existingIndex
-            ? {
-                ...item,
-                quantity: Math.min(item.quantity + quantityToAdd, MAX_QUANTITY),
-              }
+            ? { ...item, quantity: Math.min(item.quantity + quantityToAdd, MAX_QUANTITY) }
             : item
         );
+        console.log('🛒 [CartContext] item existente actualizado, total items:', updated.length);
+        return updated;
       }
 
-      return [
+      const newItems = [
         ...prev,
         {
           id: `line-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -173,13 +184,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
           quantity: quantityToAdd,
         },
       ];
+      console.log('🛒 [CartContext] item nuevo agregado, total items:', newItems.length);
+      return newItems;
     });
   }, []);
 
+  // ✅ Ahora sí lee item.product.price correctamente
   const subtotal = useMemo(
     () => items.reduce((acc, item) => acc + item.product.price * item.quantity, 0),
     [items]
   );
+
+  const totalItems = items.reduce((acc, item) => acc + item.quantity, 0);
+  const freeShippingRemaining = Math.max(0, SHIPPING_THRESHOLD - (subtotal - (appliedPromo ? subtotal * (appliedPromo.discount / 100) : 0)));
+
 
   const promoSaving = useMemo(
     () => (appliedPromo ? subtotal * (appliedPromo.discount / 100) : 0),
@@ -190,8 +208,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const shipping = taxable >= SHIPPING_THRESHOLD ? 0 : SHIPPING_COST;
   const tax = taxable * TAX_RATE;
   const total = taxable + tax + shipping;
-  const totalItems = items.reduce((acc, item) => acc + item.quantity, 0);
-  const freeShippingRemaining = Math.max(0, SHIPPING_THRESHOLD - taxable);
 
   const value = useMemo(
     () => ({
@@ -215,6 +231,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       freeShippingRemaining,
       SHIPPING_THRESHOLD,
       addToCart,
+      clearCart,
     }),
     [
       items,
@@ -235,6 +252,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       totalItems,
       freeShippingRemaining,
       addToCart,
+      clearCart,
     ]
   );
 

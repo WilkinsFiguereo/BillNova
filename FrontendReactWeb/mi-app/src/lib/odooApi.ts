@@ -1,6 +1,6 @@
 "use client";
 
-export const ODOO_URL = process.env.NEXT_PUBLIC_ODOO_URL ?? "http://localhost:8079";
+export const ODOO_URL = process.env.NEXT_PUBLIC_ODOO_URL ?? "https://jwfn4vcd-8079.use2.devtunnels.ms/";
 const AUTH_API_BASE = "/api/auth";
 
 export function authPath(path: string): string {

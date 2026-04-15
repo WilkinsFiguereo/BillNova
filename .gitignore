@@ -1,2 +1,13 @@
 __pycache__/
 *.pyc
+
+# Ignorar carpetas principales
+FrontendReactApp/
+odooBackend/
+
+# Ignorar rutas específicas dentro del proyecto
+FrontendReactWeb/mi-app/src/features/seller/
+FrontendReactWeb/mi-app/app/navigation/seller/
+
+# Ignorar rutas absolutas (por si acaso, aunque git usa rutas relativas)
+C:/Users/daury/OneDrive/Desktop/BillNova/FrontendReactWeb/mi-app/app/navigation/seller/

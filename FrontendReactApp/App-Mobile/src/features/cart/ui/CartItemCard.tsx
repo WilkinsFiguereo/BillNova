@@ -1,58 +1,58 @@
+// src/features/cart/ui/CartItemCard.tsx
 import React from 'react';
 import {
-  View, Text, Image, TouchableOpacity, StyleSheet, Animated,
+  View, Text, Image, TouchableOpacity, StyleSheet,
 } from 'react-native';
-import { CartItem } from '../types/cart.types';
 import { cartTheme as t } from '../theme/cart.theme';
-import { IconPlus, IconX } from '../../../shared/ui/Icons';
+import type { CartItem } from '../types/cart.types';
 
 type Props = {
-  item: CartItem;
+  item:        CartItem;
   onIncrement: () => void;
   onDecrement: () => void;
-  onRemove: () => void;
-  isRemoving: boolean;
+  onRemove:    () => void;
+  isRemoving:  boolean;
 };
 
 export function CartItemCard({ item, onIncrement, onDecrement, onRemove, isRemoving }: Props) {
   const { product, quantity } = item;
+  const lineTotal = product.price * quantity;
 
   return (
     <View style={[s.card, isRemoving && s.cardRemoving]}>
-      {/* Product image */}
       <Image source={{ uri: product.imageUri }} style={s.image} resizeMode="cover" />
 
-      {/* Info */}
       <View style={s.info}>
-        <View style={s.infoTop}>
-          <View style={{ flex: 1 }}>
-            <Text style={s.brand}>{product.brand}</Text>
-            <Text style={s.name} numberOfLines={2}>{product.name}</Text>
-
-            {/* Variants */}
-            <View style={s.variantRow}>
-              <View style={[s.colorDot, { backgroundColor: product.color }]} />
-              <Text style={s.variantText}>Size {product.size}</Text>
-            </View>
-          </View>
-
-          {/* Remove */}
-          <TouchableOpacity onPress={onRemove} activeOpacity={0.7} style={s.removeBtn}>
-            <IconX size={14} color={t.colors.textDisabled} strokeWidth={2} />
+        <View style={s.topRow}>
+          <Text style={s.brand}>{product.brand}</Text>
+          <TouchableOpacity
+            onPress={onRemove}
+            hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+          >
+            <Text style={s.removeBtn}>✕</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Price + qty */}
-        <View style={s.bottomRow}>
-          <Text style={s.price}>${(product.price * quantity).toFixed(2)}</Text>
+        <Text style={s.name} numberOfLines={2}>{product.name}</Text>
 
-          <View style={s.qtyControl}>
-            <TouchableOpacity onPress={onDecrement} activeOpacity={0.7} style={s.qtyBtn}>
-              <Text style={s.qtyMinus}>−</Text>
+        <View style={s.badgeRow}>
+          <View style={s.badge}>
+            <View style={[s.colorDot, { backgroundColor: product.color }]} />
+          </View>
+          <View style={s.badge}>
+            <Text style={s.badgeText}>{product.size}</Text>
+          </View>
+        </View>
+
+        <View style={s.bottomRow}>
+          <Text style={s.price}>${lineTotal.toFixed(2)}</Text>
+          <View style={s.qtyRow}>
+            <TouchableOpacity onPress={onDecrement} style={s.qtyBtn} activeOpacity={0.7}>
+              <Text style={s.qtyOp}>−</Text>
             </TouchableOpacity>
             <Text style={s.qtyNum}>{quantity}</Text>
-            <TouchableOpacity onPress={onIncrement} activeOpacity={0.7} style={s.qtyBtn}>
-              <IconPlus size={12} color={t.colors.primary} />
+            <TouchableOpacity onPress={onIncrement} style={s.qtyBtn} activeOpacity={0.7}>
+              <Text style={s.qtyOp}>+</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -66,30 +66,21 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: t.colors.bgCard,
     borderRadius: t.radius.lg,
-    padding: t.spacing.md,
     marginBottom: t.spacing.md,
-    borderWidth: 1,
-    borderColor: t.colors.borderLight,
+    overflow: 'hidden',
     ...t.shadow.card,
-    opacity: 1,
   },
-  cardRemoving: {
-    opacity: 0.3,
-  },
-  image: {
-    width: 88,
-    height: 88,
-    borderRadius: t.radius.md,
-    backgroundColor: t.colors.bgAlt,
-  },
+  cardRemoving: { opacity: 0.4 },
+  image: { width: 96, height: 112 },
   info: {
     flex: 1,
-    marginLeft: t.spacing.md,
-    justifyContent: 'space-between',
+    padding: t.spacing.md,
+    gap: 4,
   },
-  infoTop: {
+  topRow: {
     flexDirection: 'row',
-    gap: t.spacing.sm,
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   brand: {
     fontSize: t.font.xs,
@@ -97,71 +88,73 @@ const s = StyleSheet.create({
     color: t.colors.primaryLight,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: 2,
+  },
+  removeBtn: {
+    fontSize: 12,
+    color: t.colors.textDisabled,
+    fontWeight: '600',
   },
   name: {
     fontSize: t.font.md,
     fontWeight: '600',
     color: t.colors.textPrimary,
     lineHeight: 20,
-    marginBottom: t.spacing.xs,
   },
-  variantRow: {
+  badgeRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     gap: t.spacing.xs,
+    marginTop: 2,
   },
-  colorDot: {
-    width: 10,
-    height: 10,
-    borderRadius: t.radius.full,
-    borderWidth: 1,
-    borderColor: t.colors.border,
-  },
-  variantText: {
-    fontSize: t.font.xs,
-    color: t.colors.textDisabled,
-    fontWeight: '500',
-  },
-  removeBtn: {
-    width: 26,
-    height: 26,
-    borderRadius: t.radius.full,
-    backgroundColor: t.colors.bgAlt,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bottomRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  price: {
-    fontSize: t.font.lg,
-    fontWeight: '800',
-    color: t.colors.primary,
-  },
-  qtyControl: {
+  badge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: t.colors.bgAlt,
     borderRadius: t.radius.sm,
-    paddingHorizontal: 2,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  colorDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  badgeText: {
+    fontSize: t.font.xs,
+    fontWeight: '600',
+    color: t.colors.textSecondary,
+  },
+  bottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: t.spacing.xs,
+  },
+  price: {
+    fontSize: t.font.lg,
+    fontWeight: '700',
+    color: t.colors.primary,
+  },
+  qtyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: t.colors.bgAlt,
+    borderRadius: t.radius.md,
+    overflow: 'hidden',
   },
   qtyBtn: {
-    width: 30,
-    height: 28,
+    width: 32,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  qtyMinus: {
+  qtyOp: {
     fontSize: 18,
     fontWeight: '400',
     color: t.colors.primary,
     lineHeight: 20,
   },
   qtyNum: {
-    width: 22,
+    width: 26,
     textAlign: 'center',
     fontSize: t.font.md,
     fontWeight: '700',

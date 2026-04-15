@@ -1,27 +1,32 @@
+// src/features/cart/sections/PromoCodeInput.tsx
 import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import {
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+} from 'react-native';
 import { cartTheme as t } from '../theme/cart.theme';
-import { IconCheck, IconX } from '../../../shared/ui/Icons';
+import type { PromoCode } from '../types/cart.types';
 
 type Props = {
-  value: string;
+  value:    string;
   onChange: (v: string) => void;
-  onApply: () => void;
+  onApply:  () => void;
   onRemove: () => void;
-  applied: { discount: number; label: string } | null;
-  error: string;
+  applied:  PromoCode | null;
+  error:    string;
 };
 
-export function PromoCodeInput({ value, onChange, onApply, onRemove, applied, error }: Props) {
+export function PromoCodeInput({
+  value, onChange, onApply, onRemove, applied, error,
+}: Props) {
   if (applied) {
     return (
       <View style={s.appliedRow}>
-        <View style={s.appliedBadge}>
-          <IconCheck size={13} color={t.colors.success} strokeWidth={2.5} />
-          <Text style={s.appliedText}>{applied.label}</Text>
+        <View>
+          <Text style={s.appliedCode}>{applied.code}</Text>
+          <Text style={s.appliedLabel}>{applied.label}</Text>
         </View>
-        <TouchableOpacity onPress={onRemove} activeOpacity={0.7} style={s.removePromo}>
-          <IconX size={13} color={t.colors.textDisabled} strokeWidth={2} />
+        <TouchableOpacity onPress={onRemove} style={s.removeBtn}>
+          <Text style={s.removeBtnText}>Quitar</Text>
         </TouchableOpacity>
       </View>
     );
@@ -29,64 +34,56 @@ export function PromoCodeInput({ value, onChange, onApply, onRemove, applied, er
 
   return (
     <View style={s.root}>
-      <View style={[s.inputRow, !!error && s.inputRowError]}>
+      <View style={s.inputRow}>
         <TextInput
           style={s.input}
-          placeholder="Promo code"
-          placeholderTextColor={t.colors.textDisabled}
           value={value}
           onChangeText={onChange}
+          placeholder="Código de descuento"
+          placeholderTextColor={t.colors.textDisabled}
           autoCapitalize="characters"
           returnKeyType="done"
           onSubmitEditing={onApply}
         />
-        <TouchableOpacity onPress={onApply} activeOpacity={0.8} style={s.applyBtn}>
-          <Text style={s.applyText}>Apply</Text>
+        <TouchableOpacity onPress={onApply} activeOpacity={0.85} style={s.applyBtn}>
+          <Text style={s.applyBtnText}>Aplicar</Text>
         </TouchableOpacity>
       </View>
-      {!!error && <Text style={s.errorText}>{error}</Text>}
+      {!!error && <Text style={s.error}>{error}</Text>}
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  root: { gap: t.spacing.xs },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: t.colors.border,
-    borderRadius: t.radius.md,
-    backgroundColor: t.colors.bgCard,
-    overflow: 'hidden',
-  },
-  inputRowError: { borderColor: t.colors.error },
+  root:     { gap: t.spacing.xs },
+  inputRow: { flexDirection: 'row', gap: t.spacing.sm },
   input: {
     flex: 1,
     height: 46,
-    paddingHorizontal: t.spacing.lg,
+    backgroundColor: t.colors.bgCard,
+    borderWidth: 1,
+    borderColor: t.colors.borderMid,
+    borderRadius: t.radius.md,
+    paddingHorizontal: t.spacing.md,
     fontSize: t.font.md,
     color: t.colors.textPrimary,
     fontWeight: '600',
-    letterSpacing: 0.5,
   },
   applyBtn: {
+    backgroundColor: t.colors.primary,
+    borderRadius: t.radius.md,
     paddingHorizontal: t.spacing.lg,
-    height: 46,
-    backgroundColor: t.colors.primarySoft,
-    alignItems: 'center',
     justifyContent: 'center',
   },
-  applyText: {
-    fontSize: t.font.sm,
+  applyBtnText: {
+    color: t.colors.white,
     fontWeight: '700',
-    color: t.colors.primary,
+    fontSize: t.font.sm,
   },
-  errorText: {
-    fontSize: t.font.xs,
+  error: {
+    fontSize: t.font.sm,
     color: t.colors.error,
-    marginTop: 2,
-    paddingLeft: 2,
+    fontWeight: '500',
   },
   appliedRow: {
     flexDirection: 'row',
@@ -94,26 +91,28 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     backgroundColor: t.colors.successSoft,
     borderRadius: t.radius.md,
-    paddingHorizontal: t.spacing.lg,
-    paddingVertical: t.spacing.md,
+    padding: t.spacing.md,
   },
-  appliedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: t.spacing.sm,
-    flex: 1,
-  },
-  appliedText: {
-    fontSize: t.font.sm,
-    fontWeight: '600',
+  appliedCode: {
+    fontSize: t.font.md,
+    fontWeight: '700',
     color: t.colors.success,
   },
-  removePromo: {
-    width: 26,
-    height: 26,
-    borderRadius: t.radius.full,
-    backgroundColor: 'rgba(0,0,0,0.06)',
-    alignItems: 'center',
-    justifyContent: 'center',
+  appliedLabel: {
+    fontSize: t.font.sm,
+    color: t.colors.success,
+    fontWeight: '500',
+  },
+  removeBtn: {
+    paddingHorizontal: t.spacing.md,
+    paddingVertical: t.spacing.xs,
+    borderRadius: t.radius.sm,
+    borderWidth: 1,
+    borderColor: t.colors.success,
+  },
+  removeBtnText: {
+    color: t.colors.success,
+    fontSize: t.font.sm,
+    fontWeight: '600',
   },
 });

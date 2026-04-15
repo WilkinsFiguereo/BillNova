@@ -1,3 +1,4 @@
+// FrontendReactApp\App-Mobile\src\features\productDetail\ui\AddToCartBar.tsx
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { productDetailTheme as t } from '../theme/productDetail.theme';

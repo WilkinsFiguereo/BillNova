@@ -1,3 +1,4 @@
+<<<<<<< HEAD:FrontendReactWeb/mi-app/src/features/auth/register/data/api.ts
 ﻿import type { RegisterPayload, RegisterResponse } from "../types/register.types";
 
 const ODOO_URL = (process.env.NEXT_PUBLIC_ODOO_URL ?? "http://localhost:8079").replace(/\/+$/, "");
@@ -29,3 +30,24 @@ export const registerApi = {
   register: (payload: RegisterPayload): Promise<RegisterResponse> =>
     odooPost<RegisterResponse>("/api/auth/register", payload),
 };
+=======
+import type { RegisterPayload, RegisterResponse } from "../types/register.types";
+import { authPath, odooPost } from "@/lib/odooApi";
+
+export const registerApi = {
+  register: (payload: RegisterPayload): Promise<RegisterResponse> => {
+    return odooPost<RegisterResponse>(
+      authPath("/register"),
+      {
+        name: payload.name.trim(),
+        login: payload.username.trim(),                
+        password: payload.password,
+        email: payload.email.trim().toLowerCase(),      
+        phone: payload.phone?.trim() || null,           // 👈 opcional
+        address: payload.address?.trim() || null,       // 👈 opcional
+      },
+      { allowedStatuses: [400, 409] }
+    );
+  },
+};
+>>>>>>> dff76de22c0a24dc5ae37d61aec817b910d4b235:FrontendReactWeb/mi-app/src/features/register/data/api.ts

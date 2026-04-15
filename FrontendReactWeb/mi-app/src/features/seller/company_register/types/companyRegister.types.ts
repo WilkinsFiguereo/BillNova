@@ -44,3 +44,12 @@ export interface PasswordStrength {
   color: string;
   percent: number;
 }
+
+export interface CompanyRegisterResponse {
+  ok: boolean;
+  company_id?: number;
+  user_id?: number;
+  billnova_user_id?: number;
+  error?: string;
+  missing?: string[];
+}

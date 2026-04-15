@@ -1,4 +1,6 @@
-export type CartProduct = {
+// src/features/cart/types/cart.types.ts
+
+export interface CartProduct {
   id: string;
   name: string;
   brand: string;
@@ -6,16 +8,21 @@ export type CartProduct = {
   imageUri: string;
   color: string;
   size: string;
-};
+}
 
-export type CartItem = {
-  id: string; // unique cart line id
+export interface CartItem {
+  id: string;
   product: CartProduct;
   quantity: number;
-};
+}
 
-export type PromoCode = {
+export interface PromoCode {
   code: string;
-  discount: number; // percentage
+  discount: number;
   label: string;
+}
+
+export type AddToCartPayload = {
+  product: CartProduct;
+  quantity?: number;
 };

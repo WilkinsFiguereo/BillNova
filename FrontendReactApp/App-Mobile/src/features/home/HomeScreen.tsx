@@ -4,10 +4,7 @@ import {
   ActivityIndicator, Text, TouchableOpacity,
 } from 'react-native';
 import { useAuth } from '../auth/hooks/useAuth';
-<<<<<<< HEAD
-=======
 import { useCart } from '../cart/hooks/useCart';
->>>>>>> d5a70c78988b43655bd9da58bea46a376cb4ef8a
 import { useProducts, useProductSearch } from './hooks/useHome';
 import { HeroSection } from './sections/hero';
 import { CategoriesSection } from './sections/categories';
@@ -37,10 +34,7 @@ export function HomeScreen({
   onAddToCart,
 }: HomeScreenProps) {
   const { user } = useAuth();
-<<<<<<< HEAD
-=======
   const { totalItems } = useCart();
->>>>>>> d5a70c78988b43655bd9da58bea46a376cb4ef8a
   const { products, featured, isLoading, error, refreshing, refresh, toggleFavorite } = useProducts();
   const { query, setQuery, activeCategory, setActive, filtered } = useProductSearch(products);
 
@@ -87,10 +81,7 @@ export function HomeScreen({
         user={user}
         onMenuPress={openLeft}
         onCartPress={openRight}
-<<<<<<< HEAD
-=======
         cartCount={totalItems}
->>>>>>> d5a70c78988b43655bd9da58bea46a376cb4ef8a
       />
 
       {/* 📜 Main Content */}
@@ -132,8 +123,9 @@ export function HomeScreen({
 
      
       {/* 📂 Drawers */}
-      <LeftDrawer visible={leftOpen} onClose={closeAll} />
-      <RightDrawer visible={rightOpen} onClose={closeAll} />
+      <DrawerOverlay visible={leftOpen || rightOpen} onPress={closeAll} />
+      <LeftDrawer open={leftOpen} onClose={closeAll} />
+      <RightDrawer open={rightOpen} onClose={closeAll} />
 
       {/* 🌑 Overlay */}
       <DrawerOverlay visible={leftOpen || rightOpen} onPress={closeAll} />
@@ -161,8 +153,4 @@ const styles = StyleSheet.create({
     borderRadius: 12, paddingHorizontal: 28, paddingVertical: 11,
   },
   retryText: { color: '#fff', fontSize: 13.5, fontWeight: '600' },
-<<<<<<< HEAD
 });
-=======
-});
->>>>>>> d5a70c78988b43655bd9da58bea46a376cb4ef8a

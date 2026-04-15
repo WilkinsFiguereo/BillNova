@@ -10,6 +10,7 @@ import {
 } from "../data/storage";
 import { validateLogin } from "../data/validators";
 import type { LoginPayload } from "../types/auth.types";
+import { getLandingRouteForRole } from "../navigation";
 
 type LoginErrors = Partial<Record<keyof LoginPayload, string>>;
 
@@ -76,6 +77,7 @@ export function useLogin() {
          * En Odoo el login es exitoso si existe UID.
          */
         if (response?.uid) {
+<<<<<<< HEAD:FrontendReactWeb/mi-app/src/features/auth/login/hooks/useLogin.ts
           persistAuthState(
             {
               uid: response.uid,
@@ -86,8 +88,26 @@ export function useLogin() {
             },
             values.rememberMe
           );
+=======
+          let sessionInfo = null;
+          try {
+            sessionInfo = await authApi.getSession(response.session_token ?? undefined);
+          } catch {
+            sessionInfo = null;
+          }
+>>>>>>> dff76de22c0a24dc5ae37d61aec817b910d4b235:FrontendReactWeb/mi-app/src/features/auth/hooks/useLogin.ts
 
-          router.push("/dashboard");
+          const sessionUser = {
+            uid: sessionInfo?.uid ?? response.uid,
+            email: sessionInfo?.email ?? values.username,
+            name: sessionInfo?.name ?? values.username,
+            role: sessionInfo?.role ?? "seller",
+            sessionToken: sessionInfo?.session_token ?? response.session_token ?? null,
+            sessionExpiresAt: sessionInfo?.session_expires_at ?? null,
+          };
+
+          persistAuthState(sessionUser, values.rememberMe);
+          router.push(getLandingRouteForRole(sessionUser.role));
           return;
         }
 

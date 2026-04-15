@@ -6,9 +6,10 @@ import T from "../theme/ordersTheme";
 
 interface Props {
   totalOrders: number;
+  onNew: () => void;
 }
 
-export default function OrdersHeader({ totalOrders }: Props) {
+export default function OrdersHeader({ totalOrders, onNew }: Props) {
   return (
     <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 24 }}>
       <div>
@@ -35,6 +36,7 @@ export default function OrdersHeader({ totalOrders }: Props) {
           style={{ background: T.brand600, border: "none", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, color: "#fff", cursor: "pointer", fontFamily: "inherit" }}
           onMouseEnter={(e) => (e.currentTarget.style.background = T.brand700)}
           onMouseLeave={(e) => (e.currentTarget.style.background = T.brand600)}
+          onClick={onNew}
         >
           + Nuevo Pedido
         </button>
