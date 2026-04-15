@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { ordersTheme as t } from '../theme/orders.theme';
 import type { Order, OrderStatus } from '../types/orders.types';
 
-const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; bg: string }> = {
+export const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; bg: string }> = {
   pending:   { label: 'Pendiente',  color: t.colors.warning,  bg: t.colors.warningSoft },
   confirmed: { label: 'Confirmado', color: t.colors.primaryLight, bg: t.colors.primarySoft },
   delivered: { label: 'Entregado',  color: t.colors.success,  bg: t.colors.successSoft },

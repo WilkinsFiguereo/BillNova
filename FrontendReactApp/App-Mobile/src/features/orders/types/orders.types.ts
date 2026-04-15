@@ -7,6 +7,12 @@ export interface OrderLine {
   priceUnit: number;
 }
 
+export interface OrderInvoice {
+  id: string;
+  reference: string;
+  url: string;
+}
+
 export interface Order {
   id: string;
   reference: string;
@@ -14,6 +20,7 @@ export interface Order {
   status: OrderStatus;
   total: number;
   lines: OrderLine[];
+  invoice?: OrderInvoice | null;
 }
 
 export type FilterTab = 'all' | OrderStatus;

@@ -26,27 +26,28 @@ export function useSession(): UseSessionReturn {
     const cached = getStoredAuthState();
     if (cached) setUser(cached);
 
-    try {
-      const response = await authApi.getSession(cached?.sessionToken);
-      if (response.ok && response.uid && response.email && response.name) {
-        const sessionUser = {
-          uid: response.uid,
-          email: response.email,
-          name: response.name,
-          sessionToken: response.session_token ?? cached?.sessionToken,
-          sessionExpiresAt: response.session_expires_at ?? cached?.sessionExpiresAt,
-        };
-        setUser(sessionUser);
-        persistAuthState(sessionUser, getRememberMeDefault());
-      } else {
-        setUser(null);
-        clearStoredAuthState();
-      }
-    } catch {
-      setUser(cached);
-    } finally {
-      setIsLoading(false);
-    }
+        try {
+          const response = await authApi.getSession(cached?.sessionToken);
+          if (response.ok && response.uid && response.email && response.name) {
+            const sessionUser = {
+              uid: response.uid,
+              email: response.email,
+              name: response.name,
+              role: response.role ?? cached?.role,
+              sessionToken: response.session_token ?? cached?.sessionToken ?? null,
+              sessionExpiresAt: response.session_expires_at ?? cached?.sessionExpiresAt,
+            };
+            setUser(sessionUser);
+            persistAuthState(sessionUser, getRememberMeDefault());
+          } else {
+            setUser(null);
+            clearStoredAuthState();
+          }
+        } catch {
+          setUser(cached);
+        } finally {
+          setIsLoading(false);
+        }
   }, []);
 
   const logout = useCallback(async () => {

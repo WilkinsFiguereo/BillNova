@@ -10,6 +10,7 @@ import {
 } from "../data/storage";
 import { validateLogin } from "../data/validators";
 import type { LoginPayload } from "../types/auth.types";
+import { getLandingRouteForRole } from "../navigation";
 
 type LoginErrors = Partial<Record<keyof LoginPayload, string>>;
 
@@ -76,18 +77,24 @@ export function useLogin() {
          * En Odoo el login es exitoso si existe UID.
          */
         if (response?.uid) {
-          persistAuthState(
-            {
-              uid: response.uid,
-              email: response.email ?? values.username,
-              name: response.name ?? values.username,
-              sessionToken: response.session_token ?? null,
-              sessionExpiresAt: response.session_expires_at ?? null,
-            },
-            values.rememberMe
-          );
+          let sessionInfo = null;
+          try {
+            sessionInfo = await authApi.getSession(response.session_token ?? undefined);
+          } catch {
+            sessionInfo = null;
+          }
 
-          router.push("/navigation/seller/dashboard");
+          const sessionUser = {
+            uid: sessionInfo?.uid ?? response.uid,
+            email: sessionInfo?.email ?? values.username,
+            name: sessionInfo?.name ?? values.username,
+            role: sessionInfo?.role ?? "seller",
+            sessionToken: sessionInfo?.session_token ?? response.session_token ?? null,
+            sessionExpiresAt: sessionInfo?.session_expires_at ?? null,
+          };
+
+          persistAuthState(sessionUser, values.rememberMe);
+          router.push(getLandingRouteForRole(sessionUser.role));
           return;
         }
 

@@ -2,10 +2,10 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
+
 import { CartProvider } from '../src/features/cart/context/CartContext';
 import { AuthProvider } from '../src/core/providers/AuthProvider';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-
 import { useEffect } from 'react';
 import * as NavigationBar from 'expo-navigation-bar';
 
@@ -21,23 +21,6 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AuthProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          {/* Grupo de autenticación */}
-          <Stack.Screen name="(auth)" />
-
-          {/* Tabs principales */}
-          <Stack.Screen name="(tabs)" />
-
-          {/* Modal de registro */}
-          <Stack.Screen
-            name="modal"
-            options={{
-              presentation: 'modal',
-              title: 'Registro',
-              headerShown: true,
-            }}
-          />
-        </Stack>
         <CartProvider>
           <Stack screenOptions={{ headerShown: false }}>
             {/* Grupo de autenticación */}
@@ -59,8 +42,7 @@ export default function RootLayout() {
         </CartProvider>
       </AuthProvider>
 
-      {/* 🔥 Oculta barra superior */}
-      <StatusBar hidden />
+      <StatusBar style="auto" />
     </ThemeProvider>
   );
 }

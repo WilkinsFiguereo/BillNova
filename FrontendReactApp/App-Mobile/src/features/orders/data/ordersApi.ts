@@ -13,4 +13,9 @@ export const ordersApi = {
     if (res.error) return { ok: false, error: res.error };
     return { ok: true, data: res.data?.data ?? [] };
   },
+  async cancel(orderId: string): Promise<{ ok: boolean; error?: string }> {
+    const res = await odooClient.post<{ ok: boolean; error?: string }>(`/api/pos/order/${orderId}/cancel`, {});
+    if (res.error) return { ok: false, error: res.error };
+    return { ok: true };
+  },
 };

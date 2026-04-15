@@ -9,7 +9,7 @@ import {
 import { Producto, VistaMode, OrdenCampo, OrdenDir } from "../types/productos.types";
 import { StockBadge } from "../ui/ProductoCard";
 import { productosTheme as t } from "../theme/productos.theme";
-import { CATEGORIAS } from "../data/productos.data";
+// categories will be computed from current productos list
 
 interface ProductosTableSectionProps {
   productos: Producto[];
@@ -23,7 +23,9 @@ interface ProductosTableSectionProps {
   onCategoriaChange: (v: string) => void;
   onVistaModeChange: (v: VistaMode) => void;
   onToggleOrden: (campo: OrdenCampo) => void;
-  onAction: (msg: string) => void;
+  onView: (p: Producto) => void;
+  onEdit: (p: Producto) => void;
+  onDelete: (p: Producto) => void;
 }
 
 // ─── Icono de orden en columna ────────────────────────────────────────
@@ -35,12 +37,14 @@ function OrdenIcon({ campo, activo, dir }: { campo: OrdenCampo; activo: OrdenCam
 }
 
 // ─── Vista Tabla ─────────────────────────────────────────────────────
-function VistaTabla({ productos, ordenCampo, ordenDir, onToggleOrden, onAction }: {
+function VistaTabla({ productos, ordenCampo, ordenDir, onToggleOrden, onView, onEdit, onDelete }: {
   productos: Producto[];
   ordenCampo: OrdenCampo;
   ordenDir: OrdenDir;
   onToggleOrden: (c: OrdenCampo) => void;
-  onAction: (msg: string) => void;
+  onView: (p: Producto) => void;
+  onEdit: (p: Producto) => void;
+  onDelete: (p: Producto) => void;
 }) {
   const headers: { label: string; campo?: OrdenCampo }[] = [
     { label: "Producto",   campo: "nombre"    },
@@ -173,15 +177,15 @@ function VistaTabla({ productos, ordenCampo, ordenDir, onToggleOrden, onAction }
                 <td style={{ padding: "14px 16px" }}>
                   <div style={{ display: "flex", gap: 4 }}>
                     <button className="action-btn" title="Ver" style={{ color: t.brand400 }}
-                      onClick={() => onAction(`Abriendo ${p.nombre}...`)}>
+                      onClick={() => onView(p)}>
                       <Eye size={15} />
                     </button>
                     <button className="action-btn" title="Editar" style={{ color: t.textSecondary }}
-                      onClick={() => onAction(`Editando ${p.nombre}...`)}>
+                      onClick={() => onEdit(p)}>
                       <Pencil size={15} />
                     </button>
                     <button className="action-btn" title="Eliminar" style={{ color: t.error }}
-                      onClick={() => onAction(`${p.nombre} eliminado`)}>
+                      onClick={() => onDelete(p)}>
                       <Trash2 size={15} />
                     </button>
                   </div>
@@ -196,9 +200,11 @@ function VistaTabla({ productos, ordenCampo, ordenDir, onToggleOrden, onAction }
 }
 
 // ─── Vista Grilla ─────────────────────────────────────────────────────
-function VistaGrilla({ productos, onAction }: {
+function VistaGrilla({ productos, onView, onEdit, onDelete }: {
   productos: Producto[];
-  onAction: (msg: string) => void;
+  onView: (p: Producto) => void;
+  onEdit: (p: Producto) => void;
+  onDelete: (p: Producto) => void;
 }) {
   return (
     <div style={{
@@ -268,15 +274,15 @@ function VistaGrilla({ productos, onAction }: {
             {/* Acciones */}
             <div style={{ display: "flex", gap: 6, borderTop: `1px solid ${t.border}`, paddingTop: 12 }}>
               <button className="action-btn" style={{ flex: 1, justifyContent: "center", display: "flex", color: t.brand400 }}
-                onClick={() => onAction(`Abriendo ${p.nombre}...`)}>
+                onClick={() => onView(p)}>
                 <Eye size={14} />
               </button>
               <button className="action-btn" style={{ flex: 1, justifyContent: "center", display: "flex", color: t.textSecondary }}
-                onClick={() => onAction(`Editando ${p.nombre}...`)}>
+                onClick={() => onEdit(p)}>
                 <Pencil size={14} />
               </button>
               <button className="action-btn" style={{ flex: 1, justifyContent: "center", display: "flex", color: t.error }}
-                onClick={() => onAction(`${p.nombre} eliminado`)}>
+                onClick={() => onDelete(p)}>
                 <Trash2 size={14} />
               </button>
             </div>
@@ -292,7 +298,7 @@ export function ProductosTableSection({
   productos, search, categoriaActiva, vistaMode,
   ordenCampo, ordenDir, totalCount,
   onSearchChange, onCategoriaChange, onVistaModeChange,
-  onToggleOrden, onAction,
+  onToggleOrden, onView, onEdit, onDelete,
 }: ProductosTableSectionProps) {
   return (
     <div style={{
@@ -308,7 +314,10 @@ export function ProductosTableSection({
       }}>
         {/* Filtros de categoría */}
         <div style={{ display: "flex", gap: 6 }}>
-          {CATEGORIAS.map((cat) => (
+          {React.useMemo(() => {
+            const cats = ["Todas", ...new Set(productos.map((p) => p.categoria))];
+            return cats;
+          }, [productos]).map((cat) => (
             <button
               key={cat}
               onClick={() => onCategoriaChange(cat)}
@@ -382,10 +391,12 @@ export function ProductosTableSection({
           ordenCampo={ordenCampo}
           ordenDir={ordenDir}
           onToggleOrden={onToggleOrden}
-          onAction={onAction}
+          onView={onView}
+          onEdit={onEdit}
+          onDelete={onDelete}
         />
       ) : (
-        <VistaGrilla productos={productos} onAction={onAction} />
+        <VistaGrilla productos={productos} onView={onView} onEdit={onEdit} onDelete={onDelete} />
       )}
 
       {/* ── Footer ── */}

@@ -8,6 +8,15 @@ class ProyectAppUser(models.Model):
     email = fields.Char(string='Email')
     phone = fields.Char(string='Telefono')
     address = fields.Char(string='Direccion')
-    role = fields.Selection([('admin', 'Admin'), ('user', 'Usuario'), ('seller', 'Vendedor')], string='Rol', default='user')
+    role = fields.Selection(
+        [
+            ('admin', 'Admin'),
+            ('moderation', 'Moderación'),
+            ('seller', 'Vendedor'),
+            ('user', 'Usuario'),
+        ],
+        string='Rol',
+        default='seller',
+    )
     is_mobile_user = fields.Boolean(string='Es Usuario Móvil')
     res_user_id = fields.Many2one('res.users', required=True, ondelete='cascade')

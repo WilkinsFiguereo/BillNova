@@ -3,7 +3,7 @@
 import { Order, OrderStatus } from "../types/order.types";
 import mockOrders from "./mockOrders";
 
-const BASE_URL = (process.env.NEXT_PUBLIC_ODOO_URL ?? "http://localhost:8079").replace(/\/+$/, "");
+const BASE_URL = (process.env.NEXT_PUBLIC_ODOO_URL ?? "https://jwfn4vcd-8079.use2.devtunnels.ms/").replace(/\/+$/, "");
 
 export async function fetchOrders(): Promise<Order[]> {
   const res = await fetch(`${BASE_URL}/api/orders`, { cache: "no-store", credentials: "include" });

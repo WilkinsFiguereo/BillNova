@@ -41,31 +41,52 @@ class CompanyApiController(http.Controller):
 
         payload = request.httprequest.get_json(silent=True) or {}
 
-        company = request.env["res.company"].sudo().create({
-            "name": payload.get("company_name"),
-            "ruc": payload.get("ruc"),
-            "sector": payload.get("sector"),
-            "founding_year": payload.get("founding_year"),
-            "website": payload.get("website"),
-            "company_size": payload.get("company_size"),
+        # ✅ VALIDACIÓN OBLIGATORIA
+        name = (
+            payload.get("company_name") or
+            payload.get("companyName") or
+            payload.get("name")
+        )
+        
+        if not name:
+            return self._json_response({
+                "ok": False,
+                "error": "company_name is required"
+            }, 400)
 
-            # contacto
-            "contact_name": payload.get("contact_name"),
-            "contact_email": payload.get("contact_email"),
-            "contact_phone": payload.get("contact_phone"),
+        try:
+            company = request.env["res.company"].sudo().create({
+                "name": name,  # 👈 YA NUNCA SERÁ NULL
 
-            # direccion
-            "country_id": payload.get("country_id"),
-            "address_state": payload.get("state"),
-            "address_city": payload.get("city"),
-            "street": payload.get("address"),
-            "zip": payload.get("postal_code"),
+                "ruc": payload.get("ruc"),
+                "sector": payload.get("sector"),
+                "founding_year": payload.get("founding_year"),
+                "website": payload.get("website"),
+                "company_size": payload.get("company_size"),
 
-            # acceso
-            "access_password": payload.get("password"),
-        })
+                # contacto
+                "contact_name": payload.get("contact_name"),
+                "contact_email": payload.get("contact_email"),
+                "contact_phone": payload.get("contact_phone"),
 
-        return self._json_response({
-            "ok": True,
-            "company_id": company.id
-        }, 201)
+                # dirección
+                "country_id": payload.get("country_id"),
+                "address_state": payload.get("state"),
+                "address_city": payload.get("city"),
+                "street": payload.get("address"),
+                "zip": payload.get("postal_code"),
+
+                # acceso
+                "access_password": payload.get("password"),
+            })
+
+            return self._json_response({
+                "ok": True,
+                "company_id": company.id
+            }, 201)
+
+        except Exception as e:
+            return self._json_response({
+                "ok": False,
+                "error": str(e)
+            }, 500)

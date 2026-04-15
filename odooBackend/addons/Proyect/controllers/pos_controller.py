@@ -1,3 +1,5 @@
+import os
+
 from odoo import http
 from odoo.http import request, Response
 import json as json_lib
@@ -80,12 +82,64 @@ class PosApiController(http.Controller):
             'amount_return': 0,
         })
 
-        return self._json_response({'ok': True, 'order_id': order.id}, 201)
+        company = request.env['res.company'].sudo().browse(1)
+
+        partner = request.env['res.partner'].sudo().search([], limit=1)
+        if not partner:
+            return self._json_response({'ok': False, 'error': 'No customer found'}, 400)
+
+        invoice_lines = []
+        for line in lines:
+            p_id = int(line['product_id'])
+            qty = float(line['qty'])
+            price = float(line['price_unit'])
+            product = request.env['product.product'].sudo().browse(p_id)
+            invoice_lines.append((0, 0, {
+                'product_id': p_id,
+                'quantity': qty,
+                'price_unit': price,
+                'name': product.name,
+                'tax_ids': [(6, 0, product.taxes_id.ids)],
+            }))
+
+        invoice = request.env['account.move'].sudo().create({
+            'move_type': 'out_invoice',
+            'partner_id': partner.id,
+            'company_id': company.id,
+            'invoice_line_ids': invoice_lines,
+            'invoice_origin': order.name,
+        })
+        invoice.action_post()
+
+        return self._json_response({'ok': True, 'order_id': order.id, 'invoice_id': invoice.id}, 201)
+
+    @http.route('/api/pos/order/<int:order_id>/cancel', type='http', auth='public', methods=['POST', 'OPTIONS'], csrf=False)
+    def cancel_pos_order(self, order_id):
+        if request.httprequest.method == 'OPTIONS':
+            return self._options_response()
+
+        order = request.env['pos.order'].sudo().browse(order_id)
+        if not order:
+            return self._json_response({'ok': False, 'error': 'Pedido no encontrado'}, 404)
+
+        if order.state in ('done', 'cancel'):
+            return self._json_response({'ok': False, 'error': 'No se puede cancelar este pedido'}, 400)
+
+        order.sudo().write({'state': 'cancel'})
+        return self._json_response({'ok': True})
 
     @http.route('/api/pos/orders', type='http', auth='public', methods=['GET', 'OPTIONS'], csrf=False)
     def list_pos_orders(self):
         if request.httprequest.method == 'OPTIONS':
             return self._options_response()
+
+        DEFAULT_BASE_URL = "https://jwfn4vcd-8079.use2.devtunnels.ms/"
+        env_url = os.environ.get('ODOO_PUBLIC_URL') or os.environ.get('NEXT_PUBLIC_ODOO_URL')
+        base_url = (
+            env_url
+            or request.httprequest.host_url
+            or DEFAULT_BASE_URL
+        ).rstrip('/')
 
         orders = request.env['pos.order'].sudo().search([], order='date_order desc', limit=50)
         data = [{
@@ -100,6 +154,43 @@ class PosApiController(http.Controller):
                 'quantity': l.qty,
                 'priceUnit': l.price_unit,
             } for l in o.lines],
+            'invoice': None,
         } for o in orders]
 
+        for entry, o in zip(data, orders):
+            invoice = request.env['account.move'].sudo().search(
+                [('invoice_origin', '=', o.name)], limit=1)
+        if invoice:
+            entry['invoice'] = {
+                'id': str(invoice.id),
+                'reference': invoice.name,
+                'url': f"{base_url}/web#id={invoice.id}&model=account.move&view_type=form",
+            }
+
         return self._json_response({'ok': True, 'data': data})
+
+    @http.route('/api/pos/order/<int:order_id>/invoice', type='http', auth='public', methods=['GET', 'OPTIONS'], csrf=False)
+    def download_invoice(self, order_id):
+        if request.httprequest.method == 'OPTIONS':
+            return self._options_response()
+
+        order = request.env['pos.order'].sudo().browse(order_id)
+        invoice = request.env['account.move'].sudo().search(
+            [('invoice_origin', '=', order.name)], limit=1)
+        if not invoice:
+            return self._json_response({'ok': False, 'error': 'Factura no encontrada'}, 404)
+
+        report = request.env.ref('account.account_invoices').sudo()
+        pdf, _ = report._render_qweb_pdf(report.id, res_ids=[invoice.id])
+        filename = f"factura-{invoice.name or invoice.id}.pdf"
+        headers = self._cors_headers()
+        headers.update({
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': f'attachment; filename="{filename}"',
+        })
+
+        return Response(
+            pdf,
+            status=200,
+            headers=headers,
+        )

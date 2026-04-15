@@ -1,1 +1,1 @@
-from . import users, company
+from . import users, company, product

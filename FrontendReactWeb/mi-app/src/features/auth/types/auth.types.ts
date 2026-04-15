@@ -1,7 +1,10 @@
+export type AuthRole = "admin" | "moderation" | "seller" | "user";
+
 export interface AuthUser {
   uid: number;
   name: string;
   email: string;
+  role?: AuthRole;
   sessionToken?: string;
   sessionExpiresAt?: string;
 }
@@ -30,6 +33,23 @@ export interface SessionResponse {
   email?: string;
   session_token?: string;
   session_expires_at?: string;
+  role?: AuthRole;
+  error?: string;
+}
+
+export interface LogoutResponse {
+  ok: boolean;
+  error?: string;
+}
+
+export interface SessionsListResponse {
+  ok: boolean;
+  sessions?: ActiveSession[];
+  error?: string;
+}
+
+export interface RevokeSessionResponse {
+  ok: boolean;
   error?: string;
 }
 

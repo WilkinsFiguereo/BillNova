@@ -1,19 +1,5 @@
 "use client";
 
-<<<<<<< HEAD
-import { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { registerApi } from "../data/api";
-import { validateRegisterForm } from "../data/validators";
-import type { RegisterPayload, RegisterFormState } from "../types/register.types";
-
-const INITIAL_VALUES: RegisterPayload = {
-  name: "", login: "", password: "", email: "", phone: "", address: "",
-};
-
-const INITIAL_STATE: RegisterFormState = {
-  values: INITIAL_VALUES, errors: {}, isLoading: false, serverError: null, success: false,
-=======
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { registerApi } from "../data/api";
@@ -33,26 +19,12 @@ const INITIAL_STATE: RegisterFormState = {
   isLoading: false,
   serverError: null,
   success: false,
->>>>>>> d5a70c78988b43655bd9da58bea46a376cb4ef8a
 };
 
 export function useRegister() {
   const router = useRouter();
   const [state, setState] = useState<RegisterFormState>(INITIAL_STATE);
 
-<<<<<<< HEAD
-  const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      const { name, value } = e.target;
-      setState((prev) => ({
-        ...prev,
-        values: { ...prev.values, [name]: value },
-        errors: { ...prev.errors, [name]: undefined },
-        serverError: null,
-      }));
-    }, []
-  );
-=======
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setState((prev) => ({
@@ -62,41 +34,11 @@ export function useRegister() {
       serverError: null,
     }));
   }, []);
->>>>>>> d5a70c78988b43655bd9da58bea46a376cb4ef8a
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
-<<<<<<< HEAD
-      const errors = validateRegisterForm(state.values);
-      if (Object.keys(errors).length > 0) {
-        setState((prev) => ({ ...prev, errors }));
-        return;
-      }
-      setState((prev) => ({ ...prev, isLoading: true, serverError: null }));
-      try {
-        const res = await registerApi.register(state.values);
-        if (res.ok) {
-          setState((prev) => ({ ...prev, isLoading: false, success: true }));
-          setTimeout(() => router.push("/login"), 2200);
-        } else {
-          setState((prev) => ({
-            ...prev, isLoading: false,
-            serverError: res.error ?? "Error al registrar la cuenta",
-          }));
-        }
-      } catch {
-        setState((prev) => ({
-          ...prev, isLoading: false,
-          serverError: "No se pudo conectar con el servidor.",
-        }));
-      }
-    }, [state.values, router]
-  );
 
-  return { state, handleChange, handleSubmit };
-}
-=======
       console.info("[register] submit intercepted", state.values);
 
       const errors = validateRegisterForm(state.values);
@@ -137,4 +79,3 @@ export function useRegister() {
 
   return { state, handleChange, handleSubmit };
 }
->>>>>>> d5a70c78988b43655bd9da58bea46a376cb4ef8a
