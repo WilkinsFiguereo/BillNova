@@ -60,14 +60,17 @@ class ProductApiController(http.Controller):
 
     # ── LIST  /api/products?company_id=3 ─────────────────────
     @http.route('/api/products', type='http', auth='none',
-                methods=['GET', 'OPTIONS'], csrf=False)
-    def list_products(self):
+            methods=['GET', 'OPTIONS'], csrf=False)
+    def list_products(self, **kwargs):
         if request.httprequest.method == 'OPTIONS':
             return self._options_response()
 
-        # Filtro opcional por empresa
         domain = []
-        company_id = request.httprequest.args.get('company_id')
+
+        # Puedes usar cualquiera de los dos:
+        company_id = kwargs.get('company_id')  # ✅ recomendado
+        # company_id = request.httprequest.args.get('company_id')  # también funciona
+
         if company_id:
             try:
                 domain.append(('company_id', '=', int(company_id)))
@@ -77,8 +80,11 @@ class ProductApiController(http.Controller):
                 )
 
         products = request.env['product.product'].sudo().search(domain)
-        return self._json_response({'ok': True, 'data': [self._serialize(p) for p in products]})
 
+        return self._json_response({
+            'ok': True,
+            'data': [self._serialize(p) for p in products]
+        })
     # ── GET ONE  /api/products/<id> ───────────────────────────
     @http.route('/api/products/<int:product_id>', type='http', auth='none',
                 methods=['GET', 'OPTIONS'], csrf=False)
@@ -93,7 +99,7 @@ class ProductApiController(http.Controller):
         return self._json_response({'ok': True, 'data': self._serialize(product)})
 
     # ── CREATE  POST /api/products/create ────────────────────
-    @http.route('/api/products/create', type='http', auth='none',
+    @http.route('/api/products/create', type='http', auth='public',
                 methods=['POST', 'OPTIONS'], csrf=False)
     def create_product(self):
         if request.httprequest.method == 'OPTIONS':

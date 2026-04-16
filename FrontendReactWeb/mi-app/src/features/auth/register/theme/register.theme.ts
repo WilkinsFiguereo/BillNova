@@ -38,7 +38,6 @@ export const registerTheme = {
 
 /** Clases Tailwind base para inputs */
 export const inputBase =
-<<<<<<< HEAD:FrontendReactWeb/mi-app/src/features/auth/register/theme/register.theme.ts
   "w-full bg-transparent text-[#e4ebf5] placeholder:text-[#3d5166] " +
   "text-sm border border-[#1e2d42] rounded-[2px] " +
   "py-3 pl-10 pr-4 outline-none transition-all duration-200 " +
@@ -46,12 +45,3 @@ export const inputBase =
 
 export const labelBase =
   "block text-[10px] font-semibold tracking-[0.2em] text-[#7a8fa8] uppercase mb-1.5";
-=======
-  "w-full bg-[#0a1628]/65 text-[#e4ebf5] placeholder:text-[#547098] " +
-  "text-sm border border-[#27406a] rounded-[2px] " +
-  "py-3 pl-10 pr-4 outline-none transition-all duration-200 " +
-  "focus:border-[#67b8ff] focus:ring-2 focus:ring-[#67b8ff]/25 resize-none";
-
-export const labelBase =
-  "block text-[10px] font-semibold tracking-[0.2em] text-[#9db2ce] uppercase mb-1.5";
->>>>>>> dff76de22c0a24dc5ae37d61aec817b910d4b235:FrontendReactWeb/mi-app/src/features/register/theme/register.theme.ts

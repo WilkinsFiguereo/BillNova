@@ -95,87 +95,64 @@ class AuthApiController(http.Controller):
         if request.httprequest.method == 'OPTIONS':
             return self._options_response()
 
-        # ────────────────────────────────────────────────
-        # Tus logs de debug (manténlos)
-        # ────────────────────────────────────────────────
         _logger.info("LOGIN DEBUG - Headers: %s", dict(request.httprequest.headers))
-        _logger.info("LOGIN DEBUG - Content-Type: %s", request.httprequest.content_type)
 
         try:
             payload = request.httprequest.get_json(silent=False)
         except Exception as json_err:
-            _logger.error("LOGIN ERROR - No es JSON válido: %s", str(json_err))
             return self._json_response(
-                {'ok': False, 'error': 'El body debe ser un JSON válido (Content-Type: application/json)'},
+                {'ok': False, 'error': 'El body debe ser JSON válido'},
                 status=400
             )
 
-        _logger.info("LOGIN DEBUG - Payload recibido (tipo: %s): %s", type(payload), payload)
-
         if not isinstance(payload, dict):
-            _logger.error("LOGIN ERROR - Payload no es dict, es: %s", type(payload))
             return self._json_response(
-                {'ok': False, 'error': 'Formato inválido: se esperaba un objeto JSON {}'},
+                {'ok': False, 'error': 'Formato inválido'},
                 status=400
             )
 
         login = payload.get('login')
         password = payload.get('password')
 
-        _logger.info("LOGIN DEBUG - login: %s | password presente: %s", login, bool(password))
-
         if not login or not password:
             return self._json_response(
-                {'ok': False, 'error': 'Se requieren los campos "login" y "password"'},
+                {'ok': False, 'error': 'login y password requeridos'},
                 status=400
             )
 
         db = request.env.cr.dbname
-        if not request.session.db:
-            request.session.db = db
-            _logger.info("LOGIN DEBUG - Asignada DB a sesión: %s", db)
 
-        # ────────────────────────────────────────────────
-        # AUTENTICACIÓN - patrón compatible (del código que funciona)
-        # ────────────────────────────────────────────────
+        # 🔥 CLAVE: contexto interactivo
+        env = request.env(context=dict(request.env.context, interactive=True))
+
         uid = False
-        user_agent_env = request.httprequest.environ or {}   # equivalente a user_agent_env
 
         try:
-            _logger.info("LOGIN DEBUG - Intentando autenticar (modo moderno) con login: %s", login)
-
-            # Intento 1: estilo Odoo nuevo (dict de credenciales)
             credential = {
                 'type': 'password',
                 'login': login,
                 'password': password,
             }
-            # Nota: algunos versiones esperan solo credential, otras credential + env
-            try:
-                auth_info = request.env['res.users'].sudo().authenticate(credential, user_agent_env)
-                uid = auth_info.get('uid') if auth_info else False
-            except TypeError:
-                # Si falla por argumentos → prueba solo credential
-                auth_info = request.env['res.users'].sudo().authenticate(credential)
-                uid = auth_info.get('uid') if auth_info else False
+
+            # Método moderno
+            auth_info = env['res.users'].sudo().authenticate(
+                credential,
+                request.httprequest.environ
+            )
+            uid = auth_info.get('uid') if auth_info else False
 
         except Exception as e:
-            _logger.debug("Modo moderno falló: %s - %s", type(e).__name__, str(e))
+            _logger.warning("Auth moderno falló: %s", str(e))
             uid = False
 
-        # Fallback: modo antiguo (directo en el registro)
+        # Fallback clásico
         if not uid:
-            _logger.info("LOGIN DEBUG - Cayendo a fallback (modo antiguo)")
             try:
-                user = request.env['res.users'].sudo().search([('login', '=', login)], limit=1)
+                user = env['res.users'].sudo().search([('login', '=', login)], limit=1)
                 if user:
-                    # Solo password (tu versión no acepta env como dict)
-                    user._check_credentials(password)   # ← sin segundo argumento
+                    user._check_credentials(password)
                     uid = user.id
-            except odoo.exceptions.AccessDenied:
-                uid = False
-            except Exception as fallback_err:
-                _logger.error("Fallback error: %s", str(fallback_err))
+            except Exception:
                 uid = False
 
         if not uid:
@@ -184,36 +161,32 @@ class AuthApiController(http.Controller):
                 status=401
             )
 
-        # Configurar sesión (necesario para mantener auth en llamadas futuras)
-        # Configurar sesión
+        # ✅ Crear sesión correctamente
         request.session.db = db
         request.session.uid = uid
         request.session.login = login
 
-        # Intento opcional de corregir idioma (solo si existe el método)
         if hasattr(request.session, '_fix_lang'):
             try:
-                request.session._fix_lang(request.env)
+                request.session._fix_lang(env)
             except Exception:
                 pass
-     
-        _logger.info("LOGIN ÉXITO - UID: %s | session.sid: %s", uid, request.session.sid)
+
+        _logger.info("LOGIN OK - UID: %s", uid)
 
         return self._json_response({
             'ok': True,
             'uid': uid,
             'session_id': request.session.sid,
-            # debug opcional
-            'debug_info': {'db': db, 'login_used': login}
         }, status=200)
-
-    @http.route('/api/auth/session', type='http', auth='user', methods=['GET', 'OPTIONS'], csrf=False)
+    
+    @http.route('/api/auth/session', type='http', auth='public', methods=['GET', 'OPTIONS'], csrf=False)
     def session(self):
         if request.httprequest.method == 'OPTIONS':
             return self._options_response()
 
         user = request.env.user
-        if not user or not user.exists():
+        if not user or user._is_public():
             return self._json_response({'ok': False, 'error': 'No hay sesión activa'}, status=401)
 
         mobile_user = request.env['billnova.user'].sudo().search(

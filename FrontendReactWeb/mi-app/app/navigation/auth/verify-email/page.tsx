@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useVerifyEmail } from "@/features/auth/login";
+import { useVerifyEmail } from "@/features/login/login";
 
 export default function VerifyEmailPage() {
   const search = useSearchParams();

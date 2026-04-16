@@ -3,14 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { authApi } from "../data/api";
-import {
-  getRememberMeDefault,
-  getRememberedEmail,
-  persistAuthState,
-} from "../data/storage";
+import { getRememberMeDefault, getRememberedEmail, persistAuthState } from "../data/storage";
 import { validateLogin } from "../data/validators";
 import type { LoginPayload } from "../types/auth.types";
-import { getLandingRouteForRole } from "../navigation";
 
 type LoginErrors = Partial<Record<keyof LoginPayload, string>>;
 
@@ -22,112 +17,75 @@ const INITIAL_VALUES: LoginPayload = {
 
 export function useLogin() {
   const router = useRouter();
-
   const [values, setValues] = useState<LoginPayload>(INITIAL_VALUES);
   const [errors, setErrors] = useState<LoginErrors>({});
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
+  const [verificationEmail, setVerificationEmail] = useState<string>("");
 
   useEffect(() => {
     const remembered = getRememberMeDefault();
     const username = remembered ? getRememberedEmail() : "";
-
     if (remembered || username) {
-      setValues((prev) => ({
-        ...prev,
-        rememberMe: remembered,
-        username,
-      }));
+      setValues((prev) => ({ ...prev, rememberMe: remembered, username }));
     }
   }, []);
 
-  const onFieldChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const { name, type, checked, value } = e.target;
+  const onFieldChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, type, checked, value } = e.target;
+    setValues((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
+    setErrors((prev) => ({ ...prev, [name]: undefined }));
+    setServerError(null);
+    setErrorCode(null);
+    if (name === "username") setVerificationEmail("");
+  }, []);
 
-      setValues((prev) => ({
-        ...prev,
-        [name]: type === "checkbox" ? checked : value,
-      }));
+  const onSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const nextErrors = validateLogin(values);
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      return;
+    }
 
-      setErrors((prev) => ({ ...prev, [name]: undefined }));
-      setServerError(null);
-    },
-    []
-  );
+    setIsLoading(true);
+    setServerError(null);
+    setErrorCode(null);
 
-  const onSubmit = useCallback(
-    async (e: React.FormEvent<HTMLFormElement>) => {
-      e.preventDefault();
-
-      const nextErrors = validateLogin(values);
-      if (Object.keys(nextErrors).length > 0) {
-        setErrors(nextErrors);
+    try {
+      const response = await authApi.login(values);
+      if (response.ok && response.uid) {
+        persistAuthState(
+      {
+          uid: response.uid,
+          email: values.username, // 👈 usa esto
+          name: values.username,
+          sessionToken: response.session_id,
+        },
+        values.rememberMe,
+      );
+        router.push("/dashboard");
         return;
       }
 
-      setIsLoading(true);
-      setServerError(null);
-
-      try {
-        const response = await authApi.login(values);
-
-        /**
-         * 🔥 CLAVE:
-         * En Odoo el login es exitoso si existe UID.
-         */
-        if (response?.uid) {
-<<<<<<< HEAD:FrontendReactWeb/mi-app/src/features/auth/login/hooks/useLogin.ts
-          persistAuthState(
-            {
-              uid: response.uid,
-              email: response.email ?? values.username,
-              name: response.name ?? values.username,
-              sessionToken: response.session_token ?? response.session_id ?? null,
-              sessionExpiresAt: response.session_expires_at ?? null,
-            },
-            values.rememberMe
-          );
-=======
-          let sessionInfo = null;
-          try {
-            sessionInfo = await authApi.getSession(response.session_token ?? undefined);
-          } catch {
-            sessionInfo = null;
-          }
->>>>>>> dff76de22c0a24dc5ae37d61aec817b910d4b235:FrontendReactWeb/mi-app/src/features/auth/hooks/useLogin.ts
-
-          const sessionUser = {
-            uid: sessionInfo?.uid ?? response.uid,
-            email: sessionInfo?.email ?? values.username,
-            name: sessionInfo?.name ?? values.username,
-            role: sessionInfo?.role ?? "seller",
-            sessionToken: sessionInfo?.session_token ?? response.session_token ?? null,
-            sessionExpiresAt: sessionInfo?.session_expires_at ?? null,
-          };
-
-          persistAuthState(sessionUser, values.rememberMe);
-          router.push(getLandingRouteForRole(sessionUser.role));
-          return;
-        }
-
-        // Si no hay UID, es error real
-        setServerError(response?.error ?? "Credenciales inválidas.");
-      } catch (error) {
-        console.error("Login error:", error);
-        setServerError("No se pudo conectar con el servidor.");
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [router, values]
-  );
+      setErrorCode(response.code ?? null);
+      setVerificationEmail(response.email ?? "");
+      setServerError(response.error ?? "Credenciales invalidas.");
+    } catch {
+      setServerError("No se pudo conectar con el servidor.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [router, values]);
 
   return {
     values,
     errors,
     isLoading,
     serverError,
+    errorCode,
+    verificationEmail,
     onFieldChange,
     onSubmit,
   };

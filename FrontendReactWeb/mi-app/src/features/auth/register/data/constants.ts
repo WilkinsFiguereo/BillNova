@@ -1,4 +1,3 @@
-<<<<<<< HEAD:FrontendReactWeb/mi-app/src/features/auth/register/data/constants.ts
 /* ─────────────────────────────────────────
    REGISTER FEATURE — Data / Constants
    Configuración declarativa de los campos
@@ -58,47 +57,10 @@ export const REGISTER_FIELDS: FieldConfig[] = [
     placeholder: "Calle Principal 123, Ciudad",
     required:    false,
     colSpan:     "full",
-=======
-import type { FieldConfig } from "../types/register.types";
-
-export const REGISTER_FIELDS: FieldConfig[] = [
-  {
-    name: "name",
-    label: "Nombre",
-    type: "text",
-    placeholder: "Juan Perez",
-    required: true,
-    colSpan: "full",
-  },
-  {
-    name: "email",
-    label: "Correo",
-    type: "email",
-    placeholder: "usuario@correo.com",
-    required: true,
-    colSpan: "full",
-  },
-  {
-    name: "username",
-    label: "Nombre de usuario",
-    type: "text",
-    placeholder: "juan.perez",
-    required: true,
-    colSpan: "full",
-  },
-  {
-    name: "password",
-    label: "Contrasena",
-    type: "password",
-    placeholder: "Minimo 6 digitos",
-    required: true,
-    colSpan: "full",
->>>>>>> dff76de22c0a24dc5ae37d61aec817b910d4b235:FrontendReactWeb/mi-app/src/features/register/data/constants.ts
   },
 ];
 
 export const FIELD_ICONS: Record<string, string> = {
-<<<<<<< HEAD:FrontendReactWeb/mi-app/src/features/auth/register/data/constants.ts
   name:     "user",
   login:    "at-sign",
   email:    "mail",
@@ -106,10 +68,3 @@ export const FIELD_ICONS: Record<string, string> = {
   phone:    "phone",
   address:  "map-pin",
 };
-=======
-  name: "user",
-  email: "mail",
-  username: "at-sign",
-  password: "lock",
-};
->>>>>>> dff76de22c0a24dc5ae37d61aec817b910d4b235:FrontendReactWeb/mi-app/src/features/register/data/constants.ts

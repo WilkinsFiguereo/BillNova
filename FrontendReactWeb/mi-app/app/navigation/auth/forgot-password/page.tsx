@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useForgotPassword } from "@/features/auth/login";
+import { useForgotPassword } from "@/features/login/login";
 
 export default function ForgotPasswordPage() {
   const {

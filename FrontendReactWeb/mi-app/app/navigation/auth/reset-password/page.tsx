@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useResetPassword } from "@/features/auth/login";
+import { useResetPassword } from "@/features/login/login";
 
 export default function ResetPasswordPage() {
   const searchParams = useSearchParams();
