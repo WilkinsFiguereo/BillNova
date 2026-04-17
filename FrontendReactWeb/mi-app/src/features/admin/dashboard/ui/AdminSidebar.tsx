@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Shield } from "lucide-react";
 import { colors, font } from "../../users/theme/tokens";
+import { UserProfileSidebarSection } from "./UserProfileSidebarSection";
 import type { AdminNavItemData } from "../data/adminNavigation.data";
 
 interface AdminSidebarProps {
@@ -37,12 +38,13 @@ export function AdminSidebar({ navItems }: AdminSidebarProps) {
               style={{
                 width: 36,
                 height: 36,
-                background: `linear-gradient(135deg, ${colors.brand[600]}, ${colors.brand[400]})`,
-                borderRadius: 10,
+                background: colors.bg.alt ?? "#EFF6FF",
+                borderRadius: 999,
+                border: `1px solid ${colors.border}`,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "white",
+                color: colors.accent,
               }}
             >
               <Shield size={18} />
@@ -51,7 +53,7 @@ export function AdminSidebar({ navItems }: AdminSidebarProps) {
               <div style={{ fontSize: 14, fontWeight: 700, color: colors.text.primary }}>
                 BizAdmin
               </div>
-              <div style={{ fontSize: 10, color: colors.text.disabled, letterSpacing: "0.05em" }}>
+              <div style={{ fontSize: 10, color: colors.text.tertiary, letterSpacing: "0.05em" }}>
                 ENTERPRISE
               </div>
             </div>
@@ -69,19 +71,6 @@ export function AdminSidebar({ navItems }: AdminSidebarProps) {
           gap: 4,
         }}
       >
-        <div
-          style={{
-            fontSize: 10,
-            fontWeight: 700,
-            color: colors.text.disabled,
-            letterSpacing: "0.1em",
-            padding: "0 8px",
-            marginBottom: 8,
-          }}
-        >
-          MENU PRINCIPAL
-        </div>
-
         {navItems.map((item) => {
           const isActive =
             pathname === item.href || pathname.startsWith(item.href + "/");
@@ -96,11 +85,23 @@ export function AdminSidebar({ navItems }: AdminSidebarProps) {
                   padding: "10px 16px",
                   borderRadius: 10,
                   cursor: "pointer",
-                  transition: "all 0.2s",
+                  transition: "all 0.2s ease",
                   fontSize: 14,
                   fontWeight: 500,
-                  color: isActive ? colors.brand[600] : colors.text.secondary,
-                  background: isActive ? colors.brand[100] : "transparent",
+                  color: isActive ? colors.accent : colors.text.secondary,
+                  background: isActive ? "#E5EDFF" : "transparent",
+                }}
+                onMouseEnter={(e) => {
+                  if (!isActive) {
+                    (e.currentTarget as HTMLDivElement).style.background = colors.bg.alt ?? "#F3F4F6";
+                    (e.currentTarget as HTMLDivElement).style.color = colors.text.primary;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) {
+                    (e.currentTarget as HTMLDivElement).style.background = "transparent";
+                    (e.currentTarget as HTMLDivElement).style.color = colors.text.secondary;
+                  }
                 }}
               >
                 <item.Icon size={18} />
@@ -112,42 +113,7 @@ export function AdminSidebar({ navItems }: AdminSidebarProps) {
       </nav>
 
       {/* User Avatar */}
-      <div
-        style={{
-          marginTop: "auto",
-          padding: "12px",
-          background: colors.bg.alt,
-          borderRadius: 12,
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-        }}
-      >
-        <div
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: "50%",
-            background: `linear-gradient(135deg, ${colors.brand[600]}, ${colors.brand[400]})`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 13,
-            color: "white",
-            fontWeight: 700,
-          }}
-        >
-          AD
-        </div>
-        <div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: colors.text.primary }}>
-            Admin Demo
-          </div>
-          <div style={{ fontSize: 10, color: colors.text.disabled }}>
-            Administrador
-          </div>
-        </div>
-      </div>
+      <UserProfileSidebarSection />
     </aside>
   );
 }

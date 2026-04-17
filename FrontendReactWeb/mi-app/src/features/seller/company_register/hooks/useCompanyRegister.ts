@@ -5,7 +5,7 @@ import { INITIAL_FORM_DATA } from '../data/companyRegisterData';
 import { C } from '../theme/companyRegisterTheme';
 import { odooPost } from '@/lib/odooApi';
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 6;
 
 export const calcPasswordStrength = (pw: string): PasswordStrength => {
   if (!pw) return { score: 0, label: '', color: C.borderDefault, percent: 0 };
@@ -50,17 +50,28 @@ export const useCompanyRegister = () => {
       if (!formData.companySize)         errs.push({ field:'companySize',  message:'Selecciona el tamaño' });
     }
     if (step === 2) {
+      if (!formData.companyType)         errs.push({ field:'companyType',  message:'Selecciona si venderás productos o servicios' });
+    }
+    if (step === 3) {
+      if (formData.companyType === 'productos' && formData.products.length === 0) {
+        errs.push({ field:'products', message:'Agrega al menos un producto' });
+      }
+      if (formData.companyType === 'servicios' && formData.services.length === 0) {
+        errs.push({ field:'services', message:'Agrega al menos un servicio' });
+      }
+    }
+    if (step === 4) {
       if (!formData.adminFullName.trim()) errs.push({ field:'adminFullName', message:'Nombre completo requerido' });
       if (!formData.adminEmail.trim())    errs.push({ field:'adminEmail',    message:'Email requerido' });
       else if (!/\S+@\S+\.\S+/.test(formData.adminEmail)) errs.push({ field:'adminEmail', message:'Formato de email inválido' });
       if (!formData.adminPhone.trim())    errs.push({ field:'adminPhone',    message:'Teléfono requerido' });
     }
-    if (step === 3) {
+    if (step === 5) {
       if (!formData.country)              errs.push({ field:'country',  message:'País requerido' });
       if (!formData.city.trim())          errs.push({ field:'city',     message:'Ciudad requerida' });
       if (!formData.address.trim())       errs.push({ field:'address',  message:'Dirección requerida' });
     }
-    if (step === 4) {
+    if (step === 6) {
       if (!formData.password)             errs.push({ field:'password', message:'Contraseña requerida' });
       else if (formData.password.length < 8) errs.push({ field:'password', message:'Mínimo 8 caracteres' });
       if (formData.password !== formData.confirmPassword) errs.push({ field:'confirmPassword', message:'Las contraseñas no coinciden' });

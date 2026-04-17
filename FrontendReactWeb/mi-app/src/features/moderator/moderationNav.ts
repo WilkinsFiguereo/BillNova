@@ -36,6 +36,6 @@ export const MODERATOR_NAV_ITEMS: NavItemData[] = [
     id: "reports",
     Icon: FileText,
     label: "Reportes",
-    href: "/navigation/moderation/reports/page",
+    href: "/navigation/reports/page",
   },
 ];

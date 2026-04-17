@@ -1,88 +1,88 @@
+"use client";
 import { useState, useEffect, useCallback } from "react";
 import {
   apiGetResUsers,
   apiGetBillnovaUsers,
+  apiGetResUser,
+  apiGetBillnovaUser,
   apiDeleteResUser,
   apiDeleteBillnovaUser,
 } from "../data/userApi";
 import { mockResUsers, mockBillnovaUsers } from "../data/mockUsers";
 import type { ResUser, BillnovaUser } from "../types/user.types";
 
-export interface UseUsersReturn {
-  resUsers:      ResUser[];
-  billnovaUsers: BillnovaUser[];
-  loading:       boolean;
-  error:         string | null;
-  deleting:      number | null;
-  refresh:       () => Promise<void>;
-  removeUser:    (resUserId: number) => Promise<void>;
-}
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
-export function useUsers(): UseUsersReturn {
+export function useUsers() {
   const [resUsers,      setResUsers]      = useState<ResUser[]>([]);
   const [billnovaUsers, setBillnovaUsers] = useState<BillnovaUser[]>([]);
   const [loading,       setLoading]       = useState(true);
   const [error,         setError]         = useState<string | null>(null);
   const [deleting,      setDeleting]      = useState<number | null>(null);
 
-  const USE_MOCK = true;
-
-  const refresh = useCallback(async () => {
+  const fetch = useCallback(async () => {
     setLoading(true);
     setError(null);
-    if (USE_MOCK) {
-      await new Promise((r) => setTimeout(r, 250));
-      setResUsers(mockResUsers);
-      setBillnovaUsers(mockBillnovaUsers);
-      setLoading(false);
-      return;
-    }
     try {
-      const [ru, bu] = await Promise.all([
-        apiGetResUsers(),
-        apiGetBillnovaUsers(),
-      ]);
-      setResUsers(ru);
-      setBillnovaUsers(bu);
-    } catch (e) {
-      const msg = (e as Error).message;
-      if (msg.toLowerCase().includes("failed to fetch")) {
-        setError("No se pudo conectar con el servidor. Verifica que la API esté en línea.");
+      if (USE_MOCK) {
+        setResUsers(mockResUsers);
+        setBillnovaUsers(mockBillnovaUsers);
       } else {
-        setError(msg);
+        const [res, bill] = await Promise.all([
+          apiGetResUsers(),
+          apiGetBillnovaUsers(),
+        ]);
+        setResUsers(res);
+        setBillnovaUsers(bill);
       }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Error al cargar usuarios.");
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => { fetch(); }, [fetch]);
 
-  const removeUser = useCallback(async (resUserId: number) => {
-    setDeleting(resUserId);
-    if (USE_MOCK) {
-      setResUsers((prev) => prev.filter((u) => u.id !== resUserId));
-      setBillnovaUsers((prev) => prev.filter((u) => u.res_user_id !== resUserId));
-      setDeleting(null);
-      return;
-    }
+  const getUser = useCallback(async (id: number, userType: "res" | "billnova"): Promise<ResUser | BillnovaUser | null> => {
     try {
-      // Primero elimina billnova.user (el cascade lo haría igual, pero lo hacemos explícito)
-      const bu = billnovaUsers.find((b) => b.res_user_id === resUserId);
-      if (bu) await apiDeleteBillnovaUser(bu.id);
-      await apiDeleteResUser(resUserId);
-      await refresh();
-    } catch (e) {
-      const msg = (e as Error).message;
-      if (msg.toLowerCase().includes("failed to fetch")) {
-        setError("No se pudo conectar con el servidor. Verifica que la API esté en línea.");
+      if (userType === "res") {
+        return await apiGetResUser(id);
       } else {
-        setError(msg);
+        return await apiGetBillnovaUser(id);
       }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Error al obtener usuario.");
+      return null;
+    }
+  }, []);
+
+  const removeUser = useCallback(async (id: number) => {
+    setDeleting(id);
+    try {
+      const isRes = resUsers.some(u => u.id === id);
+      if (isRes) {
+        await apiDeleteResUser(id);
+        setResUsers(prev => prev.filter(u => u.id !== id));
+      } else {
+        await apiDeleteBillnovaUser(id);
+        setBillnovaUsers(prev => prev.filter(u => u.id !== id));
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Error al eliminar usuario.");
     } finally {
       setDeleting(null);
     }
-  }, [billnovaUsers, refresh]);
+  }, [resUsers]);
 
-  return { resUsers, billnovaUsers, loading, error, deleting, refresh, removeUser };
+  return {
+    resUsers,
+    billnovaUsers,
+    loading,
+    error,
+    deleting,
+    refresh: fetch,
+    getUser,
+    removeUser,
+  };
 }

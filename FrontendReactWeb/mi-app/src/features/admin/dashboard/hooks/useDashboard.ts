@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { DashboardData, Period } from '../types/dashboard.types';
-import { mockDashboardData } from '../data/dashboardData';
+import { fetchDashboardData } from '../data/dashboardApi';
 
 interface UseDashboardReturn {
   data: DashboardData | null;
@@ -25,11 +25,11 @@ export function useDashboard(): UseDashboardReturn {
     try {
       isRefresh ? setIsRefreshing(true) : setIsLoading(true);
       setError(null);
-      // Replace with: const res = await fetch(`/api/dashboard?period=${selectedPeriod}`);
-      await new Promise((r) => setTimeout(r, 700));
-      setData(mockDashboardData);
-    } catch {
-      setError('No se pudo cargar la información del dashboard.');
+      const dashboardData = await fetchDashboardData(selectedPeriod);
+      setData(dashboardData);
+    } catch (err: unknown) {
+      console.error("Dashboard error:", err);
+      setError(err instanceof Error ? err.message : 'No se pudo cargar la información del dashboard.');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);

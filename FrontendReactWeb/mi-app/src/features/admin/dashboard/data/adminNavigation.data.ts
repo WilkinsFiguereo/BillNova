@@ -1,4 +1,12 @@
-import { LayoutDashboard, Users, type LucideIcon } from "lucide-react";
+import {
+  Building2,
+  FileText,
+  LayoutDashboard,
+  Package,
+  ShoppingCart,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 
 export interface AdminNavItemData {
   id: string;
@@ -19,5 +27,23 @@ export const ADMIN_NAV_ITEMS: AdminNavItemData[] = [
     Icon: Users,
     label: "Usuarios",
     href: "/navigation/admin/users/page",
+  },
+  {
+    id: "empresas",
+    Icon: Building2,
+    label: "Empresas",
+    href: "/navigation/admin/companies/page",
+  },
+  {
+    id: "productos",
+    Icon: Package,
+    label: "Productos",
+    href: "/navigation/admin/products/page",
+  },
+  {
+    id: "reportes",
+    Icon: FileText,
+    label: "Reportar Problemas",
+    href: "/navigation/reports/page",
   },
 ];

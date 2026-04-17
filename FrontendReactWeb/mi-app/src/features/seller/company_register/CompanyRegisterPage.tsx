@@ -9,6 +9,9 @@ import { useCompanyRegister } from './hooks/useCompanyRegister';
 import { C }                  from './theme/companyRegisterTheme';
 import { StepIndicator }      from './ui/StepIndicator';
 import { CompanyInfoSection } from './sections/CompanyInfoSection';
+import { CompanyTypeSection } from './sections/CompanyTypeSection';
+import { ProductsSection } from './sections/ProductsSection';
+import { ServicesSection } from './sections/ServicesSection';
 import { ContactSection }     from './sections/ContactSection';
 import { AddressSection }     from './sections/AddressSection';
 import { AccountSection }     from './sections/AccountSection';
@@ -130,9 +133,18 @@ export default function CompanyRegisterPage() {
   const renderSection = () => {
     switch (currentStep) {
       case 1: return <CompanyInfoSection {...sharedProps} />;
-      case 2: return <ContactSection     {...sharedProps} />;
-      case 3: return <AddressSection     {...sharedProps} />;
-      case 4: return (
+      case 2: return <CompanyTypeSection {...sharedProps} />;
+      case 3: 
+        // Mostrar productos o servicios según el tipo seleccionado
+        if (formData.companyType === 'productos') {
+          return <ProductsSection {...sharedProps} />;
+        } else if (formData.companyType === 'servicios') {
+          return <ServicesSection {...sharedProps} />;
+        }
+        return null;
+      case 4: return <ContactSection     {...sharedProps} />;
+      case 5: return <AddressSection     {...sharedProps} />;
+      case 6: return (
         <AccountSection
           {...sharedProps}
           showPassword={showPassword} showConfirm={showConfirm}
