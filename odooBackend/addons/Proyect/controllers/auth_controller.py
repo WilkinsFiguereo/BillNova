@@ -186,19 +186,41 @@ class AuthApiController(http.Controller):
             return self._options_response()
 
         user = request.env.user
+        _logger.info("=== API SESSION DEBUG ===")
+        _logger.info("USER: %s", user.name if user else "None")
+        _logger.info("USER ID: %s", user.id if user else "None")
+        _logger.info("IS PUBLIC: %s", user._is_public() if user else "Unknown")
+        _logger.info("SESSION UID: %s", request.session.uid)
+        _logger.info("SESSION LOGIN: %s", request.session.login)
+        _logger.info("SESSION DB: %s", request.session.db)
+
         if not user or user._is_public():
+            _logger.warning("SESSION: No hay sesión activa o usuario público")
             return self._json_response({'ok': False, 'error': 'No hay sesión activa'}, status=401)
 
         mobile_user = request.env['billnova.user'].sudo().search(
             [('res_user_id', '=', user.id)], limit=1
         )
 
+        user_role = mobile_user.role if mobile_user else 'seller'
+        company_id = mobile_user.company_id.id if mobile_user and mobile_user.company_id else None
+
+        _logger.info("SESSION ACTIVE:")
+        _logger.info("  - uid: %s", user.id)
+        _logger.info("  - name: %s", user.name)
+        _logger.info("  - email: %s", user.email)
+        _logger.info("  - role: %s", user_role)
+        _logger.info("  - company_id: %s", company_id)
+        _logger.info("  - session_token: %s", request.session.sid)
+        _logger.info("=========================")
+
         return self._json_response({
             'ok': True,
             'uid': user.id,
             'name': user.name,
             'email': user.email,
-            'role': mobile_user.role if mobile_user else 'seller',
+            'role': user_role,
+            'company_id': company_id,
             'session_token': request.session.sid,
         })
 

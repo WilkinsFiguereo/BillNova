@@ -10,6 +10,16 @@ _logger = logging.getLogger(__name__)
 
 class PosApiController(http.Controller):
 
+    def _order_origin_ref(self, order):
+        """
+        `pos.order.name` can be '/' (placeholder) for orders created programmatically.
+        If we use '/' as `invoice_origin`, every order points to the same invoice in lookups.
+        """
+        name = getattr(order, 'name', None) or ''
+        if name and name != '/':
+            return name
+        return f"POS-{order.id}"
+
     def _cors_headers(self):
         origin = request.httprequest.headers.get('Origin')
         return {
@@ -148,6 +158,15 @@ class PosApiController(http.Controller):
             'amount_return': 0.0,
         })
 
+        origin_ref = self._order_origin_ref(order)
+        # Ensure a stable, unique reference for later invoice lookups.
+        # Only overwrite placeholder '/' to avoid disrupting normal POS flows.
+        if getattr(order, 'name', '/') == '/':
+            try:
+                order.write({'name': origin_ref})
+            except Exception:
+                _logger.exception("Could not set pos.order name for order %s", order.id)
+
         # Buscar partner de la misma compañía, o uno sin compañía (global)
         partner = request.env['res.partner'].sudo().search([
             '|',
@@ -218,7 +237,7 @@ class PosApiController(http.Controller):
             'company_id': company.id,
             'journal_id': journal.id,
             'invoice_line_ids': invoice_lines,
-            'invoice_origin': order.name,
+            'invoice_origin': origin_ref,
         })
 
         invoice.action_post()
@@ -426,8 +445,11 @@ class PosApiController(http.Controller):
 
             for o in orders:
                 try:
+                    origin_ref = self._order_origin_ref(o)
+                    # Never fallback to invoice_origin='/' because it's not unique and causes
+                    # every order to show the latest invoice values.
                     invoice = request.env['account.move'].sudo().search(
-                        [('invoice_origin', '=', o.name)],
+                        [('invoice_origin', '=', origin_ref)],
                         limit=1
                     )
 
@@ -574,7 +596,8 @@ class PosApiController(http.Controller):
             return self._options_response()
 
         order = request.env['pos.order'].sudo().browse(order_id)
-        invoice = request.env['account.move'].sudo().search([('invoice_origin', '=', order.name)], limit=1)
+        origin_ref = self._order_origin_ref(order)
+        invoice = request.env['account.move'].sudo().search([('invoice_origin', '=', origin_ref)], limit=1)
 
         if not invoice:
             return self._json_response({'ok': False, 'error': 'Factura no encontrada'}, 404)

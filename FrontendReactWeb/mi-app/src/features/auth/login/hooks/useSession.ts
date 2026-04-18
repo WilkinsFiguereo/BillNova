@@ -33,6 +33,8 @@ export function useSession(): UseSessionReturn {
           uid: response.uid,
           email: response.email,
           name: response.name,
+          role: response.role || "seller",
+          companyId: response.company_id,
           sessionToken: response.session_token ?? cached?.sessionToken,
           sessionExpiresAt: response.session_expires_at ?? cached?.sessionExpiresAt,
         };

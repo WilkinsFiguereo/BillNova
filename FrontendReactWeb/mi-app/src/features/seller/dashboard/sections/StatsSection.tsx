@@ -2,14 +2,28 @@
 
 import React from "react";
 import { StatCard } from "../ui/StatCard";
-import { STATS_DATA, CHART_SERIES } from "../data/chart.data";
+import { STATS_DATA } from "../data/chart.data";
 
-export function StatsSection() {
-  const chartSeriesArray = [
-    CHART_SERIES.ventas,
-    CHART_SERIES.pendientes,
-    CHART_SERIES.cobros,
-    CHART_SERIES.vencidas,
+interface StatsSectionProps {
+  totalGanado?: number;
+  totalPerdido?: number;
+  porMes?: number;
+  loading?: boolean;
+}
+
+function formatCurrency(value: number): string {
+  if (value >= 1000) {
+    return `$${(value / 1000).toFixed(1)}K`;
+  }
+  return `$${value.toFixed(2)}`;
+}
+
+export function StatsSection({ totalGanado = 0, totalPerdido = 0, porMes = 0, loading = false }: StatsSectionProps) {
+  const values = [
+    formatCurrency(totalGanado),
+    formatCurrency(totalPerdido),
+    formatCurrency(porMes),
+    "0",
   ];
 
   return (
@@ -23,7 +37,7 @@ export function StatsSection() {
       }}
     >
       {STATS_DATA.map((stat, i) => (
-        <StatCard key={stat.label} stat={stat} chartData={chartSeriesArray[i]} />
+        <StatCard key={stat.label} stat={stat} value={loading ? "..." : values[i]} />
       ))}
     </div>
   );

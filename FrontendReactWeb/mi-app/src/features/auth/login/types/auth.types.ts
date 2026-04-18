@@ -1,7 +1,12 @@
+export type UserRole = "admin" | "moderator" | "seller" | "gerente";
+
 export interface AuthUser {
   uid: number;
   name: string;
   email: string;
+  role: UserRole;
+  companyId?: number;
+  sessionToken?: string;
   sessionExpiresAt?: string;
 }
 
@@ -16,6 +21,7 @@ export interface LoginResponse {
   uid?: number;
   name?: string;
   email?: string;
+  session_id?: string;
   session_token?: string;
   session_expires_at?: string;
   code?: "ACCOUNT_NOT_VERIFIED" | "ACCOUNT_DISABLED";
@@ -27,6 +33,8 @@ export interface SessionResponse {
   uid?: number;
   name?: string;
   email?: string;
+  role?: UserRole;
+  company_id?: number;
   session_token?: string;
   session_expires_at?: string;
   error?: string;

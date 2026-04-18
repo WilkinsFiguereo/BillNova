@@ -3,8 +3,8 @@
 import type { ReactNode } from "react";
 import { useRoleGuard } from "@/features/auth/login/hooks/useRoleGuard";
 
-export default function AdminLayout({ children }: { children: ReactNode }) {
-  const { isLoading, hasAccess } = useRoleGuard("admin");
+export default function ModerationLayout({ children }: { children: ReactNode }) {
+  const { isLoading, hasAccess } = useRoleGuard("moderator");
 
   if (isLoading) {
     return (

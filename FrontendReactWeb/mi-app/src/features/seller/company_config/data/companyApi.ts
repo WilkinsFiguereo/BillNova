@@ -1,6 +1,7 @@
 "use client";
 
 const ODOO_URL = (process.env.NEXT_PUBLIC_ODOO_URL ?? "http://localhost:8079").replace(/\/+$/, "");
+const API_BASE = ODOO_URL;
 
 async function parseJson<T>(response: Response): Promise<T> {
   const contentType = response.headers.get("content-type") ?? "";
@@ -84,8 +85,8 @@ export interface ApiEmployee {
 
 export const companyApi = {
   getConfig: (companyId?: string | number) => {
-    // Obtener todas las empresas. Si companyId, filtrar la primera coincidencia
-    return odooGet<{ data: ApiCompany[] }>(`/api/companies`);
+    const query = companyId ? `?company_id=${encodeURIComponent(String(companyId))}` : "";
+    return odooGet<{ ok: boolean; company?: ApiCompany; error?: string }>(`/api/company/config${query}`);
   },
   updateCompany: (payload: {
     companyId: string | number;
@@ -100,11 +101,13 @@ export const companyApi = {
   }) => {
     // El backend no tiene PUT /api/company/config, solo /api/company/register
     // Por ahora, devolvemos un error indicando que no está implementado
-    return Promise.reject(new Error("updateCompany not implemented in backend"));
+    return odooPut<{ ok: boolean; error?: string }>(`/api/company/config`, payload);
   },
   listEmployees: (companyId: string | number) => {
     // El backend no tiene endpoint para listar empleados
-    return Promise.reject(new Error("listEmployees not implemented in backend"));
+    return odooGet<{ ok: boolean; employees?: ApiEmployee[]; error?: string }>(
+      `/api/company/employees?company_id=${encodeURIComponent(String(companyId))}`,
+    );
   },
   createEmployee: (payload: {
     companyId: string | number;
@@ -115,7 +118,7 @@ export const companyApi = {
     status?: "active" | "disabled";
   }) => {
     // El backend no tiene endpoint para crear empleados
-    return Promise.reject(new Error("createEmployee not implemented in backend"));
+    return odooPost<{ ok: boolean; id?: number; error?: string }>(`/api/company/employees`, payload);
   },
   updateEmployee: (employeeId: string | number, payload: {
     name?: string;
@@ -125,11 +128,14 @@ export const companyApi = {
     status?: "active" | "disabled";
   }) => {
     // El backend no tiene endpoint para actualizar empleados
-    return Promise.reject(new Error("updateEmployee not implemented in backend"));
+    return odooPut<{ ok: boolean; error?: string }>(`/api/company/employees/${employeeId}`, payload);
   },
   toggleEmployee: (employeeId: string | number) => {
     // El backend no tiene endpoint para cambiar estado de empleados
-    return Promise.reject(new Error("toggleEmployee not implemented in backend"));
+    return odooPost<{ ok: boolean; status?: "active" | "disabled"; error?: string }>(
+      `/api/company/employees/${employeeId}/toggle`,
+      {},
+    );
   },
   verifyAccess: (payload: { companyId?: string | number; taxId?: string; password: string }) =>
     odooPost<{ ok: boolean; company_id?: number; error?: string }>(`/api/company/access-verify`, payload),

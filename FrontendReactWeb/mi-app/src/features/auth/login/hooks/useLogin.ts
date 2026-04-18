@@ -6,6 +6,7 @@ import { authApi } from "../data/api";
 import { getRememberMeDefault, getRememberedEmail, persistAuthState } from "../data/storage";
 import { validateLogin } from "../data/validators";
 import type { LoginPayload } from "../types/auth.types";
+import { getLandingRouteForRole } from "../navigation";
 
 type LoginErrors = Partial<Record<keyof LoginPayload, string>>;
 
@@ -57,15 +58,16 @@ export function useLogin() {
       const response = await authApi.login(values);
       if (response.ok && response.uid) {
         persistAuthState(
-      {
-          uid: response.uid,
-          email: values.username, // 👈 usa esto
-          name: values.username,
-          sessionToken: response.session_id,
-        },
-        values.rememberMe,
-      );
-        router.push("/dashboard");
+          {
+            uid: response.uid,
+            email: values.username,
+            name: values.username,
+            role: "seller",
+            sessionToken: response.session_id,
+          },
+          values.rememberMe,
+        );
+        router.push(getLandingRouteForRole("seller"));
         return;
       }
 

@@ -11,12 +11,13 @@ class ProyectAppUser(models.Model):
     role = fields.Selection(
         [
             ('admin', 'Admin'),
-            ('moderation', 'Moderación'),
+            ('moderator', 'Moderación'),
+            ('gerente', 'Gerente'),
             ('seller', 'Vendedor'),
-            ('user', 'Usuario'),
         ],
         string='Rol',
         default='seller',
     )
     is_mobile_user = fields.Boolean(string='Es Usuario Móvil')
     res_user_id = fields.Many2one('res.users', required=True, ondelete='cascade')
+    company_id = fields.Many2one('res.company', string='Empresa')

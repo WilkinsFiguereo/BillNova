@@ -1,18 +1,27 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { PRODUCTS_DATA } from "../data/dashboard.data";
 import { Product } from "../types/dashboard.types";
 
+const ODOO_URL = process.env.NEXT_PUBLIC_ODOO_URL || "http://localhost:8079";
+
+interface CompanyStats {
+  totalGanado: number;
+  totalPerdido: number;
+  porMes: number;
+  stockCritico: number;
+}
+
 interface UseDashboardReturn {
-  // State
   search: string;
   activeNav: string;
   toastVisible: boolean;
   toastMsg: string;
   filteredProducts: Product[];
+  stats: CompanyStats;
+  loading: boolean;
 
-  // Actions
   setSearch: (value: string) => void;
   setActiveNav: (id: string) => void;
   showToast: (msg: string) => void;
@@ -23,6 +32,45 @@ export function useDashboard(): UseDashboardReturn {
   const [activeNav, setActiveNav] = useState("dashboard");
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<CompanyStats>({
+    totalGanado: 0,
+    totalPerdido: 0,
+    porMes: 0,
+    stockCritico: 0,
+  });
+
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const companyId = window.localStorage.getItem("billnova_company_id");
+        if (!companyId) {
+          setLoading(false);
+          return;
+        }
+
+        const res = await fetch(`${ODOO_URL}/api/company/${companyId}/stats`, {
+          credentials: "include",
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setStats({
+            totalGanado: data.total_ganado || 0,
+            totalPerdido: data.total_perdido || 0,
+            porMes: data.por_mes || 0,
+            stockCritico: data.stock_critico || 0,
+          });
+        }
+      } catch (e) {
+        console.error("Error fetching stats:", e);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchStats();
+  }, []);
 
   const filteredProducts = PRODUCTS_DATA.filter((p) => {
     const q = search.toLowerCase();
@@ -45,6 +93,8 @@ export function useDashboard(): UseDashboardReturn {
     toastVisible,
     toastMsg,
     filteredProducts,
+    stats,
+    loading,
     setSearch,
     setActiveNav,
     showToast,

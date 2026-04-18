@@ -509,3 +509,64 @@ class CompanyApiController(http.Controller):
             return self._json_response({"ok": True, "company_id": company.id})
 
         return self._json_response({"ok": False, "error": "Acceso denegado"}, 401)
+
+    # =============================================================
+    # COMPANY STATS: Total Ganado, Perdido, Por Mes
+    # =============================================================
+    @http.route(
+        "/api/company/<int:company_id>/stats",
+        type="http",
+        auth="user",
+        methods=["GET", "OPTIONS"],
+        csrf=False,
+    )
+    def company_stats(self, company_id):
+        if request.httprequest.method == "OPTIONS":
+            return self._options_response()
+
+        try:
+            company = request.env["res.company"].sudo().browse(company_id)
+            if not company.exists():
+                return self._json_response({"ok": False, "error": "Company not found"}, 404)
+
+            from datetime import date, timedelta
+            from odoo import fields
+
+            today = date.today()
+            first_day_month = today.replace(day=1)
+            last_day_month = (first_day_month + timedelta(days=31)).replace(day=1) - timedelta(days=1)
+
+            domain = [
+                ("company_id", "=", company_id),
+                ("state", "=", "posted"),
+            ]
+
+            invoices = request.env["account.move"].sudo().search(domain)
+
+            total_ganado = 0.0
+            total_perdido = 0.0
+            por_mes = 0.0
+
+            for inv in invoices:
+                amount = inv.amount_total or 0.0
+                total_ganado += amount
+
+                if inv.invoice_date_due and inv.invoice_date_due < today:
+                    if inv.payment_state != "paid":
+                        total_perdido += amount
+
+                if inv.invoice_date and first_day_month <= inv.invoice_date <= last_day_month:
+                    por_mes += amount
+
+            return self._json_response({
+                "ok": True,
+                "total_ganado": round(total_ganado, 2),
+                "total_perdido": round(total_perdido, 2),
+                "por_mes": round(por_mes, 2),
+                "stock_critico": 0,
+            })
+
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).exception("Error getting company stats")
+            return self._json_response({"ok": False, "error": str(e)}, 500)

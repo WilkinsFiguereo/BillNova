@@ -9,6 +9,9 @@
                 <field name="email"/>
                 <field name="phone"/>
                 <field name="address"/>
+                <field name="role"/>
+                <field name="company_id"/>
+                <field name="is_mobile_user"/>
                 <field name="res_user_id"/>
             </list>
         </field>
@@ -25,6 +28,9 @@
                         <field name="email"/>
                         <field name="phone"/>
                         <field name="address"/>
+                        <field name="role"/>
+                        <field name="company_id"/>
+                        <field name="is_mobile_user"/>
                         <field name="res_user_id"/>
                     </group>
                 </sheet>
