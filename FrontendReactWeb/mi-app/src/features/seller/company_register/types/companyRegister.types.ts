@@ -3,6 +3,16 @@ import { type LucideIcon } from "lucide-react";
 export type CompanySize = 'micro' | 'small' | 'medium' | 'large';
 export type IndustryType = 'technology' | 'finance' | 'retail' | 'health' | 'education' | 'manufacturing' | 'services' | 'other';
 export type FormStatus = 'idle' | 'loading' | 'success' | 'error';
+export type BusinessType = 'products' | 'services' | '';
+export type PricingType = 'unique' | 'monthly' | 'weekly' | 'annual';
+
+export interface Service {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  pricingType: PricingType;
+}
 
 export interface CompanyFormData {
   companyName: string;
@@ -24,6 +34,8 @@ export interface CompanyFormData {
   confirmPassword: string;
   acceptTerms: boolean;
   acceptMarketing: boolean;
+  businessType: BusinessType;
+  services: Service[];
 }
 
 export interface FormStep {

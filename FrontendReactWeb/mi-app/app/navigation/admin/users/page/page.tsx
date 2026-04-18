@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { UsersPage } from "../../../../../src/features/admin/users/UsersPage";
+import { UsersPage } from "@/features/admin/users/UsersPage";
 
 export const metadata: Metadata = {
   title: "Usuarios",

@@ -1,23 +1,24 @@
-﻿import { LayoutDashboard, Users, type LucideIcon } from "lucide-react";
+﻿import {
+  Building2,
+  FileText,
+  LayoutDashboard,
+  Package,
+  ShoppingCart,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 
 export interface NavItemData {
-  id: string;
-  Icon: LucideIcon;
   label: string;
-  href: string;
+  href:  string;
+  Icon: LucideIcon;
 }
 
 export const USERS_NAV_ITEMS: NavItemData[] = [
-  {
-    id: "dashboard",
-    Icon: LayoutDashboard,
-    label: "Dashboard",
-    href: "/navigation/admin/dashboard/page",
-  },
-  {
-    id: "usuarios",
-    Icon: Users,
-    label: "Usuarios",
-    href: "/navigation/admin/users/page",
-  },
+  { label: "Dashboard", href: "/navigation/admin/dashboard/page", Icon: LayoutDashboard },
+  { label: "Usuarios", href: "/navigation/admin/users/page", Icon: Users },
+  { label: "Empresas", href: "/navigation/admin/companies/page", Icon: Building2 },
+  { label: "Productos", href: "/navigation/admin/products/page", Icon: Package },
+  { label: "Reportar Problemas", href: "/navigation/reports/page", Icon: FileText },
 ];
+

@@ -56,17 +56,17 @@ function mapCompanyFromApi(c: ApiCompany): Company {
   return {
     id: String(c.id),
     name: c.name,
-    legalName: c.legal_name || c.name,
-    rnc: c.tax_id,
-    email: c.email,
-    phone: c.phone,
-    address: c.address,
-    city: c.city,
-    country: c.country,
+    legalName: c.legal_name || c.name, // Si no existe, usar name
+    rnc: c.tax_id || "", // RUC/Tax ID
+    email: c.email || "",
+    phone: c.phone || "",
+    address: c.address || "",
+    city: c.city || "",
+    country: c.country || "",
     logoInitials: toInitials(c.name),
     foundedYear,
-    employees: (c.employees || []).map(mapEmployeeFromApi),
-    salesHistory: c.sales_history || EMPTY_COMPANY.salesHistory,
+    employees: Array.isArray(c.employees) ? c.employees.map(mapEmployeeFromApi) : [],
+    salesHistory: Array.isArray(c.sales_history) ? c.sales_history : EMPTY_COMPANY.salesHistory,
   };
 }
 

@@ -5,3 +5,4 @@ export { useResetPassword } from "./hooks/useResetPassword";
 export { useSession } from "./hooks/useSession";
 export { useVerifyEmail } from "./hooks/useVerifyEmail";
 export { useDeviceSessions } from "./hooks/useDeviceSessions";
+export { getStoredAuthState } from  "./data/storage";

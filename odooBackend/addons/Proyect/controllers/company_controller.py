@@ -26,6 +26,41 @@ class CompanyApiController(http.Controller):
         return Response("", status=200, headers=self._cors_headers())
 
     # =========================
+    # LIST COMPANIES
+    # =========================
+    @http.route(
+        "/api/companies",
+        type="http",
+        auth="public",
+        methods=["GET", "OPTIONS"],
+        csrf=False,
+    )
+    def list_companies(self):
+        if request.httprequest.method == "OPTIONS":
+            return self._options_response()
+
+        try:
+            companies = request.env["res.company"].sudo().search([])
+            data = []
+            for company in companies:
+                data.append({
+                    "id": company.id,
+                    "name": company.name,
+                    "ruc": company.ruc or None,
+                    "sector": company.sector or None,
+                    "website": company.website or None,
+                    "contact_name": company.contact_name or None,
+                    "contact_email": company.contact_email or None,
+                    "contact_phone": company.contact_phone or None,
+                    "city": company.address_city or None,
+                    "state": company.address_state or None,
+                    "address": company.street or None,
+                })
+            return self._json_response({"data": data})
+        except Exception as e:
+            return self._json_response({"error": str(e)}, 500)
+
+    # =========================
     # REGISTER COMPANY
     # =========================
     @http.route(

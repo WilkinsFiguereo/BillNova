@@ -12,6 +12,8 @@ import { CompanyInfoSection } from './sections/CompanyInfoSection';
 import { ContactSection }     from './sections/ContactSection';
 import { AddressSection }     from './sections/AddressSection';
 import { AccountSection }     from './sections/AccountSection';
+import { BusinessTypeSection } from './sections/BusinessTypeSection';
+import { ServicesSection }     from './sections/ServicesSection';
 
 export default function CompanyRegisterPage() {
   const [hasCompany, setHasCompany] = useState(false);
@@ -142,6 +144,24 @@ export default function CompanyRegisterPage() {
           passwordStrength={passwordStrength}
         />
       );
+      case 5: return <BusinessTypeSection {...sharedProps} />;
+      case 6: return formData.businessType === 'services' 
+        ? <ServicesSection {...sharedProps} />
+        : <div style={{ textAlign:'center', padding:'40px 0' }}>
+            <div style={{ fontSize:48, marginBottom:20 }}>📦</div>
+            <h2 style={{ fontSize:20, fontWeight:600, color:C.textPrimary, margin:'0 0 8px' }}>
+              Listo para vender productos
+            </h2>
+            <p style={{ fontSize:14, color:C.textSecondary, marginBottom:24 }}>
+              Podrás agregar tus productos desde el dashboard
+            </p>
+            <div style={{
+              display:'inline-block', backgroundColor:C.successBg, color:C.success,
+              fontWeight:600, fontSize:14, borderRadius:9999, padding:'8px 20px',
+            }}>
+              ✓ Productos habilitado
+            </div>
+          </div>;
     }
   };
 

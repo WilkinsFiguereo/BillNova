@@ -24,6 +24,22 @@ interface Props {
 
 export default function StatusBadge({ status }: Props) {
   const m = STATUS_META[status];
+
+  if (!m) {
+    console.warn("Estado desconocido:", status);
+    return (
+      <span style={{
+        fontSize: 11,
+        padding: "4px 10px",
+        borderRadius: 20,
+        background: "#eee",
+        color: "#333"
+      }}>
+        {status}
+      </span>
+    );
+  }
+
   return (
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 5,
