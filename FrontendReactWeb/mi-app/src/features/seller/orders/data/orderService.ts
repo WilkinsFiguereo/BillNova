@@ -6,9 +6,20 @@ import mockOrders from "./mockOrders";
 const BASE_URL = (process.env.NEXT_PUBLIC_ODOO_URL ?? "https://jwfn4vcd-8079.use2.devtunnels.ms/").replace(/\/+$/, "");
 
 export async function fetchOrders(): Promise<Order[]> {
-  const res = await fetch(`${BASE_URL}/api/orders`, { cache: "no-store", credentials: "include" });
-  if (!res.ok) throw new Error("Error al obtener pedidos");
-  return res.json();
+  try {
+    const res = await fetch(`${BASE_URL}/api/orders`, {
+      cache: "no-store",
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      throw new Error("Error al obtener pedidos");
+    }
+
+    return res.json();
+  } catch {
+    return mockOrders;
+  }
 }
 
 export async function createOrder(payload: {

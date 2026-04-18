@@ -10,9 +10,15 @@ import { Modal }           from "./ui/Modal";
 import { UsersSidebar }    from "./ui/UsersSidebar";
 import { colors, font, radius } from "./theme/tokens";
 import { USERS_NAV_ITEMS } from "./data/usersNavigation.data";
-import type { UserModalState } from "./types/user.types";
 
-const CLOSED: UserModalState = { open: false, mode: "create" };
+interface ModalState {
+  open: boolean;
+  mode: "create" | "edit" | "view";
+  userId?: number;
+  userType?: "res" | "billnova";
+}
+
+const CLOSED: ModalState = { open: false, mode: "create" };
 
 const MODAL_TITLE = {
   create: "Nuevo usuario",
@@ -28,9 +34,17 @@ export function UsersPage() {
   } = useUsers();
 
   const { query, setQuery, filtered } = useUserSearch(resUsers, billnovaUsers);
-  const [modal, setModal] = useState<UserModalState>(CLOSED);
+  const [modal, setModal] = useState<ModalState>(CLOSED);
 
   const closeModal = () => setModal(CLOSED);
+  
+  const openEditModal = (userId: number, userType: "res" | "billnova") => {
+    setModal({ open: true, mode: "edit", userId, userType });
+  };
+
+  const openViewModal = (userId: number, userType: "res" | "billnova") => {
+    setModal({ open: true, mode: "view", userId, userType });
+  };
 
   return (
     <div
@@ -50,6 +64,7 @@ export function UsersPage() {
           flex: 1,
           overflow: "auto",
           padding: "32px 36px",
+          background: colors.bg.primary,
         }}
       >
         <div
@@ -60,15 +75,19 @@ export function UsersPage() {
         >
 
       <UsersHeader
-        total={resUsers.length}
         query={query}
-        onSearch={setQuery}
-        onCreateNew={() => setModal({ open: true, mode: "create" })}
+        onQueryChange={setQuery}
+        onAddClick={() => setModal({ open: true, mode: "create" })}
       />
 
       {/* Stats — solo si hay datos */}
       {!loading && !error && (
-        <UsersStats resUsers={resUsers} billnovaUsers={billnovaUsers} />
+        <UsersStats 
+          totalRes={resUsers.length} 
+          totalBillnova={billnovaUsers.length}
+          activeCount={resUsers.filter(u => u.active).length}
+          inactiveCount={resUsers.filter(u => !u.active).length}
+        />
       )}
 
       {/* ── Estado: cargando ── */}
@@ -79,14 +98,14 @@ export function UsersPage() {
           background:   colors.bg.secondary,
           borderRadius: radius.lg,
           border:       `1px solid ${colors.border}`,
-          color:        colors.text.disabled,
-          fontSize:     font.size.base,
+          color:        colors.text.tertiary,
+          fontSize:     font.sizes.base,
         }}>
           <div style={{
             width:        30,
             height:       30,
-            border:       `2.5px solid ${colors.brand[100]}`,
-            borderTop:    `2.5px solid ${colors.brand[600]}`,
+            border:       `2.5px solid ${colors.accent}33`,
+            borderTop:    `2.5px solid ${colors.accent}`,
             borderRadius: "50%",
             margin:       "0 auto 14px",
             animation:    "bn-spin .8s linear infinite",
@@ -99,11 +118,11 @@ export function UsersPage() {
       {error && !loading && (
         <div style={{
           padding:      "16px 20px",
-          background:   colors.error.soft,
+          background:   colors.error + "20",
           borderRadius: radius.lg,
-          color:        colors.error.text,
-          border:       `1px solid #FECACA`,
-          fontSize:     font.size.base,
+          color:        colors.error,
+          border:       `1px solid ${colors.error}66`,
+          fontSize:     font.sizes.base,
         }}>
           <strong>Error:</strong> {error}{" "}
           <button
@@ -112,8 +131,8 @@ export function UsersPage() {
               background:     "none",
               border:         "none",
               cursor:         "pointer",
-              color:          colors.error.DEFAULT,
-              fontWeight:     font.weight.semibold,
+              color:          colors.error,
+              fontWeight:     font.weights.semibold,
               textDecoration: "underline",
               fontFamily:     "inherit",
             }}
@@ -126,11 +145,12 @@ export function UsersPage() {
       {/* ── Tabla ── */}
       {!loading && !error && (
         <UsersTable
-          resUsers={filtered}
-          billnovaUsers={billnovaUsers}
+          resUsers={filtered.resUsers}
+          billnovaUsers={filtered.billnovaUsers}
           deleting={deleting}
-          onDelete={removeUser}
-          onModalOpen={setModal}
+          onDelete={(id) => removeUser(id)}
+          onEdit={openEditModal}
+          onView={openViewModal}
         />
       )}
 
@@ -139,12 +159,12 @@ export function UsersPage() {
         open={modal.open}
         onClose={closeModal}
         title={MODAL_TITLE[modal.mode]}
-        width={560}
       >
         <UserForm
           mode={modal.mode}
+          userType={modal.userType || "res"}
           userId={modal.userId}
-          onSuccess={() => { closeModal(); refresh(); }}
+          onSubmit={async () => { closeModal(); refresh(); }}
           onCancel={closeModal}
         />
       </Modal>

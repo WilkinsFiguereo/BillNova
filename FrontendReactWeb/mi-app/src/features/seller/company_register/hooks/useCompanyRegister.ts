@@ -5,7 +5,7 @@ import { INITIAL_FORM_DATA } from '../data/companyRegisterData';
 import { C } from '../theme/companyRegisterTheme';
 import { odooPost } from '@/lib/odooApi';
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 6;
 
 export const calcPasswordStrength = (pw: string): PasswordStrength => {
   if (!pw) return { score: 0, label: '', color: C.borderDefault, percent: 0 };
@@ -25,14 +25,27 @@ export const calcPasswordStrength = (pw: string): PasswordStrength => {
 
 export const useCompanyRegister = () => {
   const [currentStep,  setCurrentStep]  = useState(1);
-  const [formData,     setFormData]     = useState<CompanyFormData>(INITIAL_FORM_DATA);
+  const [formData,     setFormData]     = useState<CompanyFormData>(() => {
+    const initial = { ...INITIAL_FORM_DATA };
+    if (!Array.isArray(initial.services)) {
+      initial.services = [];
+    }
+    return initial;
+  });
   const [errors,       setErrors]       = useState<FieldError[]>([]);
   const [formStatus,   setFormStatus]   = useState<FormStatus>('idle');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm,  setShowConfirm]  = useState(false);
 
   const updateField = useCallback(<K extends keyof CompanyFormData>(field: K, value: CompanyFormData[K]) => {
-    setFormData(p => ({ ...p, [field]: value }));
+    setFormData(p => {
+      const updated = { ...p, [field]: value };
+      // Asegurar que services siempre sea un array
+      if (!Array.isArray(updated.services)) {
+        updated.services = [];
+      }
+      return updated;
+    });
     setErrors(p => p.filter(e => e.field !== field));
   }, []);
 
@@ -65,6 +78,14 @@ export const useCompanyRegister = () => {
       else if (formData.password.length < 8) errs.push({ field:'password', message:'Mínimo 8 caracteres' });
       if (formData.password !== formData.confirmPassword) errs.push({ field:'confirmPassword', message:'Las contraseñas no coinciden' });
       if (!formData.acceptTerms)          errs.push({ field:'acceptTerms', message:'Debes aceptar los términos' });
+    }
+    if (step === 5) {
+      if (!formData.businessType)         errs.push({ field:'businessType', message:'Selecciona el tipo de negocio' });
+    }
+    if (step === 6) {
+      if (formData.businessType === 'services' && (!Array.isArray(formData.services) || formData.services.length === 0)) {
+        errs.push({ field:'services', message:'Debes agregar al menos un servicio' });
+      }
     }
     setErrors(errs);
     return errs.length === 0;
@@ -103,6 +124,8 @@ export const useCompanyRegister = () => {
         password: formData.password,
         acceptTerms: formData.acceptTerms,
         acceptMarketing: formData.acceptMarketing,
+        businessType: formData.businessType,
+        services: Array.isArray(formData.services) ? formData.services : [],
       };
 
       const res = await odooPost<CompanyRegisterResponse>(

@@ -77,25 +77,12 @@ export function useLogin() {
          * En Odoo el login es exitoso si existe UID.
          */
         if (response?.uid) {
-<<<<<<< HEAD:FrontendReactWeb/mi-app/src/features/auth/login/hooks/useLogin.ts
-          persistAuthState(
-            {
-              uid: response.uid,
-              email: response.email ?? values.username,
-              name: response.name ?? values.username,
-              sessionToken: response.session_token ?? response.session_id ?? null,
-              sessionExpiresAt: response.session_expires_at ?? null,
-            },
-            values.rememberMe
-          );
-=======
           let sessionInfo = null;
           try {
             sessionInfo = await authApi.getSession(response.session_token ?? undefined);
           } catch {
             sessionInfo = null;
           }
->>>>>>> dff76de22c0a24dc5ae37d61aec817b910d4b235:FrontendReactWeb/mi-app/src/features/auth/hooks/useLogin.ts
 
           const sessionUser = {
             uid: sessionInfo?.uid ?? response.uid,

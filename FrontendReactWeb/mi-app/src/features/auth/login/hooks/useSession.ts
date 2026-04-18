@@ -26,7 +26,6 @@ export function useSession(): UseSessionReturn {
     const cached = getStoredAuthState();
     if (cached) setUser(cached);
 
-<<<<<<< HEAD:FrontendReactWeb/mi-app/src/features/auth/login/hooks/useSession.ts
     try {
       const response = await authApi.getSession(cached?.sessionToken);
       if (response.ok && response.uid && response.email && response.name) {
@@ -34,6 +33,7 @@ export function useSession(): UseSessionReturn {
           uid: response.uid,
           email: response.email,
           name: response.name,
+          role: response.role ?? cached?.role,
           sessionToken: response.session_token ?? response.session_id ?? cached?.sessionToken,
           sessionExpiresAt: response.session_expires_at ?? cached?.sessionExpiresAt,
         };
@@ -48,30 +48,6 @@ export function useSession(): UseSessionReturn {
     } finally {
       setIsLoading(false);
     }
-=======
-        try {
-          const response = await authApi.getSession(cached?.sessionToken);
-          if (response.ok && response.uid && response.email && response.name) {
-            const sessionUser = {
-              uid: response.uid,
-              email: response.email,
-              name: response.name,
-              role: response.role ?? cached?.role,
-              sessionToken: response.session_token ?? cached?.sessionToken ?? null,
-              sessionExpiresAt: response.session_expires_at ?? cached?.sessionExpiresAt,
-            };
-            setUser(sessionUser);
-            persistAuthState(sessionUser, getRememberMeDefault());
-          } else {
-            setUser(null);
-            clearStoredAuthState();
-          }
-        } catch {
-          setUser(cached);
-        } finally {
-          setIsLoading(false);
-        }
->>>>>>> dff76de22c0a24dc5ae37d61aec817b910d4b235:FrontendReactWeb/mi-app/src/features/auth/hooks/useSession.ts
   }, []);
 
   const logout = useCallback(async () => {

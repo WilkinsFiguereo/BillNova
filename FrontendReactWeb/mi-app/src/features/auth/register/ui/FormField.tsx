@@ -1,6 +1,5 @@
 "use client";
 
-<<<<<<< HEAD:FrontendReactWeb/mi-app/src/features/auth/register/ui/FormField.tsx
 /* ─────────────────────────────────────────
    REGISTER FEATURE — UI / FormField
    Campo atómico reutilizable
@@ -9,9 +8,6 @@
 import { FieldIcon } from "./FieldIcon";
 import { PasswordStrengthBar } from "./PasswordStrengthBar";
 import { inputBase, labelBase } from "../theme/register.theme";
-=======
-import { FieldIcon } from "./FieldIcon";
->>>>>>> dff76de22c0a24dc5ae37d61aec817b910d4b235:FrontendReactWeb/mi-app/src/features/register/ui/FormField.tsx
 import { FIELD_ICONS } from "../data/constants";
 
 interface FormFieldProps {
@@ -30,11 +26,7 @@ function getAutoComplete(name: string, type: string): string {
   switch (name) {
     case "name":
       return "name";
-<<<<<<< HEAD:FrontendReactWeb/mi-app/src/features/auth/register/ui/FormField.tsx
     case "login":
-=======
-    case "username":
->>>>>>> dff76de22c0a24dc5ae37d61aec817b910d4b235:FrontendReactWeb/mi-app/src/features/register/ui/FormField.tsx
       return "username";
     case "email":
       return "email";
@@ -57,7 +49,6 @@ export function FormField({
   error,
   onChange,
 }: FormFieldProps) {
-<<<<<<< HEAD:FrontendReactWeb/mi-app/src/features/auth/register/ui/FormField.tsx
   const isTextarea  = type === "textarea";
   const isPassword  = type === "password";
   const iconName    = FIELD_ICONS[name] ?? "user";
@@ -73,20 +64,6 @@ export function FormField({
       <div className="relative">
         {/* Icon */}
         <span className="absolute left-3 top-3 text-[#3d5166] transition-colors duration-200 pointer-events-none [input:focus~&]:text-[#4f8ef7]">
-=======
-  const isTextarea = type === "textarea";
-  const iconName = FIELD_ICONS[name] ?? "user";
-
-  return (
-    <div className="field">
-      <label htmlFor={name} className="field-label">
-        {label}
-        {required && <span className="req">*</span>}
-      </label>
-
-      <div className="field-wrap">
-        <span className="field-icon" aria-hidden>
->>>>>>> dff76de22c0a24dc5ae37d61aec817b910d4b235:FrontendReactWeb/mi-app/src/features/register/ui/FormField.tsx
           <FieldIcon name={iconName} />
         </span>
 
@@ -97,14 +74,8 @@ export function FormField({
             value={value}
             onChange={onChange}
             placeholder={placeholder}
-<<<<<<< HEAD:FrontendReactWeb/mi-app/src/features/auth/register/ui/FormField.tsx
             rows={3}
             className={`${inputBase} ${borderColor}`}
-=======
-            required={required}
-            rows={3}
-            className={`input${error ? " err" : ""}`}
->>>>>>> dff76de22c0a24dc5ae37d61aec817b910d4b235:FrontendReactWeb/mi-app/src/features/register/ui/FormField.tsx
           />
         ) : (
           <input
@@ -116,7 +87,6 @@ export function FormField({
             placeholder={placeholder}
             required={required}
             autoComplete={getAutoComplete(name, type)}
-<<<<<<< HEAD:FrontendReactWeb/mi-app/src/features/auth/register/ui/FormField.tsx
             className={`${inputBase} ${borderColor}`}
           />
         )}
@@ -135,15 +105,7 @@ export function FormField({
           {error}
         </p>
       )}
-=======
-            className={`input${error ? " err" : value ? " ok" : ""}`}
-          />
-        )}
-      </div>
-      <p className={`field-err${error ? " show" : ""}`} role="alert">
-        {error}
-      </p>
->>>>>>> dff76de22c0a24dc5ae37d61aec817b910d4b235:FrontendReactWeb/mi-app/src/features/register/ui/FormField.tsx
     </div>
   );
 }
+
