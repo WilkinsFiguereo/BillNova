@@ -43,7 +43,7 @@ export const ADMIN_NAV_ITEMS: AdminNavItemData[] = [
   {
     id: "reportes",
     Icon: FileText,
-    label: "Reportar Problemas",
-    href: "/navigation/reports/page",
+    label: "Reportes",
+    href: "/navigation/admin/reports/page",
   },
 ];

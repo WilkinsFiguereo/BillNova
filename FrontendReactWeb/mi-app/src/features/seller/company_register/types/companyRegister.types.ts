@@ -3,23 +3,15 @@ import { type LucideIcon } from "lucide-react";
 export type CompanySize = 'micro' | 'small' | 'medium' | 'large';
 export type IndustryType = 'technology' | 'finance' | 'retail' | 'health' | 'education' | 'manufacturing' | 'services' | 'other';
 export type FormStatus = 'idle' | 'loading' | 'success' | 'error';
-export type CompanyType = 'productos' | 'servicios';
-export type PaymentFrequency = 'unico' | 'semanal' | 'mensual' | 'anual';
+export type BusinessType = 'products' | 'services' | '';
+export type PricingType = 'unique' | 'monthly' | 'weekly' | 'annual';
 
-export interface ProductItem {
+export interface Service {
   id: string;
   name: string;
   description: string;
   price: number;
-  category: string;
-}
-
-export interface ServiceItem {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  frequency: PaymentFrequency;
+  pricingType: PricingType;
 }
 
 export interface CompanyFormData {
@@ -42,9 +34,8 @@ export interface CompanyFormData {
   confirmPassword: string;
   acceptTerms: boolean;
   acceptMarketing: boolean;
-  companyType: CompanyType | '';
-  products: ProductItem[];
-  services: ServiceItem[];
+  businessType: BusinessType;
+  services: Service[];
 }
 
 export interface FormStep {

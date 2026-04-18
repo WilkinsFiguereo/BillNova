@@ -1,25 +1,13 @@
-import { Building2, Factory, Leaf, Lock, MapPin, Store, User, Package, Wrench, type LucideIcon } from "lucide-react";
-import { CompanyFormData, FormStep, IndustryType, CompanySize, CompanyType } from '../types/companyRegister.types';
+import { Building2, Factory, Leaf, Lock, MapPin, Store, User, type LucideIcon, Package, Wrench } from "lucide-react";
+import { CompanyFormData, FormStep, IndustryType, CompanySize } from '../types/companyRegister.types';
 
 export const FORM_STEPS: FormStep[] = [
-  { id: 1, title: 'Empresa',   subtitle: 'Datos generales',        icon: Building2 },
-  { id: 2, title: 'Tipo',      subtitle: 'Productos o Servicios',  icon: Package },
-  { id: 3, title: 'Oferta',    subtitle: 'Tus productos/servicios', icon: Package },
-  { id: 4, title: 'Contacto',  subtitle: 'Responsable admin',      icon: User },
-  { id: 5, title: 'Dirección', subtitle: 'Ubicación fiscal',       icon: MapPin },
-  { id: 6, title: 'Acceso',    subtitle: 'Seguridad de cuenta',    icon: Lock },
-];
-
-export const COMPANY_TYPE_OPTIONS: { label: string; value: CompanyType; icon: LucideIcon }[] = [
-  { label: 'Productos', value: 'productos', icon: Package },
-  { label: 'Servicios', value: 'servicios', icon: Wrench },
-];
-
-export const PAYMENT_FREQUENCY_OPTIONS = [
-  { label: 'Pago Único', value: 'unico' },
-  { label: 'Semanal', value: 'semanal' },
-  { label: 'Mensual', value: 'mensual' },
-  { label: 'Anual', value: 'anual' },
+  { id: 1, title: 'Empresa',   subtitle: 'Datos generales',     icon: Building2 },
+  { id: 2, title: 'Contacto',  subtitle: 'Responsable admin',   icon: User },
+  { id: 3, title: 'Dirección', subtitle: 'Ubicación fiscal',    icon: MapPin },
+  { id: 4, title: 'Acceso',    subtitle: 'Seguridad de cuenta', icon: Lock },
+  { id: 5, title: 'Negocio',   subtitle: 'Tipo de venta',       icon: Store },
+  { id: 6, title: 'Catálogo',  subtitle: 'Tus ofertas',         icon: Package },
 ];
 
 export const INDUSTRY_OPTIONS: { label: string; value: IndustryType }[] = [
@@ -53,5 +41,5 @@ export const INITIAL_FORM_DATA: CompanyFormData = {
   adminPhone:'', adminPosition:'', country:'', state:'', city:'',
   address:'', postalCode:'', password:'', confirmPassword:'',
   acceptTerms: false, acceptMarketing: false,
-  companyType: '', products: [], services: [],
+  businessType: '', services: [],
 };

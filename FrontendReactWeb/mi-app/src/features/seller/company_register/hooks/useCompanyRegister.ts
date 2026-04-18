@@ -25,14 +25,27 @@ export const calcPasswordStrength = (pw: string): PasswordStrength => {
 
 export const useCompanyRegister = () => {
   const [currentStep,  setCurrentStep]  = useState(1);
-  const [formData,     setFormData]     = useState<CompanyFormData>(INITIAL_FORM_DATA);
+  const [formData,     setFormData]     = useState<CompanyFormData>(() => {
+    const initial = { ...INITIAL_FORM_DATA };
+    if (!Array.isArray(initial.services)) {
+      initial.services = [];
+    }
+    return initial;
+  });
   const [errors,       setErrors]       = useState<FieldError[]>([]);
   const [formStatus,   setFormStatus]   = useState<FormStatus>('idle');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm,  setShowConfirm]  = useState(false);
 
   const updateField = useCallback(<K extends keyof CompanyFormData>(field: K, value: CompanyFormData[K]) => {
-    setFormData(p => ({ ...p, [field]: value }));
+    setFormData(p => {
+      const updated = { ...p, [field]: value };
+      // Asegurar que services siempre sea un array
+      if (!Array.isArray(updated.services)) {
+        updated.services = [];
+      }
+      return updated;
+    });
     setErrors(p => p.filter(e => e.field !== field));
   }, []);
 
@@ -50,32 +63,29 @@ export const useCompanyRegister = () => {
       if (!formData.companySize)         errs.push({ field:'companySize',  message:'Selecciona el tamaño' });
     }
     if (step === 2) {
-      if (!formData.companyType)         errs.push({ field:'companyType',  message:'Selecciona si venderás productos o servicios' });
-    }
-    if (step === 3) {
-      if (formData.companyType === 'productos' && formData.products.length === 0) {
-        errs.push({ field:'products', message:'Agrega al menos un producto' });
-      }
-      if (formData.companyType === 'servicios' && formData.services.length === 0) {
-        errs.push({ field:'services', message:'Agrega al menos un servicio' });
-      }
-    }
-    if (step === 4) {
       if (!formData.adminFullName.trim()) errs.push({ field:'adminFullName', message:'Nombre completo requerido' });
       if (!formData.adminEmail.trim())    errs.push({ field:'adminEmail',    message:'Email requerido' });
       else if (!/\S+@\S+\.\S+/.test(formData.adminEmail)) errs.push({ field:'adminEmail', message:'Formato de email inválido' });
       if (!formData.adminPhone.trim())    errs.push({ field:'adminPhone',    message:'Teléfono requerido' });
     }
-    if (step === 5) {
+    if (step === 3) {
       if (!formData.country)              errs.push({ field:'country',  message:'País requerido' });
       if (!formData.city.trim())          errs.push({ field:'city',     message:'Ciudad requerida' });
       if (!formData.address.trim())       errs.push({ field:'address',  message:'Dirección requerida' });
     }
-    if (step === 6) {
+    if (step === 4) {
       if (!formData.password)             errs.push({ field:'password', message:'Contraseña requerida' });
       else if (formData.password.length < 8) errs.push({ field:'password', message:'Mínimo 8 caracteres' });
       if (formData.password !== formData.confirmPassword) errs.push({ field:'confirmPassword', message:'Las contraseñas no coinciden' });
       if (!formData.acceptTerms)          errs.push({ field:'acceptTerms', message:'Debes aceptar los términos' });
+    }
+    if (step === 5) {
+      if (!formData.businessType)         errs.push({ field:'businessType', message:'Selecciona el tipo de negocio' });
+    }
+    if (step === 6) {
+      if (formData.businessType === 'services' && (!Array.isArray(formData.services) || formData.services.length === 0)) {
+        errs.push({ field:'services', message:'Debes agregar al menos un servicio' });
+      }
     }
     setErrors(errs);
     return errs.length === 0;
@@ -114,6 +124,8 @@ export const useCompanyRegister = () => {
         password: formData.password,
         acceptTerms: formData.acceptTerms,
         acceptMarketing: formData.acceptMarketing,
+        businessType: formData.businessType,
+        services: Array.isArray(formData.services) ? formData.services : [],
       };
 
       const res = await odooPost<CompanyRegisterResponse>(

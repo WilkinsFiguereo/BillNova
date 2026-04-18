@@ -9,12 +9,11 @@ import { useCompanyRegister } from './hooks/useCompanyRegister';
 import { C }                  from './theme/companyRegisterTheme';
 import { StepIndicator }      from './ui/StepIndicator';
 import { CompanyInfoSection } from './sections/CompanyInfoSection';
-import { CompanyTypeSection } from './sections/CompanyTypeSection';
-import { ProductsSection } from './sections/ProductsSection';
-import { ServicesSection } from './sections/ServicesSection';
 import { ContactSection }     from './sections/ContactSection';
 import { AddressSection }     from './sections/AddressSection';
 import { AccountSection }     from './sections/AccountSection';
+import { BusinessTypeSection } from './sections/BusinessTypeSection';
+import { ServicesSection }     from './sections/ServicesSection';
 
 export default function CompanyRegisterPage() {
   const [hasCompany, setHasCompany] = useState(false);
@@ -133,18 +132,9 @@ export default function CompanyRegisterPage() {
   const renderSection = () => {
     switch (currentStep) {
       case 1: return <CompanyInfoSection {...sharedProps} />;
-      case 2: return <CompanyTypeSection {...sharedProps} />;
-      case 3: 
-        // Mostrar productos o servicios según el tipo seleccionado
-        if (formData.companyType === 'productos') {
-          return <ProductsSection {...sharedProps} />;
-        } else if (formData.companyType === 'servicios') {
-          return <ServicesSection {...sharedProps} />;
-        }
-        return null;
-      case 4: return <ContactSection     {...sharedProps} />;
-      case 5: return <AddressSection     {...sharedProps} />;
-      case 6: return (
+      case 2: return <ContactSection     {...sharedProps} />;
+      case 3: return <AddressSection     {...sharedProps} />;
+      case 4: return (
         <AccountSection
           {...sharedProps}
           showPassword={showPassword} showConfirm={showConfirm}
@@ -152,6 +142,24 @@ export default function CompanyRegisterPage() {
           passwordStrength={passwordStrength}
         />
       );
+      case 5: return <BusinessTypeSection {...sharedProps} />;
+      case 6: return formData.businessType === 'services' 
+        ? <ServicesSection {...sharedProps} />
+        : <div style={{ textAlign:'center', padding:'40px 0' }}>
+            <div style={{ fontSize:48, marginBottom:20 }}>📦</div>
+            <h2 style={{ fontSize:20, fontWeight:600, color:C.textPrimary, margin:'0 0 8px' }}>
+              Listo para vender productos
+            </h2>
+            <p style={{ fontSize:14, color:C.textSecondary, marginBottom:24 }}>
+              Podrás agregar tus productos desde el dashboard
+            </p>
+            <div style={{
+              display:'inline-block', backgroundColor:C.successBg, color:C.success,
+              fontWeight:600, fontSize:14, borderRadius:9999, padding:'8px 20px',
+            }}>
+              ✓ Productos habilitado
+            </div>
+          </div>;
     }
   };
 
