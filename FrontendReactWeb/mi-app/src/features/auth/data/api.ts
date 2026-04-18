@@ -26,6 +26,19 @@ export const authApi = {
       },
       { allowedStatuses: [400, 401] },
     ),
+<<<<<<< HEAD
+  verifyEmail: async (payload: { email: string; code: string }) =>
+    odooPost<{ ok: boolean; error?: string; retry_after_seconds?: number }>(
+      authPath("/verify-email"),
+      payload,
+      { allowedStatuses: [400, 401, 429] },
+    ),
+  resendVerificationCode: async (email: string) =>
+    odooPost<{ ok: boolean; message?: string; dev_code?: string; error?: string; retry_after_seconds?: number }>(
+      authPath("/resend-code"),
+      { email },
+      { allowedStatuses: [400, 429] },
+=======
 
   getSession: async (sessionToken?: string): Promise<SessionResponse> =>
     odooGet<SessionResponse>(authPath("/session"), { sessionToken }),
@@ -56,5 +69,6 @@ export const authApi = {
       authPath("/sessions/revoke"),
       { session_id: sessionId },
       { sessionToken },
+>>>>>>> bb18ddb23a5877a401d5a6e8f1b5a9a64e48a0e9
     ),
 };

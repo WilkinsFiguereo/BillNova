@@ -49,6 +49,7 @@ export function RegisterFormSection({ state, onChange, onSubmit }: RegisterFormS
         >
           Inicia sesión
         </Link>
+        Al crear tu cuenta aceptas los términos de servicio.
       </p>
     </form>
   );
