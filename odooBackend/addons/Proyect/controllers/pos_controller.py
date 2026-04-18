@@ -116,9 +116,13 @@ class PosApiController(http.Controller):
             product = request.env['product.product'].sudo().browse(int(line['product_id']))
             qty = float(line.get('qty', 1))
             price = float(line.get('price_unit', product.lst_price or 0))
-            taxes = product.taxes_id
-            tax_res = taxes.compute_all(price, quantity=qty, product=product)
 
+            # ← Filtrar impuestos por compañía para evitar el crossover
+            taxes = product.taxes_id.filtered(
+                lambda t: not t.company_id or t.company_id.id == company.id
+            )
+
+            tax_res = taxes.compute_all(price, quantity=qty, product=product)
             subtotal_excl = tax_res['total_excluded']
             subtotal_incl = tax_res['total_included']
             amount_total += subtotal_incl
@@ -144,24 +148,60 @@ class PosApiController(http.Controller):
             'amount_return': 0.0,
         })
 
-        partner = request.env['res.partner'].sudo().search([], limit=1)
+        # Buscar partner de la misma compañía, o uno sin compañía (global)
+        partner = request.env['res.partner'].sudo().search([
+            '|',
+            ('company_id', '=', company.id),
+            ('company_id', '=', False),
+            ('customer_rank', '>', 0),
+        ], limit=1)
+
+        # Si no hay ninguno, usar el partner de la propia compañía
+        if not partner:
+            partner = company.partner_id
         invoice_lines = []
+
 
         for line in lines:
             product = request.env['product.product'].sudo().browse(int(line['product_id']))
             qty = float(line.get('qty', 1))
             price = float(line.get('price_unit', product.lst_price or 0))
+
+            taxes = product.taxes_id.filtered(
+                lambda t: not t.company_id or t.company_id.id == company.id
+            )
             account = (
-            product.property_account_income_id
-            or product.categ_id.property_account_income_categ_id
-        )
+                product.property_account_income_id
+                or product.categ_id.property_account_income_categ_id
+            )
+
+            if not account:
+                account = request.env['account.account'].sudo().search([
+                    ('company_ids', 'in', [company.id]),
+                    ('account_type', '=', 'income'),
+                ], limit=1)
+
+            if not account:
+                return self._json_response({
+                    'ok': False,
+                    'error': f'No hay cuenta de ingresos para el producto {product.name}'
+                }, 400)
+
+            # ← esto debe estar FUERA del if, siempre se agrega
+            invoice_lines.append((0, 0, {
+                'product_id': product.id,
+                'quantity': qty,
+                'price_unit': price,
+                'name': product.name,
+                'account_id': account.id,
+                'tax_ids': [(6, 0, taxes.ids)],  # ← taxes filtradas, no product.taxes_id
+            }))
 
         # Si aún no hay cuenta, buscar una cuenta de ingresos genérica
         if not account:
             account = request.env['account.account'].sudo().search([
-                ('company_id', '=', company.id),
+                ('company_ids', '=', company.id),
                 ('account_type', '=', 'income'),
-                ('deprecated', '=', False),
             ], limit=1)
             invoice_lines.append((0, 0, {
                 'product_id': product.id,
