@@ -77,13 +77,32 @@ export function useCompany() {
 
   const companyId = useMemo(() => company.id, [company.id]);
 
+  const getStoredCompanyId = useCallback((): number | undefined => {
+    try {
+      const raw =
+        sessionStorage.getItem("billnova_company_id") ??
+        localStorage.getItem("billnova_company_id"); // fallback migración
+      const id = raw ? Number(raw) : NaN;
+      return Number.isFinite(id) && id > 0 ? id : undefined;
+    } catch {
+      return undefined;
+    }
+  }, []);
+
   const loadCompany = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await companyApi.getConfig();
+      const storedCompanyId = getStoredCompanyId();
+      const res = await companyApi.getConfig(storedCompanyId);
       if (res.ok && res.company) {
         setCompany(mapCompanyFromApi(res.company));
+        // Guardamos el companyId para que otras secciones (productos/pedidos) puedan filtrarlo.
+        try {
+          const id = String(res.company.id);
+          sessionStorage.setItem("billnova_company_id", id);
+          localStorage.setItem("billnova_company_id", id); // fallback migración/otras pestañas
+        } catch {}
       } else {
         setError("No se encontró empresa");
       }
@@ -93,7 +112,7 @@ export function useCompany() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [getStoredCompanyId]);
 
   useEffect(() => {
     void loadCompany();

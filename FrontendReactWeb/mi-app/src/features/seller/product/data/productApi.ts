@@ -10,10 +10,12 @@ function jsonHeaders(): HeadersInit {
 }
 
 function getCompanyId(): number | null {
-  // Seller flow stores the company id here after registration.
+  // Seller flow stores the company id in the browser session after registration.
   if (typeof window === "undefined") return null;
   try {
-    const raw = window.localStorage.getItem("billnova_company_id");
+    const raw =
+      window.sessionStorage.getItem("billnova_company_id") ??
+      window.localStorage.getItem("billnova_company_id"); // fallback para migración
     const id = raw ? Number(raw) : NaN;
     return Number.isFinite(id) && id > 0 ? id : null;
   } catch {

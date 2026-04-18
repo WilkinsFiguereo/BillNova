@@ -18,7 +18,9 @@ export default function CompanyRegisterPage() {
 
   useEffect(() => {
     try {
-      const existing = localStorage.getItem('billnova_company_id');
+      const existing =
+        sessionStorage.getItem('billnova_company_id') ??
+        localStorage.getItem('billnova_company_id'); // fallback para migración
       if (existing) setHasCompany(true);
     } catch {}
   }, []);

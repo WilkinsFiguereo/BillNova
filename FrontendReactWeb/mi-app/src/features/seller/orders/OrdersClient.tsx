@@ -170,7 +170,7 @@ export default function OrdersClient() {
             </button>
           </div>
         )}
-        <OrdersStats  orders={orders} />
+        <OrdersStats orders={filtered} />
         <OrdersFilters
           counts={counts}
           filter={filter}   setFilter={setFilter}

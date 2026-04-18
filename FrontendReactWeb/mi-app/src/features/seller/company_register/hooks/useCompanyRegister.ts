@@ -118,6 +118,10 @@ export const useCompanyRegister = () => {
 
       if (res.company_id) {
         try {
+          // Guardamos el companyId en sessionStorage para que dure solo en la sesión del navegador.
+          sessionStorage.setItem('billnova_company_id', String(res.company_id));
+          // Fallback para casos en que abras otra pestaña / recargas que vacían sessionStorage.
+          // Esto permite filtrar correctamente pedidos/productos sin mezclar empresas.
           localStorage.setItem('billnova_company_id', String(res.company_id));
         } catch {}
       }

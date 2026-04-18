@@ -15,32 +15,33 @@ interface FilterCounts {
 }
 
 export function useOrderFilters(orders: Order[]) {
+  const safeOrders = Array.isArray(orders) ? orders : [];
+
   const [filter, setFilter] = useState<FilterKey>("all");
   const [search, setSearch] = useState<string>("");
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    return orders.filter((o) => {
+
+    return safeOrders.filter((o) => {
       const matchStatus = filter === "all" || o.status === filter;
       const matchSearch =
         !q ||
         o.id.toLowerCase().includes(q) ||
         o.client.toLowerCase().includes(q) ||
         o.product.toLowerCase().includes(q);
+
       return matchStatus && matchSearch;
     });
-  }, [orders, filter, search]);
+  }, [safeOrders, filter, search]);
 
-  const counts = useMemo<FilterCounts>(
-    () => ({
-      all:       orders.length,
-      pending:   orders.filter((o) => o.status === "pending").length,
-      sent:      orders.filter((o) => o.status === "sent").length,
-      delivered: orders.filter((o) => o.status === "delivered").length,
-      cancelled: orders.filter((o) => o.status === "cancelled").length,
-    }),
-    [orders]
-  );
+  const counts = useMemo<FilterCounts>(() => ({
+    all: safeOrders.length,
+    pending: safeOrders.filter((o) => o.status === "pending").length,
+    sent: safeOrders.filter((o) => o.status === "sent").length,
+    delivered: safeOrders.filter((o) => o.status === "delivered").length,
+    cancelled: safeOrders.filter((o) => o.status === "cancelled").length,
+  }), [safeOrders]);
 
   return { filter, setFilter, search, setSearch, filtered, counts };
 }
