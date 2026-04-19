@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# project-specific ignored feature areas
+/src/features/seller/
+/src/features/auth/
+/app/navigation/auth/
