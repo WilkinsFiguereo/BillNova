@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { authApi } from "../data/api";
 import { getRememberMeDefault, getRememberedEmail, persistAuthState } from "../data/storage";
 import { validateLogin } from "../data/validators";
-import type { LoginPayload } from "../types/auth.types";
-import { getLandingRouteForRole } from "../navigation";
+import type { LoginPayload, UserRole } from "../types/auth.types";
+import { getLandingRouteForRole, normalizeUserRole } from "@/features/auth/session/roleRoutes";
 
 type LoginErrors = Partial<Record<keyof LoginPayload, string>>;
 
@@ -57,24 +57,17 @@ export function useLogin() {
     try {
       const response = await authApi.login(values);
       if (response.ok && response.uid) {
-        const sessionToken = response.session_id;
-        let userRole: "admin" | "moderator" | "seller" | "gerente" = "seller";
+        const sessionToken = response.session_token ?? response.session_id;
+        let userRole: UserRole = normalizeUserRole(response.role);
 
         try {
           const sessionRes = await authApi.getSession(sessionToken);
           console.log("[LOGIN] Session response:", sessionRes);
-          if (sessionRes.ok && sessionRes.role) {
-            const validRoles: Record<string, "admin" | "moderator" | "seller" | "gerente"> = {
-              admin: "admin",
-              moderator: "moderator",
-              seller: "seller",
-              gerente: "gerente",
-            };
-            userRole = validRoles[sessionRes.role] || "seller";
+          if (sessionRes.ok) {
+            userRole = normalizeUserRole(sessionRes.role ?? userRole);
           }
         } catch (e) {
           console.error("[LOGIN] GetSession error:", e);
-          userRole = "seller";
         }
 
         console.log("[LOGIN] Final role:", userRole);

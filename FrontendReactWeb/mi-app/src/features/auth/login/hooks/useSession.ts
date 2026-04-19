@@ -9,6 +9,7 @@ import {
   persistAuthState,
 } from "../data/storage";
 import type { AuthUser } from "../types/auth.types";
+import { normalizeUserRole } from "@/features/auth/session/roleRoutes";
 
 interface UseSessionReturn {
   user: AuthUser | null;
@@ -33,7 +34,7 @@ export function useSession(): UseSessionReturn {
           uid: response.uid,
           email: response.email,
           name: response.name,
-          role: response.role || "seller",
+          role: normalizeUserRole(response.role ?? cached?.role),
           companyId: response.company_id,
           sessionToken: response.session_token ?? cached?.sessionToken,
           sessionExpiresAt: response.session_expires_at ?? cached?.sessionExpiresAt,

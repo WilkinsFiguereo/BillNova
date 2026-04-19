@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { UserRole } from "../types/auth.types";
 import { getStoredAuthState } from "../data/storage";
-import { getLandingRouteForRole } from "@/features/auth/session/roleRoutes";
+import { getLandingRouteForRole, normalizeUserRole } from "@/features/auth/session/roleRoutes";
 
 function hasRequiredRole(userRole: UserRole, requiredRole: UserRole): boolean {
   if (requiredRole === "seller") return userRole === "seller" || userRole === "gerente";
@@ -30,7 +30,7 @@ export function useRoleGuard(requiredRole: UserRole) {
       return;
     }
 
-    const userRole = cached.role || "seller";
+    const userRole = normalizeUserRole(cached.role);
     const userRoute = getLandingRouteForRole(userRole);
 
     if (!hasRequiredRole(userRole, requiredRole)) {

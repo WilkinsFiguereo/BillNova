@@ -14,7 +14,7 @@ class AuthApiController(http.Controller):
         headers = {
             'Access-Control-Allow-Origin': origin or '*',
             'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept, Origin',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept, Origin, X-Auth-Session',
             'Access-Control-Allow-Credentials': 'true',
         }
 
@@ -90,7 +90,7 @@ class AuthApiController(http.Controller):
             status=201
         )
 
-    @http.route('/api/auth/login', type='http', auth='public', methods=['POST', 'OPTIONS'], csrf=False)
+    @http.route('/api/auth/login', type='http', auth='none', methods=['POST', 'OPTIONS'], csrf=False)
     def login(self):
         if request.httprequest.method == 'OPTIONS':
             return self._options_response()
@@ -161,23 +161,52 @@ class AuthApiController(http.Controller):
                 status=401
             )
 
-        # ✅ Crear sesión correctamente
-        request.session.db = db
-        request.session.uid = uid
-        request.session.login = login
-
-        if hasattr(request.session, '_fix_lang'):
+        # ✅ crear sesión REAL
+        # En Odoo 19 la firma de `Session.authenticate` cambió y puede variar por build.
+        # Para evitar errores de firma, establecemos la sesión manualmente.
+        rotate_fn = getattr(request.session, "rotate", None)
+        if callable(rotate_fn):
             try:
-                request.session._fix_lang(env)
+                rotate_fn()
             except Exception:
                 pass
 
-        _logger.info("LOGIN OK - UID: %s", uid)
+        request.session.uid = uid
+        request.session.login = login
+        try:
+            request.session.db = db
+        except Exception:
+            pass
+
+        _logger.info("LOGIN OK - UID: %s", request.session.uid)
+
+        # Odoo 19 puede usar `session_token` para validar requests (header `X-Auth-Session`).
+        # En algunos casos puede venir `None`; aseguramos un fallback consistente.
+        session_id = getattr(request.session, "sid", None)
+        session_token = getattr(request.session, "session_token", None) or session_id
+        try:
+            if hasattr(request.session, "session_token") and not getattr(request.session, "session_token", None):
+                request.session.session_token = session_token
+        except Exception:
+            # No bloqueamos el login si el atributo es de solo-lectura en esta versión.
+            pass
+
+        user = request.env["res.users"].sudo().browse(request.session.uid)
+        mobile_user = request.env['billnova.user'].sudo().search(
+            [('res_user_id', '=', user.id)], limit=1
+        )
+        user_role = mobile_user.role if mobile_user else 'seller'
+        company_id = mobile_user.company_id.id if mobile_user and mobile_user.company_id else None
 
         return self._json_response({
             'ok': True,
-            'uid': uid,
-            'session_id': request.session.sid,
+            'uid': request.session.uid,
+            'name': user.name,
+            'email': user.email,
+            'role': user_role,
+            'company_id': company_id,
+            'session_id': session_id,
+            'session_token': session_token,
         }, status=200)
     
     @http.route('/api/auth/session', type='http', auth='public', methods=['GET', 'OPTIONS'], csrf=False)
@@ -205,13 +234,17 @@ class AuthApiController(http.Controller):
         user_role = mobile_user.role if mobile_user else 'seller'
         company_id = mobile_user.company_id.id if mobile_user and mobile_user.company_id else None
 
+        session_id = getattr(request.session, "sid", None)
+        session_token = getattr(request.session, "session_token", None) or session_id
+
         _logger.info("SESSION ACTIVE:")
         _logger.info("  - uid: %s", user.id)
         _logger.info("  - name: %s", user.name)
         _logger.info("  - email: %s", user.email)
         _logger.info("  - role: %s", user_role)
         _logger.info("  - company_id: %s", company_id)
-        _logger.info("  - session_token: %s", request.session.sid)
+        _logger.info("  - session_id: %s", session_id)
+        _logger.info("  - session_token: %s", session_token)
         _logger.info("=========================")
 
         return self._json_response({
@@ -221,7 +254,8 @@ class AuthApiController(http.Controller):
             'email': user.email,
             'role': user_role,
             'company_id': company_id,
-            'session_token': request.session.sid,
+            'session_id': session_id,
+            'session_token': session_token,
         })
 
     @http.route('/api/auth/logout', type='http', auth='user', methods=['POST', 'OPTIONS'], csrf=False)
