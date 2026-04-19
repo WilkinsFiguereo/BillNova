@@ -9,7 +9,8 @@ export type CompanyType =
   | "Services"
   | "Logistics"
   | "Healthcare"
-  | "Education";
+  | "Education"
+  | string;
 
 export interface Document {
   name: string;

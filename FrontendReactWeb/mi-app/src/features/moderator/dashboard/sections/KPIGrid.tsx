@@ -9,7 +9,7 @@ interface KPIGridProps {
 export function KPIGrid({ kpis }: KPIGridProps) {
   const cards = [
     { label: 'Empresas', value: kpis.totalEmpresas, sub: `${kpis.empresasActivas} activas`, color: colors.brand[600], bg: colors.brand[100] },
-    { label: 'Productos', value: kpis.totalProductos, sub: `Vistas ${kpis.totalVistas.toLocaleString()}`, color: colors.estado.info.main, bg: colors.estado.info.bg },
+    { label: 'Productos', value: kpis.totalProductos, sub: kpis.totalVistas === null ? 'Vistas N/D' : `Vistas ${kpis.totalVistas.toLocaleString()}`, color: colors.estado.info.main, bg: colors.estado.info.bg },
     { label: 'Ventas', value: kpis.totalVentas, sub: `+${kpis.crecimientoVentas}%`, color: colors.estado.success.main, bg: colors.estado.success.bg },
     { label: 'Reportes', value: kpis.totalReportes, sub: `${kpis.reportesPendientes} pendientes`, color: colors.estado.warning.main, bg: colors.estado.warning.bg },
   ];

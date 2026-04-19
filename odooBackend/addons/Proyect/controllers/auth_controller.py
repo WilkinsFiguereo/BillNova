@@ -172,7 +172,7 @@ class AuthApiController(http.Controller):
                     # Solo password (tu versión no acepta env como dict)
                     user._check_credentials(password)   # ← sin segundo argumento
                     uid = user.id
-            except odoo.exceptions.AccessDenied:
+            except AccessDenied:
                 uid = False
             except Exception as fallback_err:
                 _logger.error("Fallback error: %s", str(fallback_err))

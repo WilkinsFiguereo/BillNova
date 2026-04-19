@@ -1,1 +1,6 @@
-export { default } from "../navigation/auth/login/page";
+import { redirect } from "next/navigation";
+
+export default function LoginRedirectPage() {
+  redirect("/navigation/auth/login/page");
+}
+

@@ -58,7 +58,7 @@ export default function CompaniesPage() {
           transition: "margin-right 0.25s ease",
         }}
       >
-        <CompaniesHeaderSection />
+        <CompaniesHeaderSection counters={counters} />
 
         <CompaniesListSection
           companies={filteredCompanies}
@@ -75,7 +75,6 @@ export default function CompaniesPage() {
         />
       </main>
 
-      {/* Detail side panel */}
       {selectedCompany && (
         <CompaniesDetailPanel
           company={selectedCompany}
@@ -85,7 +84,6 @@ export default function CompaniesPage() {
         />
       )}
 
-      {/* Reject modal */}
       {rejectModalVisible && companyToReject && (
         <RejectModal
           companyName={companyToReject.name}

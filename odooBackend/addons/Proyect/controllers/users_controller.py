@@ -174,6 +174,7 @@ class UserApiController(http.Controller):
         users = request.env['billnova.user'].sudo().search([])
         data = [{'id': u.id, 'name': u.name, 'email': u.email,
                  'phone': u.phone, 'address': u.address,
+                 'role': u.role,
                  'is_mobile_user': u.is_mobile_user,
                  'res_user_id': u.res_user_id.id} for u in users]
         return self._json_response({'data': data})
@@ -187,6 +188,7 @@ class UserApiController(http.Controller):
             return self._json_response({'error': 'No encontrado'}, 404)
         return self._json_response({'data': {'id': u.id, 'name': u.name,
             'email': u.email, 'phone': u.phone, 'address': u.address,
+            'role': u.role,
             'is_mobile_user': u.is_mobile_user, 'res_user_id': u.res_user_id.id}})
 
     @http.route('/api/billnova-users', type='http', auth='public', methods=['POST', 'OPTIONS'], csrf=False)
@@ -198,6 +200,7 @@ class UserApiController(http.Controller):
             u = request.env['billnova.user'].sudo().create({
                 'name': body.get('name'), 'email': body.get('email'),
                 'phone': body.get('phone'), 'address': body.get('address'),
+                'role': body.get('role', 'seller'),
                 'is_mobile_user': body.get('is_mobile_user', False),
                 'res_user_id': body.get('res_user_id'),
             })
@@ -216,6 +219,7 @@ class UserApiController(http.Controller):
             body = json_lib.loads(request.httprequest.data)
             u.write({'phone': body.get('phone', u.phone),
                      'address': body.get('address', u.address),
+                     'role': body.get('role', u.role),
                      'is_mobile_user': body.get('is_mobile_user', u.is_mobile_user)})
             return self._json_response({'message': 'Actualizado'})
         except Exception as e:

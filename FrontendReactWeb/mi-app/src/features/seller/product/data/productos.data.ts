@@ -2,6 +2,9 @@
 // conservamos la constante de categorías para compatibilidad posterior si se necesita.
 
 import type { Producto } from "../types/productos.types";
+import type { LucideIcon } from "lucide-react";
+import { AlertTriangle, Package, Tag, XCircle } from "lucide-react";
+import { productosTheme as t } from "../theme/productos.theme";
 
 export const PRODUCTOS_DATA: Producto[] = [];
 

@@ -7,7 +7,7 @@ import { Toast } from "../ui/ProductoCard";
 import { ProductosHeaderSection } from "../sections/ProductosHeaderSection";
 import { ProductosStatsSection } from "../sections/ProductosStatsSection";
 import { ProductosTableSection } from "../sections/ProductosTableSection";
-import { Modal } from "../../admin/users/ui/Modal";
+import { Modal } from "../../../admin/users/ui/Modal";
 import type { Producto, ProductCategory } from "../types/productos.types";
 
 // Reutilizamos el Sidebar y los nav items del dashboard

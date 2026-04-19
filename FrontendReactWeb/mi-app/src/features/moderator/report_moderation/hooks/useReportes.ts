@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Reporte,
   EstadoReporte,
@@ -8,7 +8,7 @@ import {
   EstadisticasReportes,
   HistorialCambio,
 } from '../types/reportes.types';
-import { reportesMock } from '../data/reportes.mock';
+import { apiListModeratorReports, apiUpdateModeratorReport } from '../../data/moderatorApi';
 
 interface UseReportesReturn {
   reportes: Reporte[];
@@ -32,11 +32,26 @@ const filtrosIniciales: FiltrosReporte = {
 };
 
 export function useReportes(): UseReportesReturn {
-  const [reportes, setReportes] = useState<Reporte[]>(reportesMock);
+  const [reportes, setReportes] = useState<Reporte[]>([]);
   const [reporteSeleccionado, setReporteSeleccionado] = useState<Reporte | null>(null);
   const [filtros, setFiltrosState] = useState<FiltrosReporte>(filtrosIniciales);
-  const [isLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [modalAbierto, setModalAbierto] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const rows = await apiListModeratorReports();
+        if (mounted) setReportes(rows as Reporte[]);
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const estadisticas = useMemo<EstadisticasReportes>(() => {
     return {
@@ -85,58 +100,21 @@ export function useReportes(): UseReportesReturn {
 
   const cambiarEstado = useCallback(
     (reporteId: string, nuevoEstado: EstadoReporte, nota: string) => {
-      setReportes((prev) =>
-        prev.map((r) => {
-          if (r.id !== reporteId) return r;
-          const cambio: HistorialCambio = {
-            id: `h${Date.now()}`,
-            fecha: new Date().toISOString(),
-            estadoAnterior: r.estado,
-            estadoNuevo: nuevoEstado,
-            moderador: 'Moderador Actual',
-            nota: nota || undefined,
-          };
-          return {
-            ...r,
-            estado: nuevoEstado,
-            fechaActualizacion: new Date().toISOString(),
-            historial: [cambio, ...r.historial],
-          };
-        })
-      );
-      // Sync selected report
-      setReporteSeleccionado((prev) => {
-        if (!prev || prev.id !== reporteId) return prev;
-        const cambio: HistorialCambio = {
-          id: `h${Date.now()}`,
-          fecha: new Date().toISOString(),
-          estadoAnterior: prev.estado,
-          estadoNuevo: nuevoEstado,
-          moderador: 'Moderador Actual',
-          nota: nota || undefined,
-        };
-        return {
-          ...prev,
-          estado: nuevoEstado,
-          fechaActualizacion: new Date().toISOString(),
-          historial: [cambio, ...prev.historial],
-        };
-      });
+      (async () => {
+        const updated = await apiUpdateModeratorReport(reporteId, { estado: nuevoEstado, nota });
+        setReportes((prev) => prev.map((r) => (r.id === reporteId ? updated as unknown as Reporte : r)));
+        setReporteSeleccionado((prev) => (prev?.id === reporteId ? updated as unknown as Reporte : prev));
+      })();
     },
     []
   );
 
   const guardarNota = useCallback((reporteId: string, nota: string) => {
-    setReportes((prev) =>
-      prev.map((r) =>
-        r.id === reporteId
-          ? { ...r, notasModerador: nota, fechaActualizacion: new Date().toISOString() }
-          : r
-      )
-    );
-    setReporteSeleccionado((prev) =>
-      prev && prev.id === reporteId ? { ...prev, notasModerador: nota } : prev
-    );
+    (async () => {
+      const updated = await apiUpdateModeratorReport(reporteId, { notasModerador: nota });
+      setReportes((prev) => prev.map((r) => (r.id === reporteId ? updated as unknown as Reporte : r)));
+      setReporteSeleccionado((prev) => (prev?.id === reporteId ? updated as unknown as Reporte : prev));
+    })();
   }, []);
 
   return {

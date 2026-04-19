@@ -41,20 +41,17 @@ export function useLogin() {
     }
   }, []);
 
-  const onFieldChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const { name, type, checked, value } = e.target;
+  const onFieldChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, type, checked, value } = e.target;
 
-      setValues((prev) => ({
-        ...prev,
-        [name]: type === "checkbox" ? checked : value,
-      }));
+    setValues((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
 
-      setErrors((prev) => ({ ...prev, [name]: undefined }));
-      setServerError(null);
-    },
-    []
-  );
+    setErrors((prev) => ({ ...prev, [name]: undefined }));
+    setServerError(null);
+  }, []);
 
   const onSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
@@ -72,38 +69,30 @@ export function useLogin() {
       try {
         const response = await authApi.login(values);
 
-        /**
-         * 🔥 CLAVE:
-         * En Odoo el login es exitoso si existe UID.
-         */
+        // En Odoo el login es exitoso si existe UID.
         if (response?.uid) {
-<<<<<<< HEAD:FrontendReactWeb/mi-app/src/features/auth/login/hooks/useLogin.ts
-          persistAuthState(
-            {
-              uid: response.uid,
-              email: response.email ?? values.username,
-              name: response.name ?? values.username,
-              sessionToken: response.session_token ?? response.session_id ?? null,
-              sessionExpiresAt: response.session_expires_at ?? null,
-            },
-            values.rememberMe
-          );
-=======
-          let sessionInfo = null;
+          let sessionInfo: Awaited<ReturnType<typeof authApi.getSession>> | null =
+            null;
           try {
-            sessionInfo = await authApi.getSession(response.session_token ?? undefined);
+            sessionInfo = await authApi.getSession(response.session_token ?? null);
           } catch {
             sessionInfo = null;
           }
->>>>>>> dff76de22c0a24dc5ae37d61aec817b910d4b235:FrontendReactWeb/mi-app/src/features/auth/hooks/useLogin.ts
 
           const sessionUser = {
             uid: sessionInfo?.uid ?? response.uid,
-            email: sessionInfo?.email ?? values.username,
-            name: sessionInfo?.name ?? values.username,
+            email: sessionInfo?.email ?? response.email ?? values.username,
+            name: sessionInfo?.name ?? response.name ?? values.username,
             role: sessionInfo?.role ?? "seller",
-            sessionToken: sessionInfo?.session_token ?? response.session_token ?? null,
-            sessionExpiresAt: sessionInfo?.session_expires_at ?? null,
+            sessionToken:
+              sessionInfo?.session_token ??
+              response.session_token ??
+              response.session_id ??
+              null,
+            sessionExpiresAt:
+              sessionInfo?.session_expires_at ??
+              response.session_expires_at ??
+              null,
           };
 
           persistAuthState(sessionUser, values.rememberMe);
@@ -111,7 +100,6 @@ export function useLogin() {
           return;
         }
 
-        // Si no hay UID, es error real
         setServerError(response?.error ?? "Credenciales inválidas.");
       } catch (error) {
         console.error("Login error:", error);
@@ -120,7 +108,7 @@ export function useLogin() {
         setIsLoading(false);
       }
     },
-    [router, values]
+    [router, values],
   );
 
   return {
@@ -132,3 +120,4 @@ export function useLogin() {
     onSubmit,
   };
 }
+

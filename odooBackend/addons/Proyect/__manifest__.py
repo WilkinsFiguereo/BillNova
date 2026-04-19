@@ -11,6 +11,7 @@
         'security/ir.model.access.csv',
         'views/users_views.xml',
         'views/company_views.xml',
+        'views/report_views.xml',
     ],
     'installable': True,
     'application': True,

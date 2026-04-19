@@ -157,15 +157,16 @@ class PosApiController(http.Controller):
             'invoice': None,
         } for o in orders]
 
-        for entry, o in zip(data, orders):
+        for entry, order in zip(data, orders):
             invoice = request.env['account.move'].sudo().search(
-                [('invoice_origin', '=', o.name)], limit=1)
-        if invoice:
-            entry['invoice'] = {
-                'id': str(invoice.id),
-                'reference': invoice.name,
-                'url': f"{base_url}/web#id={invoice.id}&model=account.move&view_type=form",
-            }
+                [('invoice_origin', '=', order.name)], limit=1
+            )
+            if invoice:
+                entry['invoice'] = {
+                    'id': str(invoice.id),
+                    'reference': invoice.name,
+                    'url': f"{base_url}/web#id={invoice.id}&model=account.move&view_type=form",
+                }
 
         return self._json_response({'ok': True, 'data': data})
 

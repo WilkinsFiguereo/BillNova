@@ -1,17 +1,12 @@
 "use client";
 
-import React from 'react';
-import { EstadisticasGlobales } from '../types/estadisticas.types';
-import { colors } from '../theme/estadisticas.theme';
+import React from "react";
+import { colors } from "../theme/estadisticas.theme";
+import { EstadisticasGlobales } from "../types/estadisticas.types";
 
 const IconBuilding = () => (
   <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-  </svg>
-);
-const IconCheckCircle = () => (
-  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
   </svg>
 );
 const IconCash = () => (
@@ -33,16 +28,14 @@ const IconTrend = () => (
   </svg>
 );
 
-interface StatCard { label: string; value: string; iconColor: string; iconBg: string; icon: React.ReactNode; sub?: string; }
-
-function Card({ label, value, iconColor, iconBg, icon, sub }: StatCard) {
+function Card({ label, value, iconColor, iconBg, icon, sub }: { label: string; value: string; iconColor: string; iconBg: string; icon: React.ReactNode; sub?: string }) {
   return (
-    <div style={{ background: colors.bg.secondary, border: `1px solid ${colors.border}`, borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, flex: 1, minWidth: 150, boxShadow: `0 1px 4px ${colors.shadow}` }}>
-      <div style={{ width: 42, height: 42, borderRadius: 10, backgroundColor: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: iconColor, flexShrink: 0 }}>{icon}</div>
+    <div style={{ background: colors.bg.secondary, border: `1px solid ${colors.border}`, borderRadius: 12, padding: "14px 18px", display: "flex", alignItems: "center", gap: 14, flex: 1, minWidth: 150, boxShadow: `0 1px 4px ${colors.shadow}` }}>
+      <div style={{ width: 42, height: 42, borderRadius: 10, backgroundColor: iconBg, display: "flex", alignItems: "center", justifyContent: "center", color: iconColor, flexShrink: 0 }}>{icon}</div>
       <div>
         <p style={{ margin: 0, fontSize: 22, fontWeight: 700, color: colors.text.primary, lineHeight: 1 }}>{value}</p>
-        <p style={{ margin: '3px 0 0', fontSize: 11, color: colors.text.secondary }}>{label}</p>
-        {sub && <p style={{ margin: '2px 0 0', fontSize: 11, color: '#10B981', fontWeight: 600 }}>{sub}</p>}
+        <p style={{ margin: "3px 0 0", fontSize: 11, color: colors.text.secondary }}>{label}</p>
+        {sub && <p style={{ margin: "2px 0 0", fontSize: 11, color: "#10B981", fontWeight: 600 }}>{sub}</p>}
       </div>
     </div>
   );
@@ -53,14 +46,14 @@ export function EstadisticasHeader({ globales }: { globales: EstadisticasGlobale
     <div>
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, color: colors.text.primary }}>Estadísticas de Empresas</h1>
-        <p style={{ margin: '4px 0 0', fontSize: 13.5, color: colors.text.secondary }}>Panel de moderación — rendimiento y actividad de empresas registradas en la plataforma</p>
+        <p style={{ margin: "4px 0 0", fontSize: 13.5, color: colors.text.secondary }}>Panel de moderación con cifras reales agregadas por empresa.</p>
       </div>
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 22 }}>
-        <Card label="Total Empresas"     value={String(globales.totalEmpresas)}    iconColor={colors.brand[600]} iconBg={colors.brand[100]} icon={<IconBuilding />} sub={`${globales.empresasActivas} activas`} />
-        <Card label="Ventas Totales"     value={globales.totalVentas.toLocaleString()} iconColor="#F59E0B" iconBg="#FEF3C7" icon={<IconShoppingBag />} />
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 22 }}>
+        <Card label="Total Empresas" value={String(globales.totalEmpresas)} iconColor={colors.brand[600]} iconBg={colors.brand[100]} icon={<IconBuilding />} sub={`${globales.empresasActivas} activas`} />
+        <Card label="Ventas Totales" value={globales.totalVentas.toLocaleString()} iconColor="#F59E0B" iconBg="#FEF3C7" icon={<IconShoppingBag />} />
         <Card label="Ingresos Plataforma" value={`RD$ ${(globales.totalIngresos / 1000000).toFixed(1)}M`} iconColor="#10B981" iconBg="#D1FAE5" icon={<IconCash />} />
-        <Card label="Calif. Promedio"    value={globales.promedioCalificacion.toFixed(1)} iconColor="#F59E0B" iconBg="#FEF3C7" icon={<IconStar />} />
-        <Card label="Crecimiento Gral."  value={`+${globales.crecimientoGeneral}%`} iconColor={colors.brand[400]} iconBg={colors.brand[100]} icon={<IconTrend />} />
+        <Card label="Calif. Promedio" value={globales.promedioCalificacion === null ? "N/D" : globales.promedioCalificacion.toFixed(1)} iconColor="#F59E0B" iconBg="#FEF3C7" icon={<IconStar />} />
+        <Card label="Crecimiento Gral." value={globales.crecimientoGeneral === null ? "N/D" : `${globales.crecimientoGeneral > 0 ? "+" : ""}${globales.crecimientoGeneral}%`} iconColor={colors.brand[400]} iconBg={colors.brand[100]} icon={<IconTrend />} />
       </div>
     </div>
   );

@@ -1,8 +1,8 @@
 "use client";
 
-import React from 'react';
-import { EstadisticasGlobales } from '../types/productos.types';
-import { colors } from '../theme/productos.theme';
+import React from "react";
+import { colors } from "../theme/productos.theme";
+import { EstadisticasGlobales } from "../types/productos.types";
 
 const IconBox = () => (
   <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -36,41 +36,36 @@ const IconTrend = () => (
   </svg>
 );
 
-function StatCard({ label, value, sub, iconColor, iconBg, icon }: {
-  label: string; value: string; sub?: string;
-  iconColor: string; iconBg: string; icon: React.ReactNode;
-}) {
+function StatCard({ label, value, sub, iconColor, iconBg, icon }: { label: string; value: string; sub?: string; iconColor: string; iconBg: string; icon: React.ReactNode }) {
   return (
-    <div style={{ background: colors.bg.secondary, border: `1px solid ${colors.border}`, borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 13, flex: 1, minWidth: 148, boxShadow: `0 1px 4px ${colors.shadow}` }}>
-      <div style={{ width: 42, height: 42, borderRadius: 10, backgroundColor: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: iconColor, flexShrink: 0 }}>{icon}</div>
+    <div style={{ background: colors.bg.secondary, border: `1px solid ${colors.border}`, borderRadius: 12, padding: "14px 18px", display: "flex", alignItems: "center", gap: 13, flex: 1, minWidth: 148, boxShadow: `0 1px 4px ${colors.shadow}` }}>
+      <div style={{ width: 42, height: 42, borderRadius: 10, backgroundColor: iconBg, display: "flex", alignItems: "center", justifyContent: "center", color: iconColor, flexShrink: 0 }}>{icon}</div>
       <div>
         <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: colors.text.primary, lineHeight: 1 }}>{value}</p>
-        <p style={{ margin: '3px 0 0', fontSize: 11, color: colors.text.secondary }}>{label}</p>
-        {sub && <p style={{ margin: '1px 0 0', fontSize: 10.5, color: '#10B981', fontWeight: 600 }}>{sub}</p>}
+        <p style={{ margin: "3px 0 0", fontSize: 11, color: colors.text.secondary }}>{label}</p>
+        {sub && <p style={{ margin: "1px 0 0", fontSize: 10.5, color: "#10B981", fontWeight: 600 }}>{sub}</p>}
       </div>
     </div>
   );
 }
 
 export function ProductosHeader({ globales }: { globales: EstadisticasGlobales }) {
-  const ingresos = (globales.totalIngresos / 1000000).toFixed(0);
-  const vistas = globales.totalVistas >= 1000
-    ? `${(globales.totalVistas / 1000).toFixed(0)}k`
-    : globales.totalVistas.toLocaleString();
+  const ingresos = `RD$ ${(globales.totalIngresos / 1000000).toFixed(1)}M`;
+  const vistas = globales.totalVistas === null ? "N/D" : globales.totalVistas >= 1000 ? `${(globales.totalVistas / 1000).toFixed(0)}k` : globales.totalVistas.toLocaleString();
 
   return (
     <div>
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, color: colors.text.primary }}>Estadísticas de Productos</h1>
-        <p style={{ margin: '4px 0 0', fontSize: 13.5, color: colors.text.secondary }}>Panel de moderación — rendimiento de todos los productos de la plataforma</p>
+        <p style={{ margin: "4px 0 0", fontSize: 13.5, color: colors.text.secondary }}>Panel de moderación con ventas reales, reseñas reales y moderación de productos.</p>
       </div>
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 22 }}>
-        <StatCard label="Total Productos"   value={String(globales.totalProductos)}     sub={`${globales.productosActivos} activos`} iconColor={colors.brand[600]} iconBg={colors.brand[100]} icon={<IconBox />} />
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 22 }}>
+        <StatCard label="Total Productos" value={String(globales.totalProductos)} sub={`${globales.productosActivos} activos`} iconColor={colors.brand[600]} iconBg={colors.brand[100]} icon={<IconBox />} />
         <StatCard label="Unidades Vendidas" value={globales.totalVentas.toLocaleString()} iconColor="#F59E0B" iconBg="#FEF3C7" icon={<IconTag />} />
-        <StatCard label="Ingresos Totales"  value={`RD$ ${ingresos}M`}                  iconColor="#10B981" iconBg="#D1FAE5" icon={<IconCash />} />
-        <StatCard label="Vistas Totales"    value={vistas}                               iconColor={colors.brand[400]} iconBg={colors.brand[100]} icon={<IconEye />} />
-        <StatCard label="Calificación Prom" value={globales.promedioCalificacion.toFixed(2)} iconColor="#F59E0B" iconBg="#FEF3C7" icon={<IconStar />} />
-        <StatCard label="Crecimiento Gral." value={`+${globales.crecimientoGeneral}%`}  iconColor="#10B981" iconBg="#D1FAE5" icon={<IconTrend />} />
+        <StatCard label="Ingresos Totales" value={ingresos} iconColor="#10B981" iconBg="#D1FAE5" icon={<IconCash />} />
+        <StatCard label="Vistas Totales" value={vistas} iconColor={colors.brand[400]} iconBg={colors.brand[100]} icon={<IconEye />} />
+        <StatCard label="Calificación Prom" value={globales.promedioCalificacion === null ? "N/D" : globales.promedioCalificacion.toFixed(2)} iconColor="#F59E0B" iconBg="#FEF3C7" icon={<IconStar />} />
+        <StatCard label="Crecimiento Gral." value={globales.crecimientoGeneral === null ? "N/D" : `${globales.crecimientoGeneral > 0 ? "+" : ""}${globales.crecimientoGeneral}%`} iconColor="#10B981" iconBg="#D1FAE5" icon={<IconTrend />} />
       </div>
     </div>
   );

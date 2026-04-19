@@ -6,13 +6,13 @@ export interface ProductoPendiente {
   id: string;
   nombre: string;
   sku: string;
-  categoria: string;
+  categoria: string | null;
   precio: number;
   costo: number;
   stock: number;
   descripcion: string;
   vendedor: string;
-  vendedorEmail: string;
+  vendedorEmail: string | null;
   fechaSubida: string;
   imagenColor: string; // color placeholder para simular imagen
   status: ProductoStatus;

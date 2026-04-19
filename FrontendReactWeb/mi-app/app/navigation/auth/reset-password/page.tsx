@@ -1,10 +1,11 @@
 "use client";
 
+import React, { Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useResetPassword } from "@/features/auth/login";
 
-export default function ResetPasswordPage() {
+function ResetPasswordInner() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email") ?? "";
   const token = searchParams.get("token") ?? "";
@@ -234,5 +235,13 @@ export default function ResetPasswordPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 24 }}>Cargando...</div>}>
+      <ResetPasswordInner />
+    </Suspense>
   );
 }

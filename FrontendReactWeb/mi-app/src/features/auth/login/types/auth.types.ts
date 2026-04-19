@@ -5,8 +5,8 @@ export interface AuthUser {
   name: string;
   email: string;
   role?: AuthRole;
-  sessionToken?: string;
-  sessionExpiresAt?: string;
+  sessionToken?: string | null;
+  sessionExpiresAt?: string | null;
 }
 
 export interface LoginPayload {
@@ -32,12 +32,10 @@ export interface SessionResponse {
   uid?: number;
   name?: string;
   email?: string;
+  role?: AuthRole;
   session_token?: string;
   session_expires_at?: string;
-<<<<<<< HEAD:FrontendReactWeb/mi-app/src/features/auth/login/types/auth.types.ts
   session_id?: string;
-=======
-  role?: AuthRole;
   error?: string;
 }
 
@@ -46,7 +44,18 @@ export interface LogoutResponse {
   error?: string;
 }
 
-export interface SessionsListResponse {
+export interface ActiveSession {
+  id: number;
+  is_current: boolean;
+  remember_me: boolean;
+  user_agent?: string;
+  ip_address?: string;
+  created_at?: string;
+  last_seen_at?: string;
+  expires_at?: string;
+}
+
+export interface SessionListResponse {
   ok: boolean;
   sessions?: ActiveSession[];
   error?: string;
@@ -54,7 +63,6 @@ export interface SessionsListResponse {
 
 export interface RevokeSessionResponse {
   ok: boolean;
->>>>>>> dff76de22c0a24dc5ae37d61aec817b910d4b235:FrontendReactWeb/mi-app/src/features/auth/types/auth.types.ts
   error?: string;
 }
 
@@ -108,29 +116,3 @@ export interface ResendCodeResponse {
   dev_code?: string;
 }
 
-export interface SessionListResponse {
-  ok: boolean;
-  sessions?: ActiveSession[];
-  error?: string;
-}
-
-export interface RevokeSessionResponse {
-  ok: boolean;
-  error?: string;
-}
-
-export interface LogoutResponse {
-  ok: boolean;
-  error?: string;
-}
-
-export interface ActiveSession {
-  id: number;
-  is_current: boolean;
-  remember_me: boolean;
-  user_agent?: string;
-  ip_address?: string;
-  created_at?: string;
-  last_seen_at?: string;
-  expires_at?: string;
-}

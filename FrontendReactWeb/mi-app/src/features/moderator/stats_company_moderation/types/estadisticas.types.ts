@@ -31,11 +31,11 @@ export interface Empresa {
   totalVentas: number;
   totalIngresos: number;
   totalProductos: number;
-  calificacion: number;
+  calificacion: number | null;
   totalResenas: number;
-  clientesUnicos: number;
-  tasaDevolucion: number;
-  crecimiento: number;
+  clientesUnicos: number | null;
+  tasaDevolucion: number | null;
+  crecimiento: number | null;
   ventasMensuales: VentaMensual[];
   productosTop: ProductoTop[];
   fechaRegistro: string;
@@ -46,8 +46,8 @@ export interface EstadisticasGlobales {
   empresasActivas: number;
   totalVentas: number;
   totalIngresos: number;
-  promedioCalificacion: number;
-  crecimientoGeneral: number;
+  promedioCalificacion: number | null;
+  crecimientoGeneral: number | null;
 }
 
 export interface FiltrosEmpresas {
