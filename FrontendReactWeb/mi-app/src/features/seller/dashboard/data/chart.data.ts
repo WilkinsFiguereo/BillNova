@@ -16,6 +16,7 @@ import {
   Calendar,
   type LucideIcon,
   Shield,
+  Receipt,
 } from "lucide-react";
 import { dashboardTheme as t } from "../theme/dashboard.theme";
 
@@ -89,5 +90,6 @@ export const NAV_ITEMS: NavItemData[] = [
   { id: "registro",  Icon: Building2,       label: "Registro",      href: "/navigation/seller/company_register/page" },
   { id: "reportes",  Icon: BarChart2,       label: "Reportes",      href: "/navigation/seller/reports/page"   },
   { id: "bitacora",  Icon: Shield,          label: "Bitácora",      href: "/navigation/seller/bitacora/page"   },
+  { id: "impuestos", Icon: Receipt,         label: "Impuestos",     href: "/navigation/seller/impuestos/page"   },
   { id: "config",    Icon: Settings,        label: "Configuración", href: "/navigation/seller/config/page"     },
 ];
