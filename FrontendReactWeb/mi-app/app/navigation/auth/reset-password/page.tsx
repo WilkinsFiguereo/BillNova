@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useResetPassword } from "@/features/login/login";
+import { useResetPassword } from "@/features/auth/login";
 
 export default function ResetPasswordPage() {
   const searchParams = useSearchParams();
@@ -227,7 +227,7 @@ export default function ResetPasswordPage() {
               )}
 
               <p className="terms" style={{ marginTop: "1rem" }}>
-                <Link href="/login">Volver a login</Link>
+                <Link href="/navigation/auth/login">Volver a login</Link>
               </p>
             </div>
           </div>

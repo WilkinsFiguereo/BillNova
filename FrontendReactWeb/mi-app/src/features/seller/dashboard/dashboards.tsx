@@ -2,8 +2,8 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Zap } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Zap, LogOut } from "lucide-react";
 import { StockStatus, InvoiceStatus } from "./types/dashboard.types";
 import { NavItemData } from "./data/chart.data";
 import { dashboardTheme as t } from "./theme/dashboard.theme";
@@ -61,6 +61,32 @@ interface SidebarProps {
 
 export function Sidebar({ navItems }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      const stored = localStorage.getItem("billnova.auth.user");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?.user?.sessionToken) {
+          await fetch(`${process.env.NEXT_PUBLIC_ODOO_URL || 'http://localhost:8079'}/api/auth/logout`, {
+            method: "POST",
+            credentials: "include",
+            headers: { "X-Auth-Session": parsed.user.sessionToken },
+          });
+        }
+      }
+    } catch {
+    } finally {
+      localStorage.removeItem("billnova.auth.user");
+      localStorage.removeItem("billnova.auth.remember");
+      sessionStorage.removeItem("billnova.auth.user");
+      document.cookie.split(";").forEach((c) => {
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      });
+      router.replace("/navigation/auth/login");
+    }
+  };
 
   return (
     <aside style={{
@@ -110,21 +136,42 @@ export function Sidebar({ navItems }: SidebarProps) {
       </nav>
 
       {/* User Avatar */}
-      <div style={{
-        marginTop: "auto", padding: "12px", background: t.bgAlt,
-        borderRadius: 12, display: "flex", alignItems: "center", gap: 10,
-      }}>
+      <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
         <div style={{
-          width: 32, height: 32, borderRadius: "50%",
-          background: `linear-gradient(135deg, ${t.brand600}, ${t.brand400})`,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 13, color: "white", fontWeight: 700,
+          padding: "12px", background: t.bgAlt,
+          borderRadius: 12, display: "flex", alignItems: "center", gap: 10,
         }}>
-          JR
+          <div style={{
+            width: 32, height: 32, borderRadius: "50%",
+            background: `linear-gradient(135deg, ${t.brand600}, ${t.brand400})`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 13, color: "white", fontWeight: 700,
+          }}>
+            JR
+          </div>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: t.textPrimary }}>Juan Ramírez</div>
+            <div style={{ fontSize: 10, color: t.textDisabled }}>Administrador</div>
+          </div>
         </div>
-        <div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: t.textPrimary }}>Juan Ramírez</div>
-          <div style={{ fontSize: 10, color: t.textDisabled }}>Administrador</div>
+        <div
+          onClick={handleLogout}
+          style={{
+            padding: "10px 12px", background: "#FEF2F2",
+            borderRadius: 10, display: "flex", alignItems: "center", gap: 8,
+            cursor: "pointer", transition: "all 0.2s ease",
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLDivElement).style.background = "#FEE2E2";
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLDivElement).style.background = "#FEF2F2";
+          }}
+        >
+          <LogOut size={16} color="#DC2626" />
+          <span style={{ fontSize: 12, fontWeight: 500, color: "#DC2626" }}>
+            Cerrar sesión
+          </span>
         </div>
       </div>
     </aside>

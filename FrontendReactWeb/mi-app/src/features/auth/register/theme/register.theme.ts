@@ -40,7 +40,7 @@ export const registerTheme = {
 export const inputBase =
   "w-full bg-transparent text-[#e4ebf5] placeholder:text-[#3d5166] " +
   "text-sm border border-[#1e2d42] rounded-[2px] " +
-  "py-3 pl-10 pr-4 outline-none transition-all duration-200 " +
+  "h-12 pl-11 pr-4 outline-none transition-all duration-200 " +
   "focus:border-[#4f8ef7] focus:ring-1 focus:ring-[#4f8ef7]/20 resize-none";
 
 export const labelBase =

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useForgotPassword } from "@/features/login/login";
+import { useForgotPassword } from "@/features/auth/login";
 
 export default function ForgotPasswordPage() {
   const {
@@ -160,7 +160,7 @@ export default function ForgotPasswordPage() {
                       </p>
                     )}
                     <p className="fh-sub" style={{ marginTop: "0.25rem" }}>
-                      <Link href="/reset-password">
+                      <Link href="/navigation/auth/reset-password">
                         Ir a restablecer contrasena
                       </Link>
                     </p>
@@ -169,7 +169,7 @@ export default function ForgotPasswordPage() {
               )}
 
               <p className="terms" style={{ marginTop: "1rem" }}>
-                <Link href="/login">Volver a login</Link>
+                <Link href="/navigation/auth/login">Volver a login</Link>
               </p>
             </div>
           </div>

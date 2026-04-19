@@ -21,6 +21,7 @@ export interface LoginResponse {
   uid?: number;
   name?: string;
   email?: string;
+  role?: UserRole;
   session_id?: string;
   session_token?: string;
   session_expires_at?: string;

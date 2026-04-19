@@ -46,7 +46,7 @@ export function RegisterFormSection({ state, onChange, onSubmit }: RegisterFormS
       <SubmitButton isLoading={isLoading} />
 
       <p className="terms">
-        Ya tienes cuenta? <a href="/login">Inicia sesion</a>
+        Ya tienes cuenta? <a href="/navigation/auth/login">Inicia sesion</a>
       </p>
     </form>
   );

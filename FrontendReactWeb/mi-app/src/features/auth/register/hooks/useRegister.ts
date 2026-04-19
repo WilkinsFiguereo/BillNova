@@ -43,7 +43,7 @@ export function useRegister() {
         const res = await registerApi.register(state.values);
         if (res.ok) {
           setState((prev) => ({ ...prev, isLoading: false, success: true }));
-          setTimeout(() => router.push("/login"), 2200);
+          setTimeout(() => router.push("/navigation/auth/login"), 2200);
         } else {
           setState((prev) => ({
             ...prev, isLoading: false,

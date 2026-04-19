@@ -4,13 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { UserRole } from "../types/auth.types";
 import { getStoredAuthState } from "../data/storage";
-
-const ROLE_ROUTES: Record<UserRole, string> = {
-  admin: "/navigation/admin/dashboard/page",
-  moderator: "/navigation/moderation/dashboard/page",
-  seller: "/navigation/seller/dashboard/page",
-  gerente: "/navigation/seller/dashboard/page",
-};
+import { getLandingRouteForRole } from "@/features/auth/session/roleRoutes";
 
 function hasRequiredRole(userRole: UserRole, requiredRole: UserRole): boolean {
   if (requiredRole === "seller") return userRole === "seller" || userRole === "gerente";
@@ -29,15 +23,19 @@ export function useRoleGuard(requiredRole: UserRole) {
 
     const cached = getStoredAuthState();
     
-    if (!cached || !cached.uid) {
-      router.replace("/navigation/auth/login/page");
+    if (!cached?.uid || !cached?.sessionToken) {
+      setReady(false);
+      setIsLoading(false);
+      router.replace("/navigation/welcome");
       return;
     }
 
     const userRole = cached.role || "seller";
-    const userRoute = ROLE_ROUTES[userRole] ?? ROLE_ROUTES.seller;
+    const userRoute = getLandingRouteForRole(userRole);
 
     if (!hasRequiredRole(userRole, requiredRole)) {
+      setReady(false);
+      setIsLoading(false);
       router.replace(userRoute);
       return;
     }
@@ -50,6 +48,5 @@ export function useRoleGuard(requiredRole: UserRole) {
 }
 
 export function getUserRoleRoute(role: UserRole | undefined): string {
-  if (!role) return "/navigation/auth/login/page";
-  return ROLE_ROUTES[role] || "/navigation/auth/login/page";
+  return getLandingRouteForRole(role);
 }

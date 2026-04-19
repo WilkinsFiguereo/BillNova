@@ -41,7 +41,7 @@ export async function odooPost<TRes>(
 export async function odooGet<TRes>(path: string, options: RequestOptions = {}): Promise<TRes> {
   const response = await fetch(`${ODOO_URL}${path}`, {
     method: "GET",
-    credentials: "include", // 👈 ESTO TAMBIÉN
+    credentials: "include",
     headers: options.sessionToken
       ? { "X-Auth-Session": options.sessionToken }
       : undefined,
@@ -49,8 +49,18 @@ export async function odooGet<TRes>(path: string, options: RequestOptions = {}):
 
   const allowed = options.allowedStatuses ?? [];
   if (!response.ok && !allowed.includes(response.status)) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    const text = await response.text();
+    throw new Error(`HTTP ${response.status}: ${text || response.statusText}`);
   }
 
-  return response.json() as Promise<TRes>;
+  const text = await response.text();
+  if (!text) {
+    return { ok: false } as TRes;
+  }
+
+  try {
+    return JSON.parse(text) as TRes;
+  } catch {
+    return { ok: false } as TRes;
+  }
 }

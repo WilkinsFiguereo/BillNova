@@ -57,17 +57,39 @@ export function useLogin() {
     try {
       const response = await authApi.login(values);
       if (response.ok && response.uid) {
+        const sessionToken = response.session_id;
+        let userRole: "admin" | "moderator" | "seller" | "gerente" = "seller";
+
+        try {
+          const sessionRes = await authApi.getSession(sessionToken);
+          console.log("[LOGIN] Session response:", sessionRes);
+          if (sessionRes.ok && sessionRes.role) {
+            const validRoles: Record<string, "admin" | "moderator" | "seller" | "gerente"> = {
+              admin: "admin",
+              moderator: "moderator",
+              seller: "seller",
+              gerente: "gerente",
+            };
+            userRole = validRoles[sessionRes.role] || "seller";
+          }
+        } catch (e) {
+          console.error("[LOGIN] GetSession error:", e);
+          userRole = "seller";
+        }
+
+        console.log("[LOGIN] Final role:", userRole);
+
         persistAuthState(
           {
             uid: response.uid,
             email: values.username,
             name: values.username,
-            role: "seller",
-            sessionToken: response.session_id,
+            role: userRole,
+            sessionToken: sessionToken,
           },
           values.rememberMe,
         );
-        router.push(getLandingRouteForRole("seller"));
+        router.push(getLandingRouteForRole(userRole));
         return;
       }
 

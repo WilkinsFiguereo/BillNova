@@ -5,37 +5,37 @@ type IconName = "user" | "at-sign" | "mail" | "lock" | "phone" | "map-pin";
 const paths: Record<IconName, React.ReactNode> = {
   "user": (
     <>
-      <circle cx="8" cy="5.5" r="2.5" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M2 14.5c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <circle cx="6" cy="4" r="2" stroke="currentColor" strokeWidth="1.2" />
+      <path d="M2 11c0-2.5 2-4 4-4s4 1.5 4 4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
     </>
   ),
   "at-sign": (
     <>
-      <circle cx="8" cy="8" r="2.5" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M10.5 8c0 2 .8 2.5 1.5 2.5S14 9.5 14 8a6 6 0 1 0-1.7 4.2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <circle cx="6" cy="6" r="2" stroke="currentColor" strokeWidth="1.2" />
+      <path d="M8 6c0 1.5.6 2 1.2 2S10.5 7 10.5 6a4.5 4.5 0 1 0-1.3 3.2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
     </>
   ),
   "mail": (
     <>
-      <rect x="1.5" y="4" width="13" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M1.5 6l6.5 4 6.5-4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <rect x="1" y="3" width="10" height="7" rx="1" stroke="currentColor" strokeWidth="1.2" />
+      <path d="M1 4.5l4.5 3 4.5-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
     </>
   ),
   "lock": (
     <>
-      <rect x="3.5" y="7.5" width="9" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M5.5 7.5V5.5a2.5 2.5 0 0 1 5 0v2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <rect x="2.5" y="5.5" width="7" height="5.5" rx="1" stroke="currentColor" strokeWidth="1.2" />
+      <path d="M4 5.5V4a2 2 0 0 1 4 0v1.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
     </>
   ),
   "phone": (
     <>
-      <path d="M3 2.5h3L7.5 6l-2 1.2A9 9 0 0 0 10.8 11l1.2-2 3.5 1.5v2.5A2 2 0 0 1 14 15C7 15 1 9 1 2a2 2 0 0 1 2-2.5z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+      <path d="M2 2h2.5L6 4.5l-1.5 1A7 7 0 0 0 8 8l1-1.5 2.5 1v2A1.5 1.5 0 0 1 10.5 12C5.5 12 1 7.5 1 3a1.5 1.5 0 0 1 1-1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
     </>
   ),
   "map-pin": (
     <>
-      <path d="M8 1.5a4.5 4.5 0 0 1 4.5 4.5c0 3.5-4.5 8.5-4.5 8.5S3.5 9.5 3.5 6A4.5 4.5 0 0 1 8 1.5z" stroke="currentColor" strokeWidth="1.4" />
-      <circle cx="8" cy="6" r="1.5" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M6 1.5a3 3 3 0 0 1 3 3c0 2.5-3 6-3 6s-3-3.5-3-6a3 3 0 0 1 3-3z" stroke="currentColor" strokeWidth="1.2" />
+      <circle cx="6" cy="4.5" r="1" stroke="currentColor" strokeWidth="1.2" />
     </>
   ),
 };
@@ -49,7 +49,7 @@ export function FieldIcon({ name, className = "w-4 h-4" }: FieldIconProps) {
   const icon = paths[name as IconName];
   if (!icon) return null;
   return (
-    <svg className={className} viewBox="0 0 16 16" fill="none" aria-hidden>
+    <svg className={className} viewBox="0 0 12 12" fill="none" aria-hidden>
       {icon}
     </svg>
   );
