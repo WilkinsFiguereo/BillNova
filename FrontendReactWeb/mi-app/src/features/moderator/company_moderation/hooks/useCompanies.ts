@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
-import { COMPANIES_DATA } from "../data/companies.data";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { apiListModeratorCompanies, apiSetCompanyModerationStatus } from "../../data/moderatorApi";
 import { Company, CompanyStatus, StatusFilter } from "../types/companies.types";
 
 interface UseCompaniesReturn {
@@ -30,7 +30,7 @@ interface UseCompaniesReturn {
 }
 
 export function useCompanies(): UseCompaniesReturn {
-  const [companies, setCompanies] = useState<Company[]>(COMPANIES_DATA);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<StatusFilter>("all");
   const [activeType, setActiveType] = useState("All");
@@ -49,22 +49,43 @@ export function useCompanies(): UseCompaniesReturn {
     setTimeout(() => setToastVisible(false), 3500);
   }, []);
 
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const rows = await apiListModeratorCompanies();
+        if (mounted) setCompanies(rows as Company[]);
+      } catch {
+        if (mounted) showToast("No se pudieron cargar las empresas", "error");
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [showToast]);
+
   const updateStatus = useCallback((id: string, status: "approved" | "rejected", reason?: string) => {
-    setCompanies((prev) =>
-      prev.map((c) => c.id === id ? { ...c, status, rejectionReason: reason } : c)
-    );
-    setSelectedCompany((prev) =>
-      prev?.id === id ? { ...prev, status, rejectionReason: reason } : prev
-    );
+    setCompanies((prev) => prev.map((company) => (company.id === id ? { ...company, status, rejectionReason: reason } : company)));
+    setSelectedCompany((prev) => (prev?.id === id ? { ...prev, status, rejectionReason: reason } : prev));
   }, []);
 
-  const approve = useCallback((id: string) => {
-    updateStatus(id, "approved");
-    showToast("Company approved and active on the platform", "success");
-  }, [updateStatus, showToast]);
+  const approve = useCallback(
+    (id: string) => {
+      (async () => {
+        try {
+          await apiSetCompanyModerationStatus(id, "approved");
+          updateStatus(id, "approved");
+          showToast("Empresa aprobada y activa en la plataforma", "success");
+        } catch {
+          showToast("No se pudo aprobar la empresa", "error");
+        }
+      })();
+    },
+    [updateStatus, showToast],
+  );
 
-  const openRejectModal = useCallback((c: Company) => {
-    setCompanyToReject(c);
+  const openRejectModal = useCallback((company: Company) => {
+    setCompanyToReject(company);
     setRejectionReason("");
     setRejectModalVisible(true);
   }, []);
@@ -77,39 +98,49 @@ export function useCompanies(): UseCompaniesReturn {
 
   const confirmRejection = useCallback(() => {
     if (!companyToReject) return;
-    updateStatus(companyToReject.id, "rejected", rejectionReason || "No reason provided");
-    closeRejectModal();
-    showToast("Company rejected. The representative will be notified.", "error");
+    (async () => {
+      try {
+        const reason = rejectionReason || "Sin motivo especificado";
+        await apiSetCompanyModerationStatus(companyToReject.id, "rejected", reason);
+        updateStatus(companyToReject.id, "rejected", reason);
+        closeRejectModal();
+        showToast("Empresa rechazada.", "error");
+      } catch {
+        showToast("No se pudo rechazar la empresa", "error");
+      }
+    })();
   }, [companyToReject, rejectionReason, updateStatus, closeRejectModal, showToast]);
 
-  const counters = useMemo(() => ({
-    all:      companies.length,
-    pending:  companies.filter((c) => c.status === "pending").length,
-    approved: companies.filter((c) => c.status === "approved").length,
-    rejected: companies.filter((c) => c.status === "rejected").length,
-  }), [companies]);
+  const counters = useMemo(
+    () => ({
+      all: companies.length,
+      pending: companies.filter((company) => company.status === "pending").length,
+      approved: companies.filter((company) => company.status === "approved").length,
+      rejected: companies.filter((company) => company.status === "rejected").length,
+    }),
+    [companies],
+  );
 
   const filteredCompanies = useMemo(() => {
     let list = [...companies];
 
     if (activeFilter !== "all") {
-      list = list.filter((c) => c.status === activeFilter);
+      list = list.filter((company) => company.status === activeFilter);
     }
     if (activeType !== "All") {
-      list = list.filter((c) => c.type === activeType);
+      list = list.filter((company) => company.type === activeType);
     }
     if (search) {
       const q = search.toLowerCase();
       list = list.filter(
-        (c) =>
-          c.name.toLowerCase().includes(q) ||
-          c.taxId.toLowerCase().includes(q) ||
-          c.representative.toLowerCase().includes(q) ||
-          c.country.toLowerCase().includes(q)
+        (company) =>
+          company.name.toLowerCase().includes(q) ||
+          company.taxId.toLowerCase().includes(q) ||
+          company.representative.toLowerCase().includes(q) ||
+          company.country.toLowerCase().includes(q),
       );
     }
 
-    // Pending first
     const order: Record<CompanyStatus, number> = { pending: 0, approved: 1, rejected: 2 };
     list.sort((a, b) => order[a.status] - order[b.status]);
 
@@ -117,12 +148,27 @@ export function useCompanies(): UseCompaniesReturn {
   }, [companies, activeFilter, activeType, search]);
 
   return {
-    companies, search, activeFilter, activeType,
-    selectedCompany, rejectModalVisible, companyToReject,
-    rejectionReason, toastVisible, toastMessage, toastType,
-    filteredCompanies, counters,
-    setSearch, setActiveFilter, setActiveType, setRejectionReason,
+    companies,
+    search,
+    activeFilter,
+    activeType,
+    selectedCompany,
+    rejectModalVisible,
+    companyToReject,
+    rejectionReason,
+    toastVisible,
+    toastMessage,
+    toastType,
+    filteredCompanies,
+    counters,
+    setSearch,
+    setActiveFilter,
+    setActiveType,
+    setRejectionReason,
     viewDetail: setSelectedCompany,
-    approve, openRejectModal, closeRejectModal, confirmRejection,
+    approve,
+    openRejectModal,
+    closeRejectModal,
+    confirmRejection,
   };
 }

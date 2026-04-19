@@ -34,13 +34,13 @@ export interface Producto {
   precio: number;
   totalVentas: number;
   totalIngresos: number;
-  totalVistas: number;
-  calificacion: number;
+  totalVistas: number | null;
+  calificacion: number | null;
   totalResenas: number;
   stock: number;
-  tasaConversion: number;   // vistas → compra %
-  tasaDevolucion: number;
-  crecimiento: number;
+  tasaConversion: number | null;
+  tasaDevolucion: number | null;
+  crecimiento: number | null;
   ventasMensuales: VentaMensual[];
   resenasDist: ResenaDistribucion[];
   fechaLanzamiento: string;
@@ -51,9 +51,9 @@ export interface EstadisticasGlobales {
   productosActivos: number;
   totalVentas: number;
   totalIngresos: number;
-  promedioCalificacion: number;
-  totalVistas: number;
-  crecimientoGeneral: number;
+  promedioCalificacion: number | null;
+  totalVistas: number | null;
+  crecimientoGeneral: number | null;
 }
 
 export interface FiltrosProductos {

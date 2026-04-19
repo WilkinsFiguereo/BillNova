@@ -12,8 +12,8 @@ export interface KpiGlobal {
   reportesSolucionados: number;
   crecimientoVentas: number;
   crecimientoIngresos: number;
-  promedioCalificacion: number;
-  totalVistas: number;
+  promedioCalificacion: number | null;
+  totalVistas: number | null;
 }
 
 export interface ActividadReciente {
@@ -39,7 +39,7 @@ export interface EmpresaTop {
   color: string;
   ventas: number;
   ingresos: number;
-  crecimiento: number;
+  crecimiento: number | null;
 }
 
 export interface ProductoTop {
@@ -48,7 +48,7 @@ export interface ProductoTop {
   empresa: string;
   ventas: number;
   ingresos: number;
-  calificacion: number;
+  calificacion: number | null;
 }
 
 export interface ReporteReciente {

@@ -1,16 +1,21 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
-import { PRODUCTOS_PENDIENTES } from "../data/moderation.data";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { apiListModeratorProducts, apiSetProductModerationStatus } from "../../data/moderatorApi";
 import {
+  AccionModeration,
+  FiltroStatus,
   ProductoPendiente,
   ProductoStatus,
-  FiltroStatus,
-  AccionModeration,
 } from "../types/moderation.types";
 
+function colorFromId(id: string): string {
+  const colors = ["#2563EB", "#059669", "#D97706", "#DC2626", "#7C3AED", "#0F766E"];
+  const num = Number(String(id).replace(/\D/g, "")) || 0;
+  return colors[num % colors.length];
+}
+
 interface UseModerationReturn {
-  // State
   productos: ProductoPendiente[];
   search: string;
   filtroActivo: FiltroStatus;
@@ -21,12 +26,8 @@ interface UseModerationReturn {
   toastVisible: boolean;
   toastMsg: string;
   toastTipo: "success" | "error";
-
-  // Computed
   productosFiltrados: ProductoPendiente[];
   contadores: Record<ProductoStatus | "todos", number>;
-
-  // Actions
   setSearch: (v: string) => void;
   setFiltroActivo: (v: FiltroStatus) => void;
   setMotivoRechazo: (v: string) => void;
@@ -38,7 +39,7 @@ interface UseModerationReturn {
 }
 
 export function useModeration(): UseModerationReturn {
-  const [productos, setProductos] = useState<ProductoPendiente[]>(PRODUCTOS_PENDIENTES);
+  const [productos, setProductos] = useState<ProductoPendiente[]>([]);
   const [search, setSearch] = useState("");
   const [filtroActivo, setFiltroActivo] = useState<FiltroStatus>("todos");
   const [productoDetalle, setProductoDetalle] = useState<ProductoPendiente | null>(null);
@@ -56,27 +57,67 @@ export function useModeration(): UseModerationReturn {
     setTimeout(() => setToastVisible(false), 3500);
   }, []);
 
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const rows = await apiListModeratorProducts();
+        if (!mounted) return;
+        setProductos(
+          rows.map((product) => ({
+            id: product.id,
+            nombre: product.name,
+            sku: product.sku,
+            categoria: product.categoryName || null,
+            precio: product.price,
+            costo: product.cost,
+            stock: product.stock,
+            descripcion: product.description,
+            vendedor: product.companyName,
+            vendedorEmail: product.companyEmail || null,
+            fechaSubida: product.updatedAt,
+            imagenColor: colorFromId(product.id),
+            status: product.moderationStatus,
+            motivoRechazo: product.moderationReason,
+          })),
+        );
+      } catch {
+        if (mounted) showToast("No se pudieron cargar productos para moderacion", "error");
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [showToast]);
+
   const cambiarStatus = useCallback((accion: AccionModeration) => {
     setProductos((prev) =>
-      prev.map((p) =>
-        p.id === accion.productoId
-          ? { ...p, status: accion.status, motivoRechazo: accion.motivo }
-          : p
-      )
+      prev.map((product) =>
+        product.id === accion.productoId
+          ? { ...product, status: accion.status, motivoRechazo: accion.motivo }
+          : product,
+      ),
     );
   }, []);
 
-  const aprobar = useCallback((id: string) => {
-    cambiarStatus({ productoId: id, status: "approved" });
-    // Si el detalle está abierto, actualizarlo
-    setProductoDetalle((prev) =>
-      prev?.id === id ? { ...prev, status: "approved" } : prev
-    );
-    showToast("Producto aprobado y publicado correctamente", "success");
-  }, [cambiarStatus, showToast]);
+  const aprobar = useCallback(
+    (id: string) => {
+      (async () => {
+        try {
+          await apiSetProductModerationStatus(id, "approved");
+          cambiarStatus({ productoId: id, status: "approved" });
+          setProductoDetalle((prev) => (prev?.id === id ? { ...prev, status: "approved" } : prev));
+          showToast("Producto aprobado y publicado correctamente", "success");
+        } catch {
+          showToast("No se pudo aprobar el producto", "error");
+        }
+      })();
+    },
+    [cambiarStatus, showToast],
+  );
 
-  const abrirModalRechazar = useCallback((p: ProductoPendiente) => {
-    setProductoARechazar(p);
+  const abrirModalRechazar = useCallback((product: ProductoPendiente) => {
+    setProductoARechazar(product);
     setMotivoRechazo("");
     setModalRechazarVisible(true);
   }, []);
@@ -89,42 +130,50 @@ export function useModeration(): UseModerationReturn {
 
   const confirmarRechazo = useCallback(() => {
     if (!productoARechazar) return;
-    cambiarStatus({
-      productoId: productoARechazar.id,
-      status: "rejected",
-      motivo: motivoRechazo || "Sin motivo especificado",
-    });
-    setProductoDetalle((prev) =>
-      prev?.id === productoARechazar.id
-        ? { ...prev, status: "rejected", motivoRechazo: motivoRechazo || "Sin motivo especificado" }
-        : prev
-    );
-    cerrarModalRechazar();
-    showToast("Producto rechazado. El vendedor será notificado.", "error");
+    (async () => {
+      try {
+        const reason = motivoRechazo || "Sin motivo especificado";
+        await apiSetProductModerationStatus(productoARechazar.id, "rejected", reason);
+        cambiarStatus({
+          productoId: productoARechazar.id,
+          status: "rejected",
+          motivo: reason,
+        });
+        setProductoDetalle((prev) =>
+          prev?.id === productoARechazar.id ? { ...prev, status: "rejected", motivoRechazo: reason } : prev,
+        );
+        cerrarModalRechazar();
+        showToast("Producto rechazado.", "error");
+      } catch {
+        showToast("No se pudo rechazar el producto", "error");
+      }
+    })();
   }, [productoARechazar, motivoRechazo, cambiarStatus, cerrarModalRechazar, showToast]);
 
-  const contadores = useMemo(() => ({
-    todos:    productos.length,
-    pending:  productos.filter((p) => p.status === "pending").length,
-    approved: productos.filter((p) => p.status === "approved").length,
-    rejected: productos.filter((p) => p.status === "rejected").length,
-  }), [productos]);
+  const contadores = useMemo(
+    () => ({
+      todos: productos.length,
+      pending: productos.filter((product) => product.status === "pending").length,
+      approved: productos.filter((product) => product.status === "approved").length,
+      rejected: productos.filter((product) => product.status === "rejected").length,
+    }),
+    [productos],
+  );
 
   const productosFiltrados = useMemo(() => {
     let lista = [...productos];
     if (filtroActivo !== "todos") {
-      lista = lista.filter((p) => p.status === filtroActivo);
+      lista = lista.filter((product) => product.status === filtroActivo);
     }
     if (search) {
       const q = search.toLowerCase();
       lista = lista.filter(
-        (p) =>
-          p.nombre.toLowerCase().includes(q) ||
-          p.sku.toLowerCase().includes(q) ||
-          p.vendedor.toLowerCase().includes(q)
+        (product) =>
+          product.nombre.toLowerCase().includes(q) ||
+          product.sku.toLowerCase().includes(q) ||
+          product.vendedor.toLowerCase().includes(q),
       );
     }
-    // Pendientes primero
     lista.sort((a, b) => {
       const orden: Record<ProductoStatus, number> = { pending: 0, approved: 1, rejected: 2 };
       return orden[a.status] - orden[b.status];
