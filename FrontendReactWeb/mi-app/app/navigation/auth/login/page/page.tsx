@@ -1,11 +1,22 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
-import { useLogin, useSession } from "@/features/auth/login";
+import { useRouter } from "next/navigation";
+import { useLogin } from "@/features/auth/login";
+import { getStoredAuthState } from "@/features/auth/login/data/storage";
+import { getUserRoleRoute } from "@/features/auth/login/hooks/useRoleGuard";
 
 export default function LoginPage() {
-  const { user } = useSession();
+  const router = useRouter();
   const { values, errors, isLoading, serverError, errorCode, verificationEmail, onFieldChange, onSubmit } = useLogin();
+
+  useEffect(() => {
+    const cached = getStoredAuthState();
+    if (cached?.uid) {
+      router.replace(getUserRoleRoute(cached.role));
+    }
+  }, [router]);
 
   return (
     <main className="page">

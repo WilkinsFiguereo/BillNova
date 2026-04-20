@@ -107,7 +107,7 @@ export async function odooDelete<TRes>(path: string, options: RequestOptions = {
 export async function odooGet<TRes>(path: string, options: RequestOptions = {}): Promise<TRes> {
   const response = await fetch(`${API_BASE}${path}`, {
     method: "GET",
-    credentials: "include", // 👈 ESTO TAMBIÉN
+    credentials: "include",
     headers: options.sessionToken
       ? { "X-Auth-Session": options.sessionToken }
       : undefined,
@@ -118,5 +118,14 @@ export async function odooGet<TRes>(path: string, options: RequestOptions = {}):
     throw new Error(await buildHttpError(response));
   }
 
-  return response.json() as Promise<TRes>;
+  const text = await response.text();
+  if (!text) {
+    return { ok: false } as TRes;
+  }
+
+  try {
+    return JSON.parse(text) as TRes;
+  } catch {
+    return { ok: false } as TRes;
+  }
 }

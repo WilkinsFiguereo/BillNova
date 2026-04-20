@@ -64,8 +64,8 @@ export function FormField({
 
     <div className="relative">
       {/* Icon */}
-      <span className="absolute left-3 top-3 text-[#3d5166] transition-colors duration-200 pointer-events-none [input:focus~&]:text-[#4f8ef7]">
-        <FieldIcon name={iconName} />
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3d5166] transition-colors duration-200 pointer-events-none [input:focus~&]:text-[#4f8ef7]">
+        <span className="block w-full h-full"><FieldIcon name={iconName} /></span>
       </span>
 
       {isTextarea ? (

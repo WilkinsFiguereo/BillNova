@@ -26,10 +26,26 @@ export interface StatCardData {
 
 export const STATS_DATA: StatCardData[] = [
   {
-    label: "Total Productos",
-    value: "248",
-    Icon: Package,
-    delta: "+12 este mes",
+    label: "Total Ganado",
+    value: "$0",
+    Icon: TrendingUp,
+    delta: "Este mes",
+    color: "#10b981",
+    bg: "#d1fae5",
+  },
+  {
+    label: "Total Perdido",
+    value: "$0",
+    Icon: TrendingDown,
+    delta: "Este mes",
+    color: "#ef4444",
+    bg: "#fee2e2",
+  },
+  {
+    label: "Por Mes",
+    value: "$0",
+    Icon: Calendar,
+    delta: "Mes actual",
     color: t.brand400,
     bg: t.brand100,
   },
@@ -37,25 +53,9 @@ export const STATS_DATA: StatCardData[] = [
     label: "Stock Critico",
     value: "9",
     Icon: AlertTriangle,
-    delta: "3 agotados",
+    delta: "Sin datos",
     color: t.warning,
     bg: t.warningBg,
-  },
-  {
-    label: "Facturas Emitidas",
-    value: "134",
-    Icon: FileText,
-    delta: "+8 hoy",
-    color: t.success,
-    bg: t.successBg,
-  },
-  {
-    label: "Cobros Pendientes",
-    value: "$24.8K",
-    Icon: DollarSign,
-    delta: "18 facturas",
-    color: t.error,
-    bg: t.errorBg,
   },
 ];
 

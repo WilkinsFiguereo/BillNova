@@ -1,12 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
 import type { ReactNode } from "react";
-import { useRouter } from "next/navigation";
-import { getStoredAuthState } from "@/features/auth/login";
+import { useRoleGuard } from "@/features/auth/login/hooks/useRoleGuard";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
-  const router = useRouter();
+  const { isLoading, hasAccess } = useRoleGuard("admin");
 
   useEffect(() => {
     const user = getStoredAuthState();

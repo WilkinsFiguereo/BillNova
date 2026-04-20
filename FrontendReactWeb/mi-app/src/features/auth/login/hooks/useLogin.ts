@@ -57,6 +57,21 @@ export function useLogin() {
     try {
       const response = await authApi.login(values);
       if (response.ok && response.uid) {
+        const sessionToken = response.session_token ?? response.session_id;
+        let userRole: UserRole = normalizeUserRole(response.role);
+
+        try {
+          const sessionRes = await authApi.getSession(sessionToken);
+          console.log("[LOGIN] Session response:", sessionRes);
+          if (sessionRes.ok) {
+            userRole = normalizeUserRole(sessionRes.role ?? userRole);
+          }
+        } catch (e) {
+          console.error("[LOGIN] GetSession error:", e);
+        }
+
+        console.log("[LOGIN] Final role:", userRole);
+
         persistAuthState(
           {
             uid: response.uid,

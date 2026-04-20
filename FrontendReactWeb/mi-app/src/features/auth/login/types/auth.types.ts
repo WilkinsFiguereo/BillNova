@@ -1,3 +1,5 @@
+export type UserRole = "admin" | "moderator" | "seller" | "gerente";
+
 export interface AuthUser {
   uid: number;
   name: string;

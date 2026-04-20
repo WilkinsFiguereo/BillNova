@@ -128,7 +128,13 @@ function VerifyEmailContent() {
                 onClick={resend}
                 disabled={isResending || cooldown > 0}
                 className="btn-submit"
-                style={{ width: "100%", marginTop: 10, background: "transparent", color: "var(--text-300)", border: "1px solid var(--stroke-200)" }}
+                style={{
+                  width: "100%",
+                  marginTop: 10,
+                  background: "transparent",
+                  color: "var(--text-300)",
+                  border: "1px solid var(--stroke-200)",
+                }}
               >
                 {cooldown > 0 ? `Reenviar en ${cooldown}s` : isResending ? "Reenviando..." : "Reenviar codigo"}
               </button>

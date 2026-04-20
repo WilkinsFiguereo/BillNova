@@ -24,6 +24,8 @@ export default function DashboardPage() {
     toastVisible,
     toastMsg,
     filteredProducts,
+    stats,
+    loading,
     setSearch,
     showToast,
     refresh,
@@ -57,7 +59,12 @@ export default function DashboardPage() {
         />
 
         {/* Section 2: Stat Cards */}
-        <StatsSection />
+        <StatsSection 
+          totalGanado={stats.totalGanado}
+          totalPerdido={stats.totalPerdido}
+          porMes={stats.porMes}
+          loading={loading}
+        />
 
         {/* Section 3: Tabla de Productos & Facturas */}
         <UsersTableSection
