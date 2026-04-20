@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { INITIAL_FORM_DATA } from '../data/companyRegisterData';
-import { CompanyFormData, CompanyRegisterResponse, FieldError, FormStatus, PasswordStrength } from '../types/companyRegister.types';
+import { CompanyFormData, CompanyRegisterResponse, FieldError, FormStatus, PasswordStrength, UseCompanyRegisterResult } from '../types/companyRegister.types';
 import { C } from '../theme/companyRegisterTheme';
 import { odooPost } from '@/lib/odooApi';
 import { syncBusinessTypeWithCurrentUser, syncCompanyIdWithCurrentUser } from '@/features/seller/shared/companySession';
@@ -28,7 +28,7 @@ export const calcPasswordStrength = (pw: string): PasswordStrength => {
   return map[score - 1] ?? map[0];
 };
 
-export const useCompanyRegister = () => {
+export const useCompanyRegister = (): UseCompanyRegisterResult => {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<CompanyFormData>(() => {
     const initial = { ...INITIAL_FORM_DATA };
@@ -37,6 +37,7 @@ export const useCompanyRegister = () => {
   });
   const [errors, setErrors] = useState<FieldError[]>([]);
   const [formStatus, setFormStatus] = useState<FormStatus>('idle');
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -47,6 +48,7 @@ export const useCompanyRegister = () => {
       return updated;
     });
     setErrors((prev) => prev.filter((error) => error.field !== field));
+    setSubmitError(null);
   }, []);
 
   const getFieldError = useCallback(
@@ -122,6 +124,7 @@ export const useCompanyRegister = () => {
     if (!validateStep(TOTAL_STEPS)) return;
 
     setFormStatus('loading');
+    setSubmitError(null);
 
     try {
       const payload = {
@@ -155,6 +158,7 @@ export const useCompanyRegister = () => {
 
       if (!res.ok) {
         setFormStatus('error');
+        setSubmitError(res.error ?? 'No se pudo registrar la empresa.');
         return;
       }
 
@@ -164,8 +168,9 @@ export const useCompanyRegister = () => {
       }
 
       setFormStatus('success');
-    } catch {
+    } catch (error) {
       setFormStatus('error');
+      setSubmitError(error instanceof Error ? error.message : 'No se pudo registrar la empresa.');
     }
   }, [formData, validateStep]);
 
@@ -178,6 +183,7 @@ export const useCompanyRegister = () => {
     formData,
     errors,
     formStatus,
+    submitError,
     showPassword,
     showConfirm,
     progressPercent,

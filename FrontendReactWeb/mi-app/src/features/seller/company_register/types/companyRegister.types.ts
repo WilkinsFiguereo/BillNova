@@ -65,3 +65,23 @@ export interface CompanyRegisterResponse {
   error?: string;
   missing?: string[];
 }
+
+export interface UseCompanyRegisterResult {
+  currentStep: number;
+  totalSteps: number;
+  formData: CompanyFormData;
+  errors: FieldError[];
+  formStatus: FormStatus;
+  submitError: string | null;
+  showPassword: boolean;
+  showConfirm: boolean;
+  progressPercent: number;
+  passwordStrength: PasswordStrength;
+  updateField: <K extends keyof CompanyFormData>(field: K, value: CompanyFormData[K]) => void;
+  getFieldError: (field: keyof CompanyFormData) => string | undefined;
+  goNext: () => void;
+  goBack: () => void;
+  handleSubmit: () => Promise<void>;
+  toggleShowPassword: () => void;
+  toggleShowConfirm: () => void;
+}

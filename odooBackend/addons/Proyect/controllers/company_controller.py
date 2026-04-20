@@ -3,6 +3,7 @@ from odoo.http import Response, request
 import json
 import secrets
 import logging
+from psycopg2 import IntegrityError
 
 _logger = logging.getLogger(__name__)
 
@@ -293,24 +294,31 @@ class CompanyApiController(http.Controller):
             company = request.env["res.company"].sudo().create(
                 {
                     "name": name,
-                    "ruc": payload.get("ruc"),
-                    "sector": payload.get("sector"),
-                    "founding_year": payload.get("founding_year"),
+                    "ruc": payload.get("ruc") or payload.get("taxId"),
+                    "sector": payload.get("sector") or payload.get("industryType"),
+                    "founding_year": payload.get("founding_year") or payload.get("foundedYear"),
                     "website": payload.get("website"),
-                    "company_size": payload.get("company_size"),
+                    "company_size": payload.get("company_size") or payload.get("companySize"),
                     "business_type": payload.get("business_type") or payload.get("businessType"),
-                    "contact_name": payload.get("contact_name"),
-                    "contact_email": payload.get("contact_email"),
-                    "contact_phone": payload.get("contact_phone"),
+                    "contact_name": payload.get("contact_name") or payload.get("adminFullName"),
+                    "contact_email": payload.get("contact_email") or payload.get("adminEmail"),
+                    "contact_phone": payload.get("contact_phone") or payload.get("adminPhone"),
+                    "admin_full_name": payload.get("admin_full_name") or payload.get("adminFullName"),
+                    "admin_email": payload.get("admin_email") or payload.get("adminEmail"),
+                    "admin_phone": payload.get("admin_phone") or payload.get("adminPhone"),
+                    "admin_position": payload.get("admin_position") or payload.get("adminPosition"),
                     "country_id": payload.get("country_id"),
-                    "country_name": payload.get("country_name"),
+                    "country_name": payload.get("country_name") or payload.get("country"),
                     "address_state": payload.get("state"),
                     "address_city": payload.get("city"),
                     "street": payload.get("address"),
                     "full_address": payload.get("address"),
-                    "postal_code": payload.get("postal_code"),
-                    "zip": payload.get("postal_code"),
+                    "postal_code": payload.get("postal_code") or payload.get("postalCode"),
+                    "zip": payload.get("postal_code") or payload.get("postalCode"),
                     "access_password": payload.get("password"),
+                    "confirm_password": payload.get("confirm_password") or payload.get("confirmPassword"),
+                    "accept_terms": payload.get("accept_terms") if payload.get("accept_terms") is not None else payload.get("acceptTerms"),
+                    "accept_marketing": payload.get("accept_marketing") if payload.get("accept_marketing") is not None else payload.get("acceptMarketing"),
                     "moderation_status": "pending",
                     "status": "disabled",
                     "moderation_reason": False,
@@ -348,6 +356,12 @@ class CompanyApiController(http.Controller):
                 company.name,
             )
             return self._json_response({"ok": True, "company_id": company.id, "data": self._serialize_company_row(company)}, 201)
+        except IntegrityError:
+            request.env.cr.rollback()
+            return self._json_response(
+                {"ok": False, "error": "Ya existe una empresa registrada con ese nombre."},
+                409,
+            )
         except Exception as error:
             return self._json_response({"ok": False, "error": str(error)}, 500)
 

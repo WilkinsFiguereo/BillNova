@@ -21,3 +21,5 @@ class ProyectAppUser(models.Model):
     is_mobile_user = fields.Boolean(string='Es Usuario Móvil')
     res_user_id = fields.Many2one('res.users', required=True, ondelete='cascade')
     company_id = fields.Many2one('res.company', string='Empresa')
+
+    active = fields.Boolean(default=True)

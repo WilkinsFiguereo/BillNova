@@ -1,10 +1,14 @@
 import { Shield, ChevronRight } from 'lucide-react';
 import type { RecentUser } from '../types/dashboard.types';
 
-const roleConfig = {
-  admin:     { label: 'Admin',      color: 'var(--color-primary)',       bg: 'var(--color-primary-soft)' },
-  moderator: { label: 'Moderador',  color: 'var(--color-primary-light)', bg: '#EFF6FF' },
-  user:      { label: 'Usuario',    color: 'var(--color-text-secondary)', bg: 'var(--color-bg-alt)' },
+const roleConfig: Record<string, { label: string; color: string; bg: string }> = {
+  admin:     { label: 'Admin',        color: 'var(--color-primary)',       bg: 'var(--color-primary-soft)' },
+  moderator: { label: 'Moderador',    color: 'var(--color-primary-light)', bg: '#EFF6FF' },
+  gerente:   { label: 'Gerente',      color: '#7C3AED',                   bg: '#EDE9FE' },
+  seller:    { label: 'Vendedor',     color: '#059669',                   bg: '#D1FAE5' },
+  editor:    { label: 'Editor',       color: '#D97706',                   bg: '#FEF3C7' },
+  viewer:    { label: 'Visor',        color: 'var(--color-text-secondary)', bg: 'var(--color-bg-alt)' },
+  user:      { label: 'Usuario',      color: 'var(--color-text-secondary)', bg: 'var(--color-bg-alt)' },
 };
 
 const statusConfig = {
@@ -14,8 +18,8 @@ const statusConfig = {
 };
 
 export function UserRow({ user, onPress }: { user: RecentUser; onPress?: (u: RecentUser) => void }) {
-  const role   = roleConfig[user.role];
-  const status = statusConfig[user.status];
+  const role   = roleConfig[user.role] || roleConfig.user;
+  const status = statusConfig[user.status] || statusConfig.inactive;
   const initials = user.name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase();
 
   return (

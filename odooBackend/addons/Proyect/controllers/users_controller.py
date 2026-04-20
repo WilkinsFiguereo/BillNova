@@ -5,6 +5,7 @@ import logging
 
 _logger = logging.getLogger(__name__)
 
+
 class UserApiController(http.Controller):
 
     # =========================
@@ -28,96 +29,162 @@ class UserApiController(http.Controller):
         )
 
     def _options_response(self):
-        return Response(
-            status=200,
-            headers=self._cors_headers()
-        )
+        return Response(status=200, headers=self._cors_headers())
 
     # =========================
-    # GET - Listar usuarios
+    # Normalizadores
+    # =========================
+
+    def _normalize_role(self, role):
+        allowed_roles = {'admin', 'moderation', 'seller', 'user'}
+        normalized = (role or 'user').strip().lower()
+        return normalized if normalized in allowed_roles else 'user'
+
+    def _normalize_email(self, value):
+        return (value or '').strip().lower()
+
+    def _system_group(self):
+        return request.env.ref('base.group_system').sudo()
+
+    def _active_admin_count(self, exclude_user_id=None):
+        domain = [('active', '=', True), ('group_ids', 'in', self._system_group().id)]
+        if exclude_user_id:
+            domain.append(('id', '!=', exclude_user_id))
+        return request.env['res.users'].sudo().search_count(domain)
+
+    def _sync_system_admin_role(self, user, role):
+        if role == 'admin':
+            user.write({'group_ids': [(4, self._system_group().id)]})
+
+    # =========================================================
+    # ====================== RES USERS =========================
+    # =========================================================
+
+    # =========================
+    # GET USERS
     # =========================
 
     @http.route('/api/users', type='http', auth='public', methods=['GET', 'OPTIONS'], csrf=False)
     def list_users(self, **kwargs):
-
         if request.httprequest.method == 'OPTIONS':
             return self._options_response()
 
-        users = request.env['res.users'].sudo().search([])
+        users = request.env['res.users'].sudo().with_context(active_test=False).search([])
 
-        data = []
-        for user in users:
-            data.append({
-                'id': user.id,
-                'name': user.name,
-                'login': user.login,
-                'email': user.email,
-                'active': user.active,
-            })
+        data = [{
+            'id': u.id,
+            'name': u.name,
+            'login': u.login,
+            'email': u.email,
+            'role': getattr(u, 'billnova_role', 'user'),
+            'active': u.active,
+        } for u in users]
 
         return self._json_response({'data': data})
 
     # =========================
-    # GET - Usuario por ID
+    # GET USER BY ID
     # =========================
 
     @http.route('/api/users/<int:user_id>', type='http', auth='public', methods=['GET', 'OPTIONS'], csrf=False)
     def get_user(self, user_id):
-
         if request.httprequest.method == 'OPTIONS':
             return self._options_response()
 
-        user = request.env['res.users'].sudo().browse(user_id)
+        user = request.env['res.users'].sudo().with_context(active_test=False).browse(user_id)
 
         if not user.exists():
             return self._json_response({'error': 'Usuario no encontrado'}, 404)
 
-        data = {
+        return self._json_response({'data': {
             'id': user.id,
             'name': user.name,
             'login': user.login,
             'email': user.email,
+            'role': getattr(user, 'billnova_role', 'user'),
             'active': user.active,
-        }
-
-        return self._json_response({'data': data})
+        }})
 
     # =========================
-    # POST - Crear usuario
+    # CREATE USER (UNIFICADO)
     # =========================
 
     @http.route('/api/users', type='http', auth='public', methods=['POST', 'OPTIONS'], csrf=False)
     def create_user(self):
-
         if request.httprequest.method == 'OPTIONS':
             return self._options_response()
 
         try:
             body = json_lib.loads(request.httprequest.data)
 
-            user = request.env['res.users'].sudo().create({
-                'name': body.get('name'),
-                'login': body.get('login'),
-                'email': body.get('email'),
-                'password': body.get('password'),
-            })
+            name = (body.get('name') or '').strip()
+            login = (body.get('login') or body.get('email') or '').strip().lower()
+            email = (body.get('email') or login).strip().lower()
+            password = body.get('password') or 'Temp1234*'
+            role = self._normalize_role(body.get('role'))
 
-            return self._json_response({
-                'message': 'Usuario creado correctamente',
-                'id': user.id
-            }, 201)
+            if not name:
+                return self._json_response({'error': 'El nombre es obligatorio'}, 400)
+
+            if not login:
+                return self._json_response({'error': 'El login/email es obligatorio'}, 400)
+
+            # evitar crear sin admin
+            if role != 'admin' and self._active_admin_count() == 0:
+                return self._json_response({
+                    'error': 'Debe existir al menos un admin activo'
+                }, 400)
+
+            existing = request.env['res.users'].sudo().search([
+                '|', ('login', '=', login), ('email', '=', email)
+            ], limit=1)
+
+            if existing:
+                existing.write({
+                    'name': name,
+                    'login': login,
+                    'email': email,
+                    'billnova_role': role,
+                    'active': body.get('active', existing.active),
+                })
+
+                if body.get('password'):
+                    existing.write({'password': password})
+
+                self._sync_system_admin_role(existing, role)
+
+                return self._json_response({
+                    'message': 'Usuario reutilizado',
+                    'id': existing.id,
+                    'reused': True
+                })
+
+            values = {
+                'name': name,
+                'login': login,
+                'email': email,
+                'password': password,
+                'billnova_role': role,
+                'active': body.get('active', True),
+            }
+
+            if role == 'admin':
+                values['group_ids'] = [(4, self._system_group().id)]
+
+            user = request.env['res.users'].sudo().create(values)
+
+            return self._json_response({'message': 'Usuario creado', 'id': user.id}, 201)
 
         except Exception as e:
             _logger.exception("Error creando usuario")
             return self._json_response({'error': str(e)}, 400)
 
     # =========================
-    # PUT - Actualizar usuario
+    # UPDATE USER
     # =========================
 
     @http.route('/api/users/<int:user_id>', type='http', auth='public', methods=['PUT', 'OPTIONS'], csrf=False)
     def update_user(self, user_id):
-
         if request.httprequest.method == 'OPTIONS':
             return self._options_response()
 
@@ -129,29 +196,44 @@ class UserApiController(http.Controller):
         try:
             body = json_lib.loads(request.httprequest.data)
 
+            name = (body.get('name') or user.name).strip()
+            login = (body.get('login') or body.get('email') or user.login).strip().lower()
+            email = (body.get('email') or user.email or login).strip().lower()
+            role = self._normalize_role(body.get('role', getattr(user, 'billnova_role', 'user')))
+
+            duplicate = request.env['res.users'].sudo().search([
+                ('id', '!=', user.id),
+                '|', ('login', '=', login), ('email', '=', email)
+            ], limit=1)
+
+            if duplicate:
+                return self._json_response({'error': 'Email/login ya existe'}, 409)
+
             user.write({
-                'name': body.get('name', user.name),
-                'login': body.get('login', user.login),
-                'email': body.get('email', user.email),
+                'name': name,
+                'login': login,
+                'email': email,
+                'billnova_role': role,
                 'active': body.get('active', user.active),
             })
 
             if body.get('password'):
                 user.write({'password': body.get('password')})
 
-            return self._json_response({'message': 'Usuario actualizado correctamente'})
+            self._sync_system_admin_role(user, role)
+
+            return self._json_response({'message': 'Usuario actualizado'})
 
         except Exception as e:
-            _logger.exception("Error actualizando usuario")
+            _logger.exception("Error update user")
             return self._json_response({'error': str(e)}, 400)
 
     # =========================
-    # DELETE - Eliminar usuario
+    # DELETE (SOFT)
     # =========================
 
     @http.route('/api/users/<int:user_id>', type='http', auth='public', methods=['DELETE', 'OPTIONS'], csrf=False)
     def delete_user(self, user_id):
-
         if request.httprequest.method == 'OPTIONS':
             return self._options_response()
 
@@ -161,75 +243,206 @@ class UserApiController(http.Controller):
             return self._json_response({'error': 'Usuario no encontrado'}, 404)
 
         try:
-            user.unlink()
-            return self._json_response({'message': 'Usuario eliminado correctamente'})
+            request.env.cr.execute(
+                "UPDATE res_users SET active = FALSE WHERE id = %s",
+                [user.id]
+            )
+            request.env.cr.commit()
+
+            return self._json_response({'message': 'Usuario desactivado'})
         except Exception as e:
-            _logger.exception("Error eliminando usuario")
+            _logger.exception("Error delete user")
             return self._json_response({'error': str(e)}, 400)
-        
+
+    # =========================================================
+    # ================== BILLNOVA USERS =======================
+    # =========================================================
+
+    # LIST
     @http.route('/api/billnova-users', type='http', auth='public', methods=['GET', 'OPTIONS'], csrf=False)
-    def list_billnova_users(self, **kwargs):
+    def list_billnova_users(self):
         if request.httprequest.method == 'OPTIONS':
             return self._options_response()
-        users = request.env['billnova.user'].sudo().search([])
-        data = [{'id': u.id, 'name': u.name, 'email': u.email,
-                 'phone': u.phone, 'address': u.address,
-                 'is_mobile_user': u.is_mobile_user,
-                 'res_user_id': u.res_user_id.id} for u in users]
+
+        users = request.env['billnova.user'].sudo().with_context(active_test=False).search([])
+
+        data = [{
+            'id': u.id,
+            'name': u.name,
+            'email': u.email,
+            'phone': u.phone,
+            'address': u.address,
+            'role': u.role,
+            'active': u.active,
+            'is_mobile_user': u.is_mobile_user,
+            'res_user_id': u.res_user_id.id if u.res_user_id else None,
+        } for u in users]
+
         return self._json_response({'data': data})
 
+    # GET
     @http.route('/api/billnova-users/<int:user_id>', type='http', auth='public', methods=['GET', 'OPTIONS'], csrf=False)
     def get_billnova_user(self, user_id):
         if request.httprequest.method == 'OPTIONS':
             return self._options_response()
+
         u = request.env['billnova.user'].sudo().browse(user_id)
+
         if not u.exists():
             return self._json_response({'error': 'No encontrado'}, 404)
-        return self._json_response({'data': {'id': u.id, 'name': u.name,
-            'email': u.email, 'phone': u.phone, 'address': u.address,
-            'is_mobile_user': u.is_mobile_user, 'res_user_id': u.res_user_id.id}})
 
+        return self._json_response({'data': {
+            'id': u.id,
+            'name': u.name,
+            'email': u.email,
+            'phone': u.phone,
+            'address': u.address,
+            'role': u.role,
+            'active': u.active,
+            'is_mobile_user': u.is_mobile_user,
+            'res_user_id': u.res_user_id.id if u.res_user_id else None,
+        }})
+
+    # CREATE (UNIFICADO + LINK RES USERS)
     @http.route('/api/billnova-users', type='http', auth='public', methods=['POST', 'OPTIONS'], csrf=False)
     def create_billnova_user(self):
         if request.httprequest.method == 'OPTIONS':
             return self._options_response()
+
         try:
             body = json_lib.loads(request.httprequest.data)
-            u = request.env['billnova.user'].sudo().create({
-                'name': body.get('name'), 'email': body.get('email'),
-                'phone': body.get('phone'), 'address': body.get('address'),
+
+            name = (body.get('name') or '').strip()
+            email = self._normalize_email(body.get('email'))
+            role = self._normalize_role(body.get('role', 'seller'))
+
+            if not name:
+                return self._json_response({'error': 'Nombre obligatorio'}, 400)
+
+            if not email:
+                return self._json_response({'error': 'Email obligatorio'}, 400)
+
+            res_user_id = body.get('res_user_id')
+
+            # crear o reutilizar res.users
+            if not res_user_id:
+                res_user = request.env['res.users'].sudo().search([
+                    '|', ('login', '=', email), ('email', '=', email)
+                ], limit=1)
+
+                if not res_user:
+                    if role != 'admin' and self._active_admin_count() == 0:
+                        return self._json_response({'error': 'Debe existir admin activo'}, 400)
+
+                    res_user = request.env['res.users'].sudo().create({
+                        'name': name,
+                        'login': email,
+                        'email': email,
+                        'password': body.get('password') or 'Temp1234*',
+                        'billnova_role': role,
+                    })
+
+                res_user_id = res_user.id
+
+            existing = request.env['billnova.user'].sudo().search([
+                '|', ('email', '=', email), ('res_user_id', '=', res_user_id)
+            ], limit=1)
+
+            values = {
+                'name': name,
+                'email': email,
+                'phone': body.get('phone'),
+                'address': body.get('address'),
+                'role': role,
+                'active': body.get('active', True),
                 'is_mobile_user': body.get('is_mobile_user', False),
-                'res_user_id': body.get('res_user_id'),
-            })
+                'res_user_id': res_user_id,
+            }
+
+            if existing:
+                existing.write(values)
+                return self._json_response({
+                    'message': 'BillNova user reutilizado',
+                    'id': existing.id,
+                    'reused': True
+                })
+
+            u = request.env['billnova.user'].sudo().create(values)
+
             return self._json_response({'message': 'Creado', 'id': u.id}, 201)
+
         except Exception as e:
+            _logger.exception("Error billnova create")
             return self._json_response({'error': str(e)}, 400)
 
+    # UPDATE
     @http.route('/api/billnova-users/<int:user_id>', type='http', auth='public', methods=['PUT', 'OPTIONS'], csrf=False)
     def update_billnova_user(self, user_id):
         if request.httprequest.method == 'OPTIONS':
             return self._options_response()
+
         u = request.env['billnova.user'].sudo().browse(user_id)
+
         if not u.exists():
             return self._json_response({'error': 'No encontrado'}, 404)
+
         try:
             body = json_lib.loads(request.httprequest.data)
-            u.write({'phone': body.get('phone', u.phone),
-                     'address': body.get('address', u.address),
-                     'is_mobile_user': body.get('is_mobile_user', u.is_mobile_user)})
+
+            email = self._normalize_email(body.get('email', u.email))
+            name = (body.get('name') or u.name).strip()
+
+            u.write({
+                'name': name,
+                'email': email,
+                'phone': body.get('phone', u.phone),
+                'address': body.get('address', u.address),
+                'role': self._normalize_role(body.get('role', u.role)),
+                'active': body.get('active', u.active),
+                'is_mobile_user': body.get('is_mobile_user', u.is_mobile_user),
+            })
+
+            if u.res_user_id:
+                u.res_user_id.sudo().write({
+                    'name': name,
+                    'login': email,
+                    'email': email,
+                    'billnova_role': u.role,
+                    'active': u.active,
+                })
+
             return self._json_response({'message': 'Actualizado'})
+
         except Exception as e:
+            _logger.exception("Error update billnova")
             return self._json_response({'error': str(e)}, 400)
 
+    # DELETE (SOFT + sync)
     @http.route('/api/billnova-users/<int:user_id>', type='http', auth='public', methods=['DELETE', 'OPTIONS'], csrf=False)
     def delete_billnova_user(self, user_id):
         if request.httprequest.method == 'OPTIONS':
             return self._options_response()
+
         u = request.env['billnova.user'].sudo().browse(user_id)
+
         if not u.exists():
             return self._json_response({'error': 'No encontrado'}, 404)
+
         try:
-            u.unlink()
-            return self._json_response({'message': 'Eliminado'})
+            if u.res_user_id:
+                request.env.cr.execute(
+                    "UPDATE res_users SET active = FALSE WHERE id = %s",
+                    [u.res_user_id.id]
+                )
+
+            request.env.cr.execute(
+                "UPDATE billnova_user SET active = FALSE WHERE id = %s",
+                [u.id]
+            )
+            request.env.cr.commit()
+
+            return self._json_response({'message': 'Desactivado'})
+
         except Exception as e:
+            _logger.exception("Error delete billnova")
             return self._json_response({'error': str(e)}, 400)

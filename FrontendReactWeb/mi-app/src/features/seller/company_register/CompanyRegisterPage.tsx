@@ -33,6 +33,7 @@ export default function CompanyRegisterPage() {
     totalSteps,
     formData,
     formStatus,
+    submitError,
     showPassword,
     showConfirm,
     progressPercent,
@@ -288,7 +289,23 @@ export default function CompanyRegisterPage() {
             >
               <StepIndicator steps={FORM_STEPS} currentStep={currentStep} progressPercent={progressPercent} />
 
-              <div style={{ padding: 32 }}>{renderSection()}</div>
+            <div style={{ padding: 32 }}>{renderSection()}</div>
+
+              {submitError && (
+                <div
+                  style={{
+                    margin: "0 32px 20px",
+                    padding: "12px 14px",
+                    borderRadius: 10,
+                    backgroundColor: C.errorBg,
+                    color: C.error,
+                    fontSize: 13,
+                    fontWeight: 600,
+                  }}
+                >
+                  {submitError}
+                </div>
+              )}
 
               <div style={{ display: 'flex', gap: 12, padding: '0 32px 32px' }}>
                 {currentStep > 1 && (

@@ -8,6 +8,7 @@ import { StockStatus, InvoiceStatus } from "./types/dashboard.types";
 import { NavItemData } from "./data/chart.data";
 import { dashboardTheme as t } from "./theme/dashboard.theme";
 import { getActiveBusinessType, hasCompanyForCurrentUser } from "@/features/seller/shared/companySession";
+import { getStoredAuthState } from "@/features/auth/login/data/storage";
 
 // ─── Stock Badge ────────────────────────────────────────────────────
 interface StockBadgeProps {
@@ -60,11 +61,32 @@ interface SidebarProps {
   navItems: NavItemData[];
 }
 
+function getRoleLabel(role: string | undefined): string {
+  switch (role) {
+    case 'admin':
+      return 'Administrador';
+    case 'moderator':
+      return 'Moderador';
+    case 'seller':
+      return 'Vendedor';
+    case 'gerente':
+      return 'Gerente';
+    default:
+      return role || 'Usuario';
+  }
+}
+
 export function Sidebar({ navItems }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const hasCompany = hasCompanyForCurrentUser();
   const businessType = getActiveBusinessType();
+  const currentUser = getStoredAuthState();
+  const userInitials = currentUser?.name
+    ? currentUser.name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
+    : 'US';
+  const userName = currentUser?.name || 'Usuario';
+  const userRole = getRoleLabel(currentUser?.role);
   const visibleNavItems = navItems.filter((item) => {
     if (item.id === "empresa") return hasCompany;
     if (item.id === "registro") return !hasCompany;
@@ -157,11 +179,11 @@ export function Sidebar({ navItems }: SidebarProps) {
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 13, color: "white", fontWeight: 700,
           }}>
-            JR
+            {userInitials}
           </div>
           <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: t.textPrimary }}>Juan Ramírez</div>
-            <div style={{ fontSize: 10, color: t.textDisabled }}>Administrador</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: t.textPrimary }}>{userName}</div>
+            <div style={{ fontSize: 10, color: t.textDisabled }}>{userRole}</div>
           </div>
         </div>
       </div>
