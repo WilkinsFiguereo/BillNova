@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Zap } from "lucide-react";
 import { StockStatus, InvoiceStatus } from "./types/dashboard.types";
 import { NavItemData } from "./data/chart.data";
@@ -63,11 +63,39 @@ interface SidebarProps {
 
 export function Sidebar({ navItems }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [currentUser, setCurrentUser] = useState<{ name: string; email: string; role?: string } | null>(null);
+
+  useEffect(() => {
+    const user = getStoredAuthState();
+    if (user) {
+      setCurrentUser({
+        name: user.name || user.email?.split("@")[0] || "Usuario",
+        email: user.email || "",
+        role: user.role,
+      });
+    }
+  }, []);
 
   const homeHref = useMemo(() => {
     const user = getStoredAuthState();
     return getLandingRouteForRole(user?.role ?? null);
   }, []);
+
+  const initials = currentUser?.name
+    ? currentUser.name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase()
+    : "U";
+
+  const roleLabel = currentUser?.role === "admin" ? "Administrador" 
+    : currentUser?.role === "moderation" ? "Moderador"
+    : "Vendedor";
+
+  const getProfileHref = () => {
+    const role = currentUser?.role || getStoredAuthState()?.role;
+    if (role === "admin") return "/navigation/admin/profile/page";
+    if (role === "moderation") return "/navigation/moderation/profile/page";
+    return "/navigation/seller/profile/page";
+  };
 
   return (
     <aside style={{
@@ -116,22 +144,28 @@ export function Sidebar({ navItems }: SidebarProps) {
         })}
       </nav>
 
-      {/* User Avatar */}
-      <div style={{
-        marginTop: "auto", padding: "12px", background: t.bgAlt,
-        borderRadius: 12, display: "flex", alignItems: "center", gap: 10,
-      }}>
+      {/* User Avatar - Clickable to Profile */}
+      <div
+        onClick={() => router.push(getProfileHref())}
+        style={{
+          marginTop: "auto", padding: "12px", background: t.bgAlt,
+          borderRadius: 12, display: "flex", alignItems: "center", gap: 10,
+          cursor: "pointer", transition: "background 0.2s",
+        }}
+        onMouseEnter={(e) => e.currentTarget.style.background = t.brand100}
+        onMouseLeave={(e) => e.currentTarget.style.background = t.bgAlt}
+      >
         <div style={{
           width: 32, height: 32, borderRadius: "50%",
           background: `linear-gradient(135deg, ${t.brand600}, ${t.brand400})`,
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 13, color: "white", fontWeight: 700,
         }}>
-          JR
+          {initials}
         </div>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: t.textPrimary }}>Juan Ramírez</div>
-          <div style={{ fontSize: 10, color: t.textDisabled }}>Administrador</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: t.textPrimary }}>{currentUser?.name || "Usuario"}</div>
+          <div style={{ fontSize: 10, color: t.textDisabled }}>{roleLabel}</div>
         </div>
       </div>
     </aside>

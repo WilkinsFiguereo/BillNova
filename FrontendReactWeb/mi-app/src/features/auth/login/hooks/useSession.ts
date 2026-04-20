@@ -15,6 +15,7 @@ interface UseSessionReturn {
   isLoading: boolean;
   refreshSession: () => Promise<void>;
   logout: () => Promise<void>;
+  updateProfile: (data: { name?: string; phone?: string }) => Promise<{ ok: boolean; error?: string }>;
 }
 
 export function useSession(): UseSessionReturn {
@@ -59,9 +60,19 @@ export function useSession(): UseSessionReturn {
     }
   }, []);
 
+  const updateProfile = useCallback(async (data: { name?: string; phone?: string }) => {
+    const cached = getStoredAuthState();
+    const result = await authApi.updateProfile(cached?.sessionToken, data);
+    if (result.ok && user) {
+      setUser({ ...user, name: data.name ?? user.name });
+      persistAuthState({ ...user, name: data.name ?? user.name }, getRememberMeDefault());
+    }
+    return result;
+  }, [user]);
+
   useEffect(() => {
     void refreshSession();
   }, [refreshSession]);
 
-  return { user, isLoading, refreshSession, logout };
+  return { user, isLoading, refreshSession, logout, updateProfile };
 }

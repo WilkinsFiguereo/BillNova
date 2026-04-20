@@ -115,4 +115,18 @@ export const authApi = {
         allowedStatuses: [400, 401, 403, 404],
       },
     ),
+
+  updateProfile: async (
+    sessionToken: string | undefined,
+    data: { name?: string; phone?: string },
+  ): Promise<{ ok: boolean; error?: string }> => {
+    if (DEV_AUTH && process.env.NODE_ENV !== "production") {
+      return { ok: true };
+    }
+    return odooPost<{ ok: boolean; error?: string }>(
+      authPath("/profile"),
+      data,
+      { sessionToken, allowedStatuses: [400, 401, 403, 404] },
+    );
+  },
 };

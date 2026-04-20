@@ -21,6 +21,7 @@ import { useColorMode } from "@/features/shared/theme/useColorMode";
 import { ReportProblemForm } from "@/features/shared/reports/ReportProblemForm";
 
 export default function ModeratorConfigPage() {
+  const router = useRouter();
   const user = getStoredAuthState();
   const pathname = usePathname();
   const { mode, toggle } = useColorMode();
@@ -66,7 +67,7 @@ export default function ModeratorConfigPage() {
             <SettingsItem
               icon={User}
               label="Perfil"
-              onClick={() => {}}
+              onClick={() => router.push("/navigation/moderation/profile/page")}
             />
             <SettingsItem
               icon={LogOut}
@@ -122,12 +123,12 @@ export default function ModeratorConfigPage() {
             <SettingsItem
               icon={FileText}
               label="Términos y Condiciones"
-              onClick={() => {}}
+              onClick={() => router.push(termsHref)}
             />
             <SettingsItem
               icon={Shield}
               label="Política de Privacidad"
-              onClick={() => {}}
+              onClick={() => router.push(termsHref)}
             />
           </SettingsSection>
 

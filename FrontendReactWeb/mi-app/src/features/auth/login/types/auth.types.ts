@@ -5,6 +5,8 @@ export interface AuthUser {
   role?: AuthRole;
   sessionToken?: string;
   sessionExpiresAt?: string;
+  phone?: string;
+  companyName?: string;
 }
 
 export type AuthRole = "admin" | "moderation" | "seller" | "user";
