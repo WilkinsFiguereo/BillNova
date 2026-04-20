@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { ordersTheme as t } from '../theme/orders.theme';
-import type { Order, OrderStatus } from '../types/orders.types';
+import { normalizeOrderStatus, type Order, type OrderStatus } from '../types/orders.types';
 
 export const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; bg: string }> = {
   pending:   { label: 'Pendiente',  color: t.colors.warning,  bg: t.colors.warningSoft },
@@ -11,7 +11,7 @@ export const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; 
 };
 
 export function OrderCard({ order, onPress }: { order: Order; onPress: () => void }) {
-  const { label, color, bg } = STATUS_CONFIG[order.status];
+  const { label, color, bg } = STATUS_CONFIG[normalizeOrderStatus(order.status)];
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.75} style={s.card}>

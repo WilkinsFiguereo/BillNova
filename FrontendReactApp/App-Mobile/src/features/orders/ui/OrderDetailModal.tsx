@@ -11,7 +11,7 @@ import {
 import { ordersTheme as t } from '../theme/orders.theme';
 import { colors } from '../../../shared/theme/colors';
 import { radius } from '../../../shared/theme/spacing';
-import type { Order } from '../types/orders.types';
+import { normalizeOrderStatus, type Order } from '../types/orders.types';
 import { STATUS_CONFIG } from './OrderCard';
 
 interface Props {
@@ -35,7 +35,8 @@ export function OrderDetailModal({
 }: Props) {
   if (!visible || !order) return null;
 
-  const statusConfig = STATUS_CONFIG[order.status];
+  const normalizedStatus = normalizeOrderStatus(order.status);
+  const statusConfig = STATUS_CONFIG[normalizedStatus];
 
   const linesTotal = order.lines.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -96,7 +97,7 @@ export function OrderDetailModal({
             </TouchableOpacity>
           </View>
 
-          {order.status === 'pending' && onCancel && (
+          {normalizedStatus === 'pending' && onCancel && (
             <TouchableOpacity
               style={[styles.cancelBtn, isCancelling && styles.actionDisabled]}
               onPress={onCancel}

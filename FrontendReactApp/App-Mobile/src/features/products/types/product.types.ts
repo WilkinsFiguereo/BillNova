@@ -3,6 +3,7 @@ export interface Product {
   name: string;
   default_code: string | null;
   list_price: number;
+  moderation_status?: 'pending' | 'approved' | 'rejected' | string;
 }
 
 export interface ProductsResponse {

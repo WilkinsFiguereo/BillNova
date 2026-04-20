@@ -4,6 +4,26 @@ import json as json_lib
 
 
 class ProductApiController(http.Controller):
+    def _log_event(self, company_id, accion, descripcion, detalle="", entidad_id=None, entidad_nombre=""):
+        user = request.env.user
+        ua = request.httprequest.headers.get("User-Agent", "") or ""
+        request.env["billnova.bitacora"].sudo().create_event(
+            {
+                "company_id": company_id or False,
+                "user_id": user.id if user and not user._is_public() else False,
+                "accion": accion,
+                "modulo": "Productos",
+                "nivel": "info",
+                "descripcion": descripcion,
+                "detalle": detalle,
+                "ip": request.httprequest.remote_addr or "",
+                "dispositivo": ua.split("(")[0].strip() if ua else "Desconocido",
+                "entidad_modelo": "product.product",
+                "entidad_id": entidad_id or 0,
+                "entidad_nombre": entidad_nombre or "",
+            }
+        )
+
     def _cors_headers(self):
         origin = request.httprequest.headers.get("Origin")
         return {
@@ -52,59 +72,6 @@ class ProductApiController(http.Controller):
             "write_date": product.write_date.isoformat() if product.write_date else None,
         }
 
-    def _current_billnova_role(self):
-        session_uid = getattr(request.session, "uid", None)
-        if not session_uid:
-            return None
-        user = request.env["res.users"].sudo().browse(session_uid)
-        if not user.exists():
-            return None
-        mobile_user = request.env["billnova.user"].sudo().search(
-            [("res_user_id", "=", user.id)],
-            limit=1,
-        )
-        if mobile_user:
-            return mobile_user.role
-        if user.id == 1:
-            return "admin"
-        return None
-
-    def _can_view_unapproved_products(self):
-        return self._current_billnova_role() in ("admin", "moderation", "moderator")
-
-    def _company_is_approved(self, company):
-        return bool(
-            company
-            and company.exists()
-            and company.moderation_status == "approved"
-            and company.status == "approved"
-        )
-
-    def _visibility_domain(self):
-        if self._can_view_unapproved_products():
-            return []
-        return [
-            ("moderation_status", "=", "approved"),
-            ("company_id.moderation_status", "=", "approved"),
-            ("company_id.status", "=", "approved"),
-        ]
-
-    def _resolve_company(self, payload=None, product=None):
-        if payload and "company_id" in payload:
-            company_id_int = self._parse_company_id(payload)
-            if isinstance(company_id_int, Response):
-                return company_id_int
-            if company_id_int:
-                return request.env["res.company"].sudo().browse(company_id_int)
-        if product and product.company_id:
-            return product.company_id.sudo()
-        return None
-
-    def _is_only_moderation_update(self, payload):
-        allowed = {"moderation_status", "moderation_reason"}
-        keys = {key for key in payload.keys() if payload.get(key) is not None}
-        return bool(keys) and keys.issubset(allowed)
-
     def _parse_company_id(self, payload):
         company_id = payload.get("company_id")
         if company_id is None or company_id == "":
@@ -133,7 +100,7 @@ class ProductApiController(http.Controller):
         if request.httprequest.method == "POST":
             return self.create_product()
 
-        domain = self._visibility_domain()
+        domain = []
         company_id = kwargs.get("company_id")
         if company_id:
             try:
@@ -152,10 +119,6 @@ class ProductApiController(http.Controller):
         product = request.env["product.product"].sudo().browse(product_id)
         if not product.exists():
             return self._json_response({"ok": False, "error": "Product not found"}, 404)
-        if not self._can_view_unapproved_products():
-            company = product.company_id.sudo()
-            if product.moderation_status != "approved" or not self._company_is_approved(company):
-                return self._json_response({"ok": False, "error": "Product not found"}, 404)
 
         return self._json_response({"ok": True, "data": self._serialize(product)})
 
@@ -174,16 +137,6 @@ class ProductApiController(http.Controller):
             return company_id_int
         if not company_id_int:
             return self._json_response({"ok": False, "error": "company_id is required"}, 400)
-        company = request.env["res.company"].sudo().browse(company_id_int)
-        if not self._company_is_approved(company):
-            return self._json_response(
-                {"ok": False, "error": "La empresa no esta aprobada y no puede subir productos"},
-                403,
-            )
-
-        moderation_status = self._normalize_moderation_status(payload.get("moderation_status"))
-        if not self._can_view_unapproved_products():
-            moderation_status = "pending"
 
         vals = {
             "name": name,
@@ -192,12 +145,20 @@ class ProductApiController(http.Controller):
             "standard_price": payload.get("standard_price", 0.0),
             "description_sale": payload.get("description_sale") or "",
             "company_id": company_id_int,
-            "moderation_status": moderation_status,
+            "moderation_status": self._normalize_moderation_status(payload.get("moderation_status")),
             "moderation_reason": payload.get("moderation_reason") or False,
             "moderation_updated_at": fields.Datetime.now(),
         }
 
         product = request.env["product.product"].sudo().create(vals)
+        self._log_event(
+            company_id_int,
+            "crear",
+            f"Producto creado: {product.name}",
+            f"Codigo: {product.default_code or 'Sin codigo'} · Precio: {product.list_price}",
+            product.id,
+            product.name,
+        )
         return self._json_response({"ok": True, "id": product.id, "data": self._serialize(product)}, 201)
 
     @http.route("/api/products/<int:product_id>", type="http", auth="none", methods=["PUT", "DELETE", "OPTIONS"], csrf=False)
@@ -210,7 +171,17 @@ class ProductApiController(http.Controller):
             return self._json_response({"ok": False, "error": "Product not found"}, 404)
 
         if request.httprequest.method == "DELETE":
+            company_id = product.company_id.id if product.company_id else False
+            product_name = product.name
             product.unlink()
+            self._log_event(
+                company_id,
+                "eliminar",
+                f"Producto eliminado: {product_name}",
+                "El producto fue eliminado desde la gestion de productos",
+                product_id,
+                product_name,
+            )
             return self._json_response({"ok": True})
 
         payload = request.httprequest.get_json(silent=True) or {}
@@ -244,18 +215,13 @@ class ProductApiController(http.Controller):
         if not vals:
             return self._json_response({"ok": False, "error": "No fields to update"}, 400)
 
-        if not self._is_only_moderation_update(payload):
-            company = self._resolve_company(payload=payload, product=product)
-            if isinstance(company, Response):
-                return company
-            if not self._company_is_approved(company):
-                return self._json_response(
-                    {"ok": False, "error": "La empresa no esta aprobada y no puede modificar o subir productos"},
-                    403,
-                )
-            if "moderation_status" in vals and not self._can_view_unapproved_products():
-                vals["moderation_status"] = "pending"
-                vals["moderation_reason"] = False
-
         product.write(vals)
+        self._log_event(
+            product.company_id.id if product.company_id else False,
+            "actualizar",
+            f"Producto actualizado: {product.name}",
+            ", ".join(sorted(vals.keys())),
+            product.id,
+            product.name,
+        )
         return self._json_response({"ok": True, "data": self._serialize(product)})

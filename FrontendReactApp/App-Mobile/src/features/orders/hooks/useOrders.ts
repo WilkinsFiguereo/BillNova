@@ -1,7 +1,14 @@
 import { useEffect, useState, useCallback } from 'react';
 import { ordersApi } from '../data/ordersApi';
-import type { Order, FilterTab } from '../types/orders.types';
+import { normalizeOrderStatus, type Order, type FilterTab } from '../types/orders.types';
 import { useIsFocused } from '@react-navigation/native';
+
+function normalizeOrders(rawOrders: Order[]): Order[] {
+  return rawOrders.map((order) => ({
+    ...order,
+    status: normalizeOrderStatus(order?.status),
+  }));
+}
 
 export function useOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -20,7 +27,7 @@ export function useOrders() {
     ordersApi.getAll().then((res) => {
       if (!mounted) return;
       if (res.ok && res.data) {
-        setOrders(res.data);
+        setOrders(normalizeOrders(res.data));
         setError(null);
       } else {
         setError(res.error ?? 'No se pudieron cargar los pedidos');

@@ -9,6 +9,23 @@ _logger = logging.getLogger(__name__)
 
 
 class PosApiController(http.Controller):
+    def _log_event(self, company_id, accion, descripcion, detalle="", entidad_modelo="", entidad_id=None, entidad_nombre=""):
+        user = request.env.user
+        ua = request.httprequest.headers.get('User-Agent', '') or ''
+        request.env['billnova.bitacora'].sudo().create_event({
+            'company_id': company_id or False,
+            'user_id': user.id if user and not user._is_public() else False,
+            'accion': accion,
+            'modulo': 'Facturas',
+            'nivel': 'info',
+            'descripcion': descripcion,
+            'detalle': detalle,
+            'ip': request.httprequest.remote_addr or '',
+            'dispositivo': ua.split("(")[0].strip() if ua else 'Desconocido',
+            'entidad_modelo': entidad_modelo or False,
+            'entidad_id': entidad_id or 0,
+            'entidad_nombre': entidad_nombre or '',
+        })
 
     def _order_origin_ref(self, order):
         """
@@ -241,6 +258,15 @@ class PosApiController(http.Controller):
         })
 
         invoice.action_post()
+        self._log_event(
+            company.id,
+            'crear',
+            f'Factura creada: {invoice.name or origin_ref}',
+            f'Pedido {order.name or origin_ref} · Total: {invoice.amount_total}',
+            'account.move',
+            invoice.id,
+            invoice.name or origin_ref,
+        )
 
         return self._json_response({
             'ok': True,
@@ -263,6 +289,15 @@ class PosApiController(http.Controller):
         if order.state in ('done', 'cancel'):
             return self._json_response({'ok': False, 'error': 'No se puede cancelar'}, 400)
         order.write({'state': 'cancel'})
+        self._log_event(
+            order.company_id.id if order.company_id else False,
+            'actualizar',
+            f'Pedido cancelado: {order.name or order.id}',
+            'El pedido fue marcado como cancelado',
+            'pos.order',
+            order.id,
+            order.name or str(order.id),
+        )
         return self._json_response({'ok': True})
 
     # =============================================================
@@ -310,6 +345,16 @@ class PosApiController(http.Controller):
         except Exception as e:
             _logger.exception("Error cambiando estado de factura %s", invoice_id)
             return self._json_response({'ok': False, 'error': str(e)}, 500)
+
+        self._log_event(
+            invoice.company_id.id if invoice.company_id else False,
+            'actualizar',
+            f'Estado de factura actualizado: {invoice.name or invoice.id}',
+            f'Nuevo estado: {invoice.state} · Pago: {invoice.payment_state}',
+            'account.move',
+            invoice.id,
+            invoice.name or str(invoice.id),
+        )
 
         return self._json_response({
             'ok': True,

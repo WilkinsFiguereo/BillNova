@@ -5,6 +5,26 @@ import secrets
 
 
 class CompanyApiController(http.Controller):
+    def _log_event(self, company_id, accion, modulo, descripcion, detalle="", entidad_modelo="", entidad_id=None, entidad_nombre=""):
+        user = request.env.user
+        ua = request.httprequest.headers.get("User-Agent", "") or ""
+        request.env["billnova.bitacora"].sudo().create_event(
+            {
+                "company_id": company_id or False,
+                "user_id": user.id if user and not user._is_public() else False,
+                "accion": accion,
+                "modulo": modulo,
+                "nivel": "info",
+                "descripcion": descripcion,
+                "detalle": detalle,
+                "ip": request.httprequest.remote_addr or "",
+                "dispositivo": ua.split("(")[0].strip() if ua else "Desconocido",
+                "entidad_modelo": entidad_modelo or False,
+                "entidad_id": entidad_id or 0,
+                "entidad_nombre": entidad_nombre or "",
+            }
+        )
+
     def _cors_headers(self):
         origin = request.httprequest.headers.get("Origin")
         return {
@@ -176,6 +196,16 @@ class CompanyApiController(http.Controller):
 
         if vals:
             company.write(vals)
+            self._log_event(
+                company.id,
+                "actualizar",
+                "Empresa",
+                f"Empresa actualizada: {company.name}",
+                ", ".join(sorted(vals.keys())),
+                "res.company",
+                company.id,
+                company.name,
+            )
 
         return self._json_response({"ok": True, "data": self._serialize_company_row(company)})
 
@@ -214,6 +244,16 @@ class CompanyApiController(http.Controller):
                     "status": "disabled",
                     "moderation_reason": False,
                 }
+            )
+            self._log_event(
+                company.id,
+                "crear",
+                "Empresa",
+                f"Empresa registrada: {company.name}",
+                f"Sector: {company.sector or 'Sin sector'}",
+                "res.company",
+                company.id,
+                company.name,
             )
             return self._json_response({"ok": True, "company_id": company.id, "data": self._serialize_company_row(company)}, 201)
         except Exception as error:
@@ -345,13 +385,32 @@ class CompanyApiController(http.Controller):
                     "address": "",
                     "role": self._map_role_to_internal(role_api),
                     "is_mobile_user": True,
+                    "company_id": company_id,
                     "res_user_id": res_user.id,
                 }
             )
         else:
-            billnova_user.write({"name": name, "email": email, "phone": phone, "role": self._map_role_to_internal(role_api)})
+            billnova_user.write(
+                {
+                    "name": name,
+                    "email": email,
+                    "phone": phone,
+                    "role": self._map_role_to_internal(role_api),
+                    "company_id": company_id,
+                }
+            )
 
         res_user.write({"active": status_api == "active"})
+        self._log_event(
+            company_id,
+            "crear",
+            "Trabajadores",
+            f"Trabajador agregado: {name}",
+            f"Rol: {role_api} · Email: {email}",
+            "billnova.user",
+            billnova_user.id,
+            name,
+        )
         return self._json_response({"ok": True, "id": billnova_user.id}, status=201)
 
     @http.route("/api/company/employees/<int:employee_id>", type="http", auth="public", methods=["PUT", "OPTIONS"], csrf=False)
@@ -390,6 +449,18 @@ class CompanyApiController(http.Controller):
         if vals_res:
             res_user.write(vals_res)
 
+        employee_company_id = billnova_user.company_id.id if billnova_user.company_id else (res_user.company_id.id if getattr(res_user, "company_id", None) else False)
+        self._log_event(
+            employee_company_id,
+            "actualizar",
+            "Trabajadores",
+            f"Trabajador actualizado: {billnova_user.name or res_user.name}",
+            ", ".join(sorted(set(list(vals_billnova.keys()) + list(vals_res.keys())))),
+            "billnova.user",
+            billnova_user.id,
+            billnova_user.name or res_user.name,
+        )
+
         return self._json_response({"ok": True})
 
     @http.route("/api/company/employees/<int:employee_id>/toggle", type="http", auth="public", methods=["POST", "OPTIONS"], csrf=False)
@@ -404,6 +475,17 @@ class CompanyApiController(http.Controller):
         res_user = billnova_user.res_user_id.sudo()
         new_active = not getattr(res_user, "active", True)
         res_user.write({"active": new_active})
+        employee_company_id = billnova_user.company_id.id if billnova_user.company_id else (res_user.company_id.id if getattr(res_user, "company_id", None) else False)
+        self._log_event(
+            employee_company_id,
+            "actualizar",
+            "Trabajadores",
+            f"Estado de trabajador cambiado: {billnova_user.name or res_user.name}",
+            f"Nuevo estado: {'active' if new_active else 'disabled'}",
+            "billnova.user",
+            billnova_user.id,
+            billnova_user.name or res_user.name,
+        )
         return self._json_response({"ok": True, "status": "active" if new_active else "disabled"})
 
     @http.route("/api/company/access-verify", type="http", auth="public", methods=["POST", "OPTIONS"], csrf=False)
