@@ -5,6 +5,7 @@ import json as json_lib
 import logging
 
 _logger = logging.getLogger(__name__)
+TARGET_DB = 'wilkins'
 
 class AuthApiController(http.Controller):
 
@@ -120,7 +121,7 @@ class AuthApiController(http.Controller):
                 status=400
             )
 
-        db = request.env.cr.dbname
+        db = TARGET_DB
 
         # 🔥 CLAVE: contexto interactivo
         env = request.env(context=dict(request.env.context, interactive=True))
@@ -174,7 +175,7 @@ class AuthApiController(http.Controller):
         request.session.uid = uid
         request.session.login = login
         try:
-            request.session.db = db
+            request.session.db = TARGET_DB
         except Exception:
             pass
 

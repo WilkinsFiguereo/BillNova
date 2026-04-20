@@ -16,7 +16,7 @@ class UserApiController(http.Controller):
         return {
             'Access-Control-Allow-Origin': origin or '*',
             'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept, Origin, X-Auth-Session',
             'Access-Control-Allow-Credentials': 'true',
         }
 

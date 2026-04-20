@@ -1,6 +1,7 @@
 "use client";
 
 import { ODOO_URL } from "@/lib/odooApi";
+import { getStoredAuthState } from "@/features/auth/login/data/storage";
 
 const BASE_URL = ODOO_URL.replace(/\/+$/, "");
 
@@ -9,6 +10,7 @@ type AnyObj = Record<string, any>;
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const url = `${BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
   let res: Response;
+  const auth = getStoredAuthState();
 
   try {
     res = await fetch(url, {
@@ -16,6 +18,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
+        ...(auth?.sessionToken ? { "X-Auth-Session": auth.sessionToken } : {}),
         ...(init?.headers ?? {}),
       },
     });

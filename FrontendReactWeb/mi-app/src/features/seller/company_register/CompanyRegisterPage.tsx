@@ -12,8 +12,8 @@ import { CompanyInfoSection } from './sections/CompanyInfoSection';
 import { ContactSection }     from './sections/ContactSection';
 import { AddressSection }     from './sections/AddressSection';
 import { AccountSection }     from './sections/AccountSection';
-import { BusinessTypeSection } from './sections/BusinessTypeSection';
-import { ServicesSection }     from './sections/ServicesSection';
+// import { BusinessTypeSection } from './sections/BusinessTypeSection';
+// import { ServicesSection }     from './sections/ServicesSection';
 
 export default function CompanyRegisterPage() {
   const [hasCompany, setHasCompany] = useState(false);

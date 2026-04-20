@@ -1,10 +1,19 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useRoleGuard } from "@/features/auth/login/hooks/useRoleGuard";
 
 export default function ModerationLayout({ children }: { children: ReactNode }) {
+  const [mounted, setMounted] = useState(false);
   const { isLoading, hasAccess } = useRoleGuard("moderator");
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return null;
+  }
 
   if (isLoading) {
     return (
