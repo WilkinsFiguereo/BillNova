@@ -82,5 +82,5 @@ export const NAV_ITEMS: NavItemData[] = [
   { id: "empresa", Icon: Building, label: "Empresa", href: "/navigation/seller/company_config/page" },
   { id: "registro", Icon: Building2, label: "Registro", href: "/navigation/seller/company_register/page" },
   { id: "reportes", Icon: BarChart2, label: "Reportes", href: "/navigation/seller/reports/page" },
-  { id: "config", Icon: Settings, label: "Configuracion", href: "/navigation/seller/config/page" },
+  { id: "config", Icon: Settings, label: "Configuracion", href: "/navigation/seller/settings/page" },
 ];

@@ -106,7 +106,7 @@ export function Sidebar({ navItems }: SidebarProps) {
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           return (
-            <Link key={item.id} href={item.href} style={{ textDecoration: "none" }}>
+            <Link key={item.id} href={item.href} style={{ textDecoration: "none" }} suppressHydrationWarning>
               <div className={`nav-item ${isActive ? "active" : ""}`}>
                 <item.Icon size={18} />
                 {item.label}

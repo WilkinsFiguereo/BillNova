@@ -24,7 +24,7 @@ export function SettingsSidebar({ width = 280 }: SettingsSidebarProps) {
     const role = user?.role ?? null;
     if (role === "admin") return "/navigation/admin/configuracion/page";
     if (role === "moderation") return "/navigation/moderation/config/page";
-    return "/navigation/seller/config/page";
+    return "/navigation/seller/company_config/page";
   }, []);
 
   const termsHref = useMemo(() => {

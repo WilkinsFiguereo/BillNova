@@ -29,6 +29,18 @@ export const COMPANY_SIZE_OPTIONS: { label: string; value: CompanySize; range: s
   { label: 'Grande',  value: 'large',  range: '200+ empleados',   Icon: Factory },
 ];
 
+export const BUSINESS_TYPE_OPTIONS: { label: string; value: CompanyFormData['businessType']; description: string; Icon: LucideIcon }[] = [
+  { label: 'Productos', value: 'products', description: 'Vendo productos físicos o digitales', Icon: Package },
+  { label: 'Servicios', value: 'services', description: 'Ofrezco servicios profesionales', Icon: Wrench },
+];
+
+export const PRICING_TYPE_OPTIONS: { label: string; value: CompanyFormData['services'][0]['pricingType'] }[] = [
+  { label: 'Precio único', value: 'unique' },
+  { label: 'Por hora', value: 'monthly' },
+  { label: 'Semanal', value: 'weekly' },
+  { label: 'Anual', value: 'annual' },
+];
+
 export const COUNTRY_OPTIONS = [
   'Argentina','Bolivia','Chile','Colombia','Costa Rica','Ecuador',
   'El Salvador','Guatemala','Honduras','México','Nicaragua','Panamá',
