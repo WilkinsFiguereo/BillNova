@@ -1,4 +1,3 @@
-import { ODOO_URL } from "@/lib/odooApi";
 import type { ResUser, BillnovaUser } from "../types/user.types";
 
 type ApiEnvelope<T> = {
@@ -13,6 +12,7 @@ type ResUserApi = {
   name: string;
   login?: string;
   email: string;
+  role?: string;
   active?: boolean;
 };
 
@@ -22,6 +22,7 @@ type BillnovaUserApi = {
   email: string;
   phone?: string;
   address?: string;
+  active?: boolean;
   is_mobile_user?: boolean;
   res_user_id?: number;
 };
@@ -44,7 +45,9 @@ async function parseJson<T>(res: Response): Promise<T | null> {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${ODOO_URL}${path}`, {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+
+  const res = await fetch(`/api/proxy${normalizedPath}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
@@ -67,7 +70,7 @@ function mapResUser(user: ResUserApi): ResUser {
     id: user.id,
     name: user.name,
     email: user.email,
-    role: user.login || "user",
+    role: user.role || "user",
     active: user.active ?? true,
   };
 }
@@ -77,8 +80,11 @@ function mapBillnovaUser(user: BillnovaUserApi): BillnovaUser {
     id: user.id,
     name: user.name,
     email: user.email,
-    role: user.is_mobile_user ? "mobile" : "web",
-    active: true,
+    role: (user as BillnovaUserApi & { role?: string }).role || (user.is_mobile_user ? "seller" : "user"),
+    active: user.active ?? true,
+    phone: user.phone,
+    address: user.address,
+    resUserId: user.res_user_id,
   };
 }
 
@@ -110,6 +116,7 @@ export async function apiCreateResUser(
       login: data.email,
       email: data.email,
       password: "Temp1234*",
+      role: data.role,
       active: data.active,
     }),
   });
@@ -133,6 +140,7 @@ export async function apiUpdateResUser(
       name: data.name,
       login: data.email,
       email: data.email,
+      role: data.role,
       active: data.active,
     }),
   });
@@ -178,7 +186,9 @@ export async function apiCreateBillnovaUser(
     body: JSON.stringify({
       name: data.name,
       email: data.email,
-      is_mobile_user: data.role === "billing" || data.role === "support",
+      role: data.role,
+      active: data.active,
+      is_mobile_user: data.role === "seller" || data.role === "user",
     }),
   });
 
@@ -200,7 +210,8 @@ export async function apiUpdateBillnovaUser(
     body: JSON.stringify({
       name: data.name,
       email: data.email,
-      is_mobile_user: data.role === "billing" || data.role === "support",
+      role: data.role,
+      is_mobile_user: data.role === "seller" || data.role === "user",
       active: data.active,
     }),
   });

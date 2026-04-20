@@ -13,5 +13,8 @@ export interface BillnovaUser {
   email: string;
   role: string;
   active: boolean;
+  phone?: string;
+  address?: string;
+  resUserId?: number;
   createdAt?: string;
 }

@@ -1,225 +1,237 @@
 import { ODOO_URL } from "@/lib/odooApi";
 import type {
+  ChartDataPoint,
   DashboardData,
   Period,
-  StatCard,
-  RecentUser,
   RecentActivity,
-  ChartDataPoint,
+  RecentUser,
+  StatCard,
 } from "../types/dashboard.types";
-import { mockDashboardData } from "./dashboardData";
 
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
+type ApiEnvelope<T> = { data?: T };
 
-/**
- * Obtiene datos agregados del dashboard
- */
-export async function fetchDashboardData(period: Period): Promise<DashboardData> {
-  try {
-    // Si estamos usando datos mock, retornar de inmediato
-    if (USE_MOCK) {
-      console.log("[Dashboard] Using mock data (NEXT_PUBLIC_USE_MOCK=true)");
-      return mockDashboardData;
-    }
+type BillnovaUserApi = {
+  id: number;
+  name: string;
+  email: string;
+  role?: string;
+  is_mobile_user?: boolean;
+  created_at?: string | null;
+};
 
-    // Obtener datos de usuarios y empresas
-    const fetchOptions: RequestInit = {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
+type CompanyApi = {
+  id: number;
+  name: string;
+  created_at?: string | null;
+};
+
+type ProductApi = {
+  id: number;
+  name: string;
+  moderation_status?: "pending" | "approved" | "rejected";
+  created_at?: string | null;
+};
+
+type ReportApi = {
+  id: string;
+  estado: "pendiente" | "en_proceso" | "solucionado" | "rechazado" | "cerrado";
+  usuario?: { nombre?: string };
+  titulo?: string;
+  fechaCreacion?: string;
+  fechaActualizacion?: string;
+};
+
+async function fetchData<T>(path: string): Promise<T> {
+  const response = await fetch(`${ODOO_URL}${path}`, {
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+
+  return response.json() as Promise<T>;
+}
+
+function getUserRole(role?: string, isMobileUser?: boolean): RecentUser["role"] {
+  if ((role || "").toLowerCase() === "admin") return "admin";
+  return isMobileUser ? "user" : "moderator";
+}
+
+function getPeriodMonths(period: Period) {
+  switch (period) {
+    case "week":
+      return 3;
+    case "year":
+      return 12;
+    default:
+      return 6;
+  }
+}
+
+function buildChartData(companies: CompanyApi[], products: ProductApi[], reports: ReportApi[], period: Period): ChartDataPoint[] {
+  const months = getPeriodMonths(period);
+  const now = new Date();
+  const items = Array.from({ length: months }, (_, index) => {
+    const date = new Date(now.getFullYear(), now.getMonth() - (months - index - 1), 1);
+    return {
+      key: `${date.getFullYear()}-${date.getMonth()}`,
+      label: date.toLocaleDateString("es-DO", { month: "short" }),
+      sales: 0,
+      collections: 0,
+      pending: 0,
     };
+  });
 
-    const usersUrl = `${ODOO_URL}/api/billnova-users`;
+  const byKey = new Map(items.map((item) => [item.key, item]));
 
-    console.log("[Dashboard] Fetching dashboard data from:", usersUrl);
+  companies.forEach((company) => {
+    if (!company.created_at) return;
+    const date = new Date(company.created_at);
+    const key = `${date.getFullYear()}-${date.getMonth()}`;
+    const bucket = byKey.get(key);
+    if (bucket) bucket.sales += 1;
+  });
 
-    let usersRes: Response;
-    try {
-      usersRes = await fetch(usersUrl, fetchOptions);
-      console.log("[Dashboard] User API response status:", usersRes.status);
-    } catch (error) {
-      console.warn("[Dashboard] Failed to fetch users:", error);
-      console.warn("[Dashboard] Using mock data as fallback");
-      return mockDashboardData;
+  products.forEach((product) => {
+    if (!product.created_at) return;
+    const date = new Date(product.created_at);
+    const key = `${date.getFullYear()}-${date.getMonth()}`;
+    const bucket = byKey.get(key);
+    if (!bucket) return;
+    bucket.collections += 1;
+    if (product.moderation_status === "pending") {
+      bucket.pending += 1;
     }
+  });
 
-    const usersData = usersRes.ok ? await usersRes.json() : { data: [] };
-    const users = usersData.data || [];
-
-    // Si no hay usuarios, usar mock data
-    if (!users.length) {
-      console.warn("[Dashboard] No users data received, using mock data");
-      return mockDashboardData;
+  reports.forEach((report) => {
+    const sourceDate = report.fechaCreacion || report.fechaActualizacion;
+    if (!sourceDate) return;
+    const date = new Date(sourceDate);
+    const key = `${date.getFullYear()}-${date.getMonth()}`;
+    const bucket = byKey.get(key);
+    if (bucket && report.estado === "pendiente") {
+      bucket.pending += 1;
     }
+  });
 
-    // Procesar usuarios recientes
-    const recentUsers: RecentUser[] = users.slice(0, 5).map((user: any) => ({
-      id: user.id,
+  return items;
+}
+
+export async function fetchDashboardData(period: Period): Promise<DashboardData> {
+  const [billnovaUsersResponse, companiesResponse, productsResponse, reportsResponse] = await Promise.allSettled([
+    fetchData<ApiEnvelope<BillnovaUserApi[]>>("/api/billnova-users"),
+    fetchData<ApiEnvelope<CompanyApi[]>>("/api/companies"),
+    fetchData<{ data?: ProductApi[] }>("/api/products"),
+    fetchData<{ data?: ReportApi[] }>("/api/moderation/reports"),
+  ]);
+
+  const billnovaUsers =
+    billnovaUsersResponse.status === "fulfilled" ? billnovaUsersResponse.value.data || [] : [];
+  const companies = companiesResponse.status === "fulfilled" ? companiesResponse.value.data || [] : [];
+  const products = productsResponse.status === "fulfilled" ? productsResponse.value.data || [] : [];
+  const reports = reportsResponse.status === "fulfilled" ? reportsResponse.value.data || [] : [];
+
+  if (
+    billnovaUsersResponse.status === "rejected" &&
+    companiesResponse.status === "rejected" &&
+    productsResponse.status === "rejected" &&
+    reportsResponse.status === "rejected"
+  ) {
+    throw new Error("No se pudo cargar la informacion real del dashboard.");
+  }
+
+  const recentUsers: RecentUser[] = [...billnovaUsers]
+    .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+    .slice(0, 5)
+    .map((user) => ({
+      id: String(user.id),
       name: user.name,
       email: user.email,
-      role: user.is_mobile_user ? "user" : "admin",
+      role: getUserRole(user.role, user.is_mobile_user),
       status: "active",
-      joinedAt: new Date().toISOString().split("T")[0],
+      joinedAt: user.created_at ? user.created_at.split("T")[0] : new Date().toISOString().split("T")[0],
     }));
 
-    // Calcular estadísticas basado en usuarios
-    const activeUsers = Math.ceil(users.length * 0.85);
-    const totalCompanies = Math.ceil(users.length * 0.3);
-    const monthlyRevenue = totalCompanies * 1250;
-    const pendingInvoices = Math.ceil(totalCompanies * 0.3);
-    const overdueInvoices = Math.ceil(totalCompanies * 0.1);
+  const pendingProducts = products.filter((product) => product.moderation_status === "pending").length;
+  const overdueReports = reports.filter((report) => report.estado === "rechazado").length;
 
-    const stats: StatCard[] = [
-      {
-        id: "total-users",
-        label: "Usuarios registrados",
-        value: users.length,
-        change: 12.5,
-        changeLabel: "vs mes anterior",
-        type: "users",
-      },
-      {
-        id: "active-users",
-        label: "Usuarios activos",
-        value: activeUsers,
-        change: 8.2,
-        changeLabel: "vs mes anterior",
-        type: "users",
-      },
-      {
-        id: "total-companies",
-        label: "Empresas",
-        value: totalCompanies,
-        change: 5.8,
-        changeLabel: "vs mes anterior",
-        type: "revenue",
-      },
-      {
-        id: "monthly-revenue",
-        label: "Ingresos mensuales",
-        value: `$${monthlyRevenue.toLocaleString()}`,
-        change: 15.3,
-        changeLabel: "vs mes anterior",
-        type: "revenue",
-      },
-      {
-        id: "pending-invoices",
-        label: "Facturas pendientes",
-        value: pendingInvoices,
-        change: -2.1,
-        changeLabel: "vs mes anterior",
-        type: "pending",
-      },
-      {
-        id: "overdue-invoices",
-        label: "Facturas vencidas",
-        value: overdueInvoices,
-        change: 1.5,
-        changeLabel: "vs mes anterior",
-        type: "overdue",
-      },
-    ];
+  const stats: StatCard[] = [
+    {
+      id: "total-users",
+      label: "Usuarios registrados",
+      value: billnovaUsers.length,
+      change: 0,
+      changeLabel: "datos reales",
+      type: "users",
+    },
+    {
+      id: "active-users",
+      label: "Usuarios activos",
+      value: billnovaUsers.length,
+      change: 0,
+      changeLabel: "datos reales",
+      type: "users",
+    },
+    {
+      id: "total-companies",
+      label: "Empresas",
+      value: companies.length,
+      change: 0,
+      changeLabel: "registradas",
+      type: "revenue",
+    },
+    {
+      id: "total-products",
+      label: "Productos",
+      value: products.length,
+      change: 0,
+      changeLabel: "catalogados",
+      type: "invoices",
+    },
+    {
+      id: "pending-products",
+      label: "Productos pendientes",
+      value: pendingProducts,
+      change: 0,
+      changeLabel: "moderacion",
+      type: "pending",
+    },
+    {
+      id: "reports",
+      label: "Reportes abiertos",
+      value: reports.filter((report) => report.estado === "pendiente" || report.estado === "en_proceso").length,
+      change: overdueReports,
+      changeLabel: "rechazados",
+      type: "overdue",
+    },
+  ];
 
-    // Actividades recientes
-    const recentActivity: RecentActivity[] = [
-      {
-        id: "activity-1",
-        type: "user_created",
-        description: "Nuevo usuario registrado",
-        user: recentUsers[0]?.name || "Usuario",
-        timestamp: new Date(Date.now() - 3600000).toISOString(),
-      },
-      {
-        id: "activity-2",
-        type: "invoice_paid",
-        description: "Factura pagada",
-        user: recentUsers[1]?.name || "Usuario",
-        timestamp: new Date(Date.now() - 7200000).toISOString(),
-      },
-      {
-        id: "activity-3",
-        type: "moderator_added",
-        description: "Moderador asignado",
-        user: "Sistema",
-        timestamp: new Date(Date.now() - 86400000).toISOString(),
-      },
-      {
-        id: "activity-4",
-        type: "report_flagged",
-        description: "Reporte marcado",
-        user: "Sistema",
-        timestamp: new Date(Date.now() - 172800000).toISOString(),
-      },
-      {
-        id: "activity-5",
-        type: "invoice_overdue",
-        description: "Factura vencida",
-        user: recentUsers[2]?.name || "Usuario",
-        timestamp: new Date(Date.now() - 259200000).toISOString(),
-      },
-    ];
+  const recentActivity: RecentActivity[] = reports
+    .slice(0, 5)
+    .map((report) => ({
+      id: report.id,
+      type:
+        report.estado === "pendiente"
+          ? "report_flagged"
+          : report.estado === "solucionado"
+            ? "invoice_paid"
+            : "invoice_overdue",
+      description: report.titulo || "Reporte actualizado",
+      user: report.usuario?.nombre || "Sistema",
+      timestamp: report.fechaActualizacion || report.fechaCreacion || new Date().toISOString(),
+    }));
 
-    // Datos de gráfica
-    const chartData: ChartDataPoint[] = [
-      {
-        label: "Enero",
-        sales: Math.floor(Math.random() * 1000) + 500,
-        collections: Math.floor(Math.random() * 800) + 300,
-        pending: Math.floor(Math.random() * 200) + 100,
-      },
-      {
-        label: "Febrero",
-        sales: Math.floor(Math.random() * 1200) + 600,
-        collections: Math.floor(Math.random() * 900) + 400,
-        pending: Math.floor(Math.random() * 250) + 100,
-      },
-      {
-        label: "Marzo",
-        sales: Math.floor(Math.random() * 1100) + 550,
-        collections: Math.floor(Math.random() * 850) + 350,
-        pending: Math.floor(Math.random() * 200) + 80,
-      },
-      {
-        label: "Abril",
-        sales: Math.floor(Math.random() * 1300) + 700,
-        collections: Math.floor(Math.random() * 1000) + 500,
-        pending: Math.floor(Math.random() * 180) + 90,
-      },
-      {
-        label: "Mayo",
-        sales: Math.floor(Math.random() * 1250) + 650,
-        collections: Math.floor(Math.random() * 950) + 450,
-        pending: Math.floor(Math.random() * 220) + 100,
-      },
-      {
-        label: "Junio",
-        sales: Math.floor(Math.random() * 1400) + 750,
-        collections: Math.floor(Math.random() * 1050) + 550,
-        pending: Math.floor(Math.random() * 200) + 95,
-      },
-      {
-        label: "Julio",
-        sales: Math.floor(Math.random() * 1350) + 700,
-        collections: Math.floor(Math.random() * 1000) + 520,
-        pending: Math.floor(Math.random() * 190) + 85,
-      },
-    ];
-
-    return {
-      stats,
-      recentUsers,
-      recentActivity,
-      chartData,
-      totalUsers: users.length,
-      totalModerators: Math.ceil(users.length * 0.15),
-      systemHealth: 98 + Math.floor(Math.random() * 2),
-    };
-  } catch (error) {
-    console.error("Error fetching dashboard data:", error);
-    console.warn("Using mock data as fallback");
-    // Fallback a datos mock si falla la API
-    return mockDashboardData;
-  }
+  return {
+    stats,
+    recentUsers,
+    recentActivity,
+    chartData: buildChartData(companies, products, reports, period),
+    totalUsers: billnovaUsers.length,
+    totalModerators: billnovaUsers.filter((user) => user.role === "moderation").length,
+    systemHealth: Math.max(80, 100 - pendingProducts - overdueReports),
+  };
 }

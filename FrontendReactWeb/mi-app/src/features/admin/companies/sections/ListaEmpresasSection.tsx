@@ -9,9 +9,12 @@ interface ListaEmpresasSectionProps {
   companies: Company[];
   isLoading: boolean;
   error: string | null;
+  onViewCompany: (company: Company) => void;
+  onEditCompany: (company: Company) => void;
+  onToggleCompany: (company: Company) => void;
 }
 
-export function ListaEmpresasSection({ companies, isLoading, error }: ListaEmpresasSectionProps) {
+export function ListaEmpresasSection({ companies, isLoading, error, onViewCompany, onEditCompany, onToggleCompany }: ListaEmpresasSectionProps) {
   if (isLoading) {
     return (
       <div
@@ -183,7 +186,13 @@ export function ListaEmpresasSection({ companies, isLoading, error }: ListaEmpre
           </thead>
           <tbody>
             {companies.map(company => (
-              <EmpresaCard key={company.id} company={company} />
+              <EmpresaCard
+                key={company.id}
+                company={company}
+                onView={onViewCompany}
+                onEdit={onEditCompany}
+                onToggleActive={onToggleCompany}
+              />
             ))}
           </tbody>
         </table>

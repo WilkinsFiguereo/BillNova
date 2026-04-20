@@ -8,10 +8,7 @@ import {
   apiDeleteResUser,
   apiDeleteBillnovaUser,
 } from "../data/userApi";
-import { mockResUsers, mockBillnovaUsers } from "../data/mockUsers";
 import type { ResUser, BillnovaUser } from "../types/user.types";
-
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
 export function useUsers() {
   const [resUsers,      setResUsers]      = useState<ResUser[]>([]);
@@ -24,17 +21,12 @@ export function useUsers() {
     setLoading(true);
     setError(null);
     try {
-      if (USE_MOCK) {
-        setResUsers(mockResUsers);
-        setBillnovaUsers(mockBillnovaUsers);
-      } else {
-        const [res, bill] = await Promise.all([
-          apiGetResUsers(),
-          apiGetBillnovaUsers(),
-        ]);
-        setResUsers(res);
-        setBillnovaUsers(bill);
-      }
+      const [res, bill] = await Promise.all([
+        apiGetResUsers(),
+        apiGetBillnovaUsers(),
+      ]);
+      setResUsers(res);
+      setBillnovaUsers(bill);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error al cargar usuarios.");
     } finally {
@@ -63,13 +55,13 @@ export function useUsers() {
       const isRes = resUsers.some(u => u.id === id);
       if (isRes) {
         await apiDeleteResUser(id);
-        setResUsers(prev => prev.filter(u => u.id !== id));
+        setResUsers(prev => prev.map(u => u.id === id ? { ...u, active: false } : u));
       } else {
         await apiDeleteBillnovaUser(id);
-        setBillnovaUsers(prev => prev.filter(u => u.id !== id));
+        setBillnovaUsers(prev => prev.map(u => u.id === id ? { ...u, active: false } : u));
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Error al eliminar usuario.");
+      setError(err instanceof Error ? err.message : "Error al deshabilitar usuario.");
     } finally {
       setDeleting(null);
     }

@@ -1,5 +1,21 @@
 from odoo import fields, models
 
+
+class ResUsers(models.Model):
+    _inherit = "res.users"
+
+    billnova_role = fields.Selection(
+        [
+            ("admin", "Admin"),
+            ("moderation", "Moderacion"),
+            ("seller", "Vendedor"),
+            ("user", "Usuario"),
+        ],
+        string="Rol BillNova",
+        default="user",
+    )
+
+
 class ProyectAppUser(models.Model):
     _name = 'billnova.user'
     _description = 'Proyect App User'
@@ -8,6 +24,7 @@ class ProyectAppUser(models.Model):
     email = fields.Char(string='Email')
     phone = fields.Char(string='Telefono')
     address = fields.Char(string='Direccion')
+    active = fields.Boolean(string='Activo', default=True)
     role = fields.Selection(
         [
             ('admin', 'Admin'),

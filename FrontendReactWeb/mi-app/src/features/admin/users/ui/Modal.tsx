@@ -7,9 +7,10 @@ interface ModalProps {
   onClose:  () => void;
   title:    string;
   children: React.ReactNode;
+  width?:   number;
 }
 
-export function Modal({ open, onClose, title, children }: ModalProps) {
+export function Modal({ open, onClose, title, children, width }: ModalProps) {
   // Close on Escape
   useEffect(() => {
     if (!open) return;
@@ -41,7 +42,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         transform:    "translate(-50%, -50%)",
         zIndex:       51,
         width:        "100%",
-        maxWidth:     480,
+        maxWidth:     width ?? 480,
         background:   colors.bg.secondary,
         borderRadius: radius.xl,
         border:       `1px solid ${colors.border}`,

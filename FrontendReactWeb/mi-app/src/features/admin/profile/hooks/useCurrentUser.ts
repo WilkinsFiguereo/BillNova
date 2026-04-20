@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { getStoredAuthState, persistAuthState } from '@/features/auth';
+import { ODOO_URL } from '@/lib/odooApi';
 
 export interface CurrentUser {
   id: string;
@@ -10,46 +12,114 @@ export interface CurrentUser {
   avatar?: string;
   phone?: string;
   department?: string;
+  billnovaUserId?: number;
+  resUserId?: number;
 }
 
-const mockUser: CurrentUser = {
-  id: '1',
-  name: 'Admin Demo',
-  email: 'admin@billnova.com',
-  role: 'Administrador',
-  phone: '+1 (555) 123-4567',
-  department: 'Administración',
-  avatar: undefined,
+type ResUserResponse = {
+  data?: {
+    id: number;
+    name: string;
+    email: string;
+  };
 };
+
+type BillnovaUsersResponse = {
+  data?: Array<{
+    id: number;
+    name: string;
+    email: string;
+    phone?: string;
+    role?: string;
+    res_user_id?: number;
+  }>;
+};
+
+async function fetchJson<T>(url: string): Promise<T> {
+  const response = await fetch(url, {
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `HTTP ${response.status}`);
+  }
+
+  return response.json() as Promise<T>;
+}
+
+function getRoleLabel(role?: string) {
+  switch ((role || '').toLowerCase()) {
+    case 'admin':
+      return 'Administrador';
+    case 'moderation':
+      return 'Moderacion';
+    case 'seller':
+      return 'Vendedor';
+    case 'user':
+      return 'Usuario';
+    default:
+      return role || 'Administrador';
+  }
+}
 
 export function useCurrentUser() {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const loadUser = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // TODO: Aquí iría la llamada a la API real para obtener el usuario actual
-        // const response = await fetch('/api/user/me');
-        // const data = await response.json();
-        // setUser(data);
-        
-        // Por ahora usamos datos mock
-        setUser(mockUser);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error al cargar usuario');
-        setUser(mockUser); // Fallback a mock
-      } finally {
-        setLoading(false);
-      }
-    };
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-    loadUser();
+      const authUser = getStoredAuthState();
+      if (!authUser?.uid) {
+        throw new Error('No hay una sesion activa para cargar el perfil.');
+      }
+
+      const [resUserResponse, billnovaUsersResponse] = await Promise.all([
+        fetchJson<ResUserResponse>(`${ODOO_URL}/api/users/${authUser.uid}`),
+        fetchJson<BillnovaUsersResponse>(`${ODOO_URL}/api/billnova-users`),
+      ]);
+
+      const billnovaUser = (billnovaUsersResponse.data || []).find(
+        (candidate) => candidate.res_user_id === authUser.uid,
+      );
+
+      const currentUser: CurrentUser = {
+        id: String(authUser.uid),
+        resUserId: authUser.uid,
+        billnovaUserId: billnovaUser?.id,
+        name: billnovaUser?.name || resUserResponse.data?.name || authUser.name,
+        email: billnovaUser?.email || resUserResponse.data?.email || authUser.email,
+        role: getRoleLabel(billnovaUser?.role || authUser.role),
+        phone: billnovaUser?.phone,
+        department: 'Administracion',
+      };
+
+      setUser(currentUser);
+      persistAuthState(
+        {
+          ...authUser,
+          name: currentUser.name,
+          email: currentUser.email,
+        },
+        false,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al cargar usuario');
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  return { user, loading, error };
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  return { user, loading, error, refresh };
 }

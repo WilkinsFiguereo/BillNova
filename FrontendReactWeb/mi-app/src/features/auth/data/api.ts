@@ -26,40 +26,26 @@ export const authApi = {
       },
       { allowedStatuses: [400, 401] },
     ),
-<<<<<<< HEAD
-  verifyEmail: async (payload: { email: string; code: string }) =>
-    odooPost<{ ok: boolean; error?: string; retry_after_seconds?: number }>(
-      authPath("/verify-email"),
-      payload,
-      { allowedStatuses: [400, 401, 429] },
-    ),
-  resendVerificationCode: async (email: string) =>
-    odooPost<{ ok: boolean; message?: string; dev_code?: string; error?: string; retry_after_seconds?: number }>(
-      authPath("/resend-code"),
-      { email },
-      { allowedStatuses: [400, 429] },
-=======
-
   getSession: async (sessionToken?: string): Promise<SessionResponse> =>
-    odooGet<SessionResponse>(authPath("/session"), { sessionToken }),
+    odooGet<SessionResponse>(authPath("/session"), { sessionToken, allowedStatuses: [401] }),
 
   logout: async (sessionToken?: string): Promise<LogoutResponse> =>
-    odooPost<LogoutResponse>(authPath("/logout"), {}, { sessionToken }),
+    odooPost<LogoutResponse>(authPath("/logout"), {}, { sessionToken, allowedStatuses: [401] }),
 
   forgotPassword: async (payload: ForgotPasswordPayload): Promise<ForgotPasswordResponse> =>
-    odooPost<ForgotPasswordResponse>(authPath("/forgot-password"), payload),
+    odooPost<ForgotPasswordResponse>(authPath("/forgot-password"), payload, { allowedStatuses: [400, 404, 409, 429] }),
 
   resetPassword: async (payload: ResetPasswordPayload): Promise<ResetPasswordResponse> =>
-    odooPost<ResetPasswordResponse>(authPath("/reset-password"), payload),
+    odooPost<ResetPasswordResponse>(authPath("/reset-password"), payload, { allowedStatuses: [400, 404, 409, 429] }),
 
   verifyEmail: async (payload: VerifyEmailPayload): Promise<VerifyEmailResponse> =>
-    odooPost<VerifyEmailResponse>(authPath("/verify-email"), payload),
+    odooPost<VerifyEmailResponse>(authPath("/verify-email"), payload, { allowedStatuses: [400, 404, 409, 429] }),
 
   resendVerificationCode: async (email: string): Promise<ResendCodeResponse> =>
-    odooPost<ResendCodeResponse>(authPath("/resend-verification-code"), { email }),
+    odooPost<ResendCodeResponse>(authPath("/verify-email/resend"), { email }, { allowedStatuses: [400, 404, 409, 429] }),
 
   listSessions: async (sessionToken: string): Promise<SessionsListResponse> =>
-    odooGet<SessionsListResponse>(authPath("/sessions"), { sessionToken }),
+    odooGet<SessionsListResponse>(authPath("/sessions"), { sessionToken, allowedStatuses: [401] }),
 
   revokeSession: async (
     sessionToken: string,
@@ -68,7 +54,6 @@ export const authApi = {
     odooPost<RevokeSessionResponse>(
       authPath("/sessions/revoke"),
       { session_id: sessionId },
-      { sessionToken },
->>>>>>> bb18ddb23a5877a401d5a6e8f1b5a9a64e48a0e9
+      { sessionToken, allowedStatuses: [400, 401, 404] },
     ),
 };

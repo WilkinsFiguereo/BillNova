@@ -7,7 +7,7 @@ import { validateRegisterForm } from "../data/validators";
 import type { RegisterPayload, RegisterFormState } from "../types/register.types";
 
 const INITIAL_VALUES: RegisterPayload = {
-  name: "", login: "", password: "", email: "", phone: "", address: "",
+  name: "", username: "", password: "", email: "", phone: "", address: "",
 };
 
 const INITIAL_STATE: RegisterFormState = {

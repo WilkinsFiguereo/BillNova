@@ -1,6 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const ODOO_URL = (process.env.ODOO_URL ?? "https://jwfn4vcd-8079.use2.devtunnels.ms").replace(/\/+$/, "");
+const ODOO_URL = (
+  process.env.ODOO_URL ??
+  process.env.NEXT_PUBLIC_ODOO_URL ??
+  "http://localhost:8079"
+).replace(/\/+$/, "");
+
+async function forwardError(response: Response) {
+  const contentType = response.headers.get("content-type") || "";
+  const rawBody = await response.text();
+
+  if (contentType.includes("application/json")) {
+    try {
+      return NextResponse.json(JSON.parse(rawBody), { status: response.status });
+    } catch {
+      // Fall through to the generic response below if the backend sent invalid JSON.
+    }
+  }
+
+  return NextResponse.json(
+    {
+      error: `Backend error: ${response.status}`,
+      details: rawBody,
+    },
+    { status: response.status }
+  );
+}
 
 export async function GET(
   request: NextRequest,
@@ -25,9 +50,11 @@ export async function GET(
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`[PROXY GET ERROR] ${response.status}:`, errorText);
-      return NextResponse.json(
-        { error: `Backend error: ${response.status}`, details: errorText },
-        { status: response.status }
+      return forwardError(
+        new Response(errorText, {
+          status: response.status,
+          headers: response.headers,
+        })
       );
     }
 
@@ -64,12 +91,8 @@ export async function POST(
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[PROXY POST ERROR] ${response.status}:`, errorText);
-      return NextResponse.json(
-        { error: `Backend error: ${response.status}`, details: errorText },
-        { status: response.status }
-      );
+      console.error(`[PROXY POST ERROR] ${response.status}`);
+      return forwardError(response);
     }
 
     const data = await response.json();
@@ -105,12 +128,8 @@ export async function PUT(
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[PROXY PUT ERROR] ${response.status}:`, errorText);
-      return NextResponse.json(
-        { error: `Backend error: ${response.status}`, details: errorText },
-        { status: response.status }
-      );
+      console.error(`[PROXY PUT ERROR] ${response.status}`);
+      return forwardError(response);
     }
 
     const data = await response.json();
@@ -144,12 +163,8 @@ export async function DELETE(
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[PROXY DELETE ERROR] ${response.status}:`, errorText);
-      return NextResponse.json(
-        { error: `Backend error: ${response.status}`, details: errorText },
-        { status: response.status }
-      );
+      console.error(`[PROXY DELETE ERROR] ${response.status}`);
+      return forwardError(response);
     }
 
     const data = await response.json();

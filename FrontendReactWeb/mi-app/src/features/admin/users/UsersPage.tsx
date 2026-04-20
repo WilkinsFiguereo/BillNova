@@ -35,6 +35,7 @@ export function UsersPage() {
 
   const { query, setQuery, filtered } = useUserSearch(resUsers, billnovaUsers);
   const [modal, setModal] = useState<ModalState>(CLOSED);
+  const [activeTab, setActiveTab] = useState<"res" | "billnova">("res");
 
   const closeModal = () => setModal(CLOSED);
   
@@ -77,7 +78,7 @@ export function UsersPage() {
       <UsersHeader
         query={query}
         onQueryChange={setQuery}
-        onAddClick={() => setModal({ open: true, mode: "create" })}
+        onAddClick={() => setModal({ open: true, mode: "create", userType: activeTab })}
       />
 
       {/* Stats — solo si hay datos */}
@@ -85,8 +86,8 @@ export function UsersPage() {
         <UsersStats 
           totalRes={resUsers.length} 
           totalBillnova={billnovaUsers.length}
-          activeCount={resUsers.filter(u => u.active).length}
-          inactiveCount={resUsers.filter(u => !u.active).length}
+          activeCount={[...resUsers, ...billnovaUsers].filter(u => u.active).length}
+          inactiveCount={[...resUsers, ...billnovaUsers].filter(u => !u.active).length}
         />
       )}
 
@@ -147,6 +148,8 @@ export function UsersPage() {
         <UsersTable
           resUsers={filtered.resUsers}
           billnovaUsers={filtered.billnovaUsers}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
           deleting={deleting}
           onDelete={(id) => removeUser(id)}
           onEdit={openEditModal}
@@ -164,7 +167,13 @@ export function UsersPage() {
           mode={modal.mode}
           userType={modal.userType || "res"}
           userId={modal.userId}
-          onSubmit={async () => { closeModal(); refresh(); }}
+          onSubmit={async () => {
+            if (modal.userType) {
+              setActiveTab(modal.userType);
+            }
+            closeModal();
+            await refresh();
+          }}
           onCancel={closeModal}
         />
       </Modal>

@@ -3,13 +3,17 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Camera, Save, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { getStoredAuthState, persistAuthState } from '@/features/auth';
+import { ODOO_URL } from '@/lib/odooApi';
 import { useCurrentUser } from './hooks/useCurrentUser';
 import { colors, font } from '../users/theme/tokens';
 
 export function ProfilePage() {
   const router = useRouter();
-  const { user, loading } = useCurrentUser();
+  const { user, loading, refresh } = useCurrentUser();
   const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -44,16 +48,67 @@ export function ProfilePage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSave = async () => {
     try {
-      // TODO: Aquí iría la llamada a la API para actualizar los datos del usuario
-      console.log('Datos a guardar:', formData, avatarFile);
+      setSaving(true);
+      setSaveError(null);
+
+      const authUser = getStoredAuthState();
+      if (!authUser?.uid) {
+        throw new Error('No hay una sesion activa para guardar el perfil.');
+      }
+
+      const resUserResponse = await fetch(`${ODOO_URL}/api/users/${authUser.uid}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: formData.name,
+          login: formData.email,
+          email: formData.email,
+        }),
+      });
+
+      if (!resUserResponse.ok) {
+        throw new Error(await resUserResponse.text());
+      }
+
+      if (user?.billnovaUserId) {
+        const billnovaResponse = await fetch(`${ODOO_URL}/api/billnova-users/${user.billnovaUserId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+          }),
+        });
+
+        if (!billnovaResponse.ok) {
+          throw new Error(await billnovaResponse.text());
+        }
+      }
+
+      persistAuthState(
+        {
+          ...authUser,
+          name: formData.name,
+          email: formData.email,
+        },
+        false,
+      );
+
+      await refresh();
       setIsEditing(false);
     } catch (error) {
       console.error('Error al guardar perfil:', error);
+      setSaveError(error instanceof Error ? error.message : 'No se pudo guardar el perfil.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -80,21 +135,22 @@ export function ProfilePage() {
   const initials = user.name
     .split(' ')
     .slice(0, 2)
-    .map(n => n[0])
+    .map((n) => n[0])
     .join('')
     .toUpperCase();
 
   return (
     <div style={{ minHeight: '100vh', background: colors.bg.primary, fontFamily: font.family }}>
-      {/* Topbar */}
-      <div style={{
-        background: colors.bg.secondary,
-        borderBottom: `1px solid ${colors.border}`,
-        padding: '16px 24px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-      }}>
+      <div
+        style={{
+          background: colors.bg.secondary,
+          borderBottom: `1px solid ${colors.border}`,
+          padding: '16px 24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <button
             onClick={() => router.back()}
@@ -122,7 +178,7 @@ export function ProfilePage() {
           </button>
           <div>
             <h1 style={{ fontSize: 18, fontWeight: 700, color: colors.text.primary, margin: 0 }}>Mi Perfil</h1>
-            <p style={{ fontSize: 12, color: colors.text.tertiary, margin: '4px 0 0 0' }}>Gestiona tu información personal</p>
+            <p style={{ fontSize: 12, color: colors.text.tertiary, margin: '4px 0 0 0' }}>Gestiona tu informacion personal</p>
           </div>
         </div>
 
@@ -153,27 +209,30 @@ export function ProfilePage() {
           <div style={{ display: 'flex', gap: 8 }}>
             <button
               onClick={handleSave}
+              disabled={saving}
               style={{
                 padding: '8px 16px',
                 background: colors.success,
                 color: 'white',
                 border: 'none',
                 borderRadius: 8,
-                cursor: 'pointer',
+                cursor: saving ? 'wait' : 'pointer',
                 fontSize: 14,
                 fontWeight: 600,
                 display: 'flex',
                 alignItems: 'center',
                 gap: 6,
+                opacity: saving ? 0.75 : 1,
               }}
             >
               <Save size={16} />
-              Guardar
+              {saving ? 'Guardando...' : 'Guardar'}
             </button>
             <button
               onClick={() => {
                 setIsEditing(false);
                 setAvatarPreview(null);
+                setSaveError(null);
               }}
               style={{
                 padding: '8px 16px',
@@ -196,48 +255,67 @@ export function ProfilePage() {
         )}
       </div>
 
-      {/* Contenido */}
       <div style={{ maxWidth: 800, margin: '32px auto', padding: '0 24px' }}>
-        {/* Avatar Section */}
-        <div style={{
-          background: colors.bg.secondary,
-          border: `1px solid ${colors.border}`,
-          borderRadius: 12,
-          padding: 32,
-          marginBottom: 24,
-          textAlign: 'center',
-        }}>
-          <div style={{
-            width: 120,
-            height: 120,
-            margin: '0 auto 16px',
-            borderRadius: '50%',
-            background: avatarPreview ? `url(${avatarPreview})` : `linear-gradient(135deg, ${colors.primary}, #818cf8)`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 40,
-            fontWeight: 700,
-            color: 'white',
-            position: 'relative',
-            overflow: 'hidden',
-          }}>
+        {saveError && (
+          <div
+            style={{
+              marginBottom: 16,
+              padding: '12px 16px',
+              borderRadius: 10,
+              background: `${colors.error}18`,
+              border: `1px solid ${colors.error}55`,
+              color: colors.error,
+              fontSize: 13,
+            }}
+          >
+            {saveError}
+          </div>
+        )}
+
+        <div
+          style={{
+            background: colors.bg.secondary,
+            border: `1px solid ${colors.border}`,
+            borderRadius: 12,
+            padding: 32,
+            marginBottom: 24,
+            textAlign: 'center',
+          }}
+        >
+          <div
+            style={{
+              width: 120,
+              height: 120,
+              margin: '0 auto 16px',
+              borderRadius: '50%',
+              background: avatarPreview ? `url(${avatarPreview})` : `linear-gradient(135deg, ${colors.primary}, #818cf8)`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 40,
+              fontWeight: 700,
+              color: 'white',
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+          >
             {!avatarPreview && initials}
 
             {isEditing && (
-              <label style={{
-                position: 'absolute',
-                inset: 0,
-                background: 'rgba(0,0,0,0.5)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                opacity: 0,
-                transition: 'opacity 0.2s',
-              }}
+              <label
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'rgba(0,0,0,0.5)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  opacity: 0,
+                  transition: 'opacity 0.2s',
+                }}
                 onMouseEnter={(e) => {
                   (e.currentTarget as HTMLLabelElement).style.opacity = '1';
                 }}
@@ -245,47 +323,41 @@ export function ProfilePage() {
                   (e.currentTarget as HTMLLabelElement).style.opacity = '0';
                 }}
               >
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarChange}
-                  style={{ display: 'none' }}
-                />
+                <input type="file" accept="image/*" onChange={handleAvatarChange} style={{ display: 'none' }} />
                 <Camera size={32} color="white" />
               </label>
             )}
           </div>
-          <h2 style={{ fontSize: 20, fontWeight: 700, color: colors.text.primary, margin: '0 0 4px 0' }}>
-            {user.name}
-          </h2>
-          <p style={{ fontSize: 13, color: colors.text.secondary, margin: 0 }}>
-            {user.role}
-          </p>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: colors.text.primary, margin: '0 0 4px 0' }}>{user.name}</h2>
+          <p style={{ fontSize: 13, color: colors.text.secondary, margin: 0 }}>{user.role}</p>
         </div>
 
-        {/* Form Section */}
         {isEditing ? (
-          <div style={{
-            background: colors.bg.secondary,
-            border: `1px solid ${colors.border}`,
-            borderRadius: 12,
-            padding: 24,
-          }}>
+          <div
+            style={{
+              background: colors.bg.secondary,
+              border: `1px solid ${colors.border}`,
+              borderRadius: 12,
+              padding: 24,
+            }}
+          >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {[
                 { label: 'Nombre completo', name: 'name', type: 'text' },
                 { label: 'Email', name: 'email', type: 'email' },
-                { label: 'Teléfono', name: 'phone', type: 'tel' },
+                { label: 'Telefono', name: 'phone', type: 'tel' },
                 { label: 'Departamento', name: 'department', type: 'text' },
-              ].map(field => (
+              ].map((field) => (
                 <div key={field.name}>
-                  <label style={{
-                    display: 'block',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: colors.text.primary,
-                    marginBottom: 6,
-                  }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: colors.text.primary,
+                      marginBottom: 6,
+                    }}
+                  >
                     {field.label}
                   </label>
                   <input
@@ -317,15 +389,17 @@ export function ProfilePage() {
             </div>
           </div>
         ) : (
-          <div style={{
-            background: colors.bg.secondary,
-            border: `1px solid ${colors.border}`,
-            borderRadius: 12,
-            overflow: 'hidden',
-          }}>
+          <div
+            style={{
+              background: colors.bg.secondary,
+              border: `1px solid ${colors.border}`,
+              borderRadius: 12,
+              overflow: 'hidden',
+            }}
+          >
             {[
               { label: 'Email', value: user.email },
-              { label: 'Teléfono', value: user.phone },
+              { label: 'Telefono', value: user.phone },
               { label: 'Departamento', value: user.department },
             ].map((item, index) => (
               <div
@@ -338,12 +412,8 @@ export function ProfilePage() {
                   alignItems: 'center',
                 }}
               >
-                <span style={{ fontSize: 13, fontWeight: 600, color: colors.text.secondary }}>
-                  {item.label}
-                </span>
-                <span style={{ fontSize: 14, color: colors.text.primary }}>
-                  {item.value || '-'}
-                </span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: colors.text.secondary }}>{item.label}</span>
+                <span style={{ fontSize: 14, color: colors.text.primary }}>{item.value || '-'}</span>
               </div>
             ))}
           </div>

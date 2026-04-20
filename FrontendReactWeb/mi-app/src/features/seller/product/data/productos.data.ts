@@ -1,7 +1,6 @@
-// archivo de datos viejo. Actualmente la aplicación obtiene la información del backend.
-// conservamos la constante de categorías para compatibilidad posterior si se necesita.
-
+import { AlertTriangle, Package, Tag, XCircle, type LucideIcon } from "lucide-react";
 import type { Producto } from "../types/productos.types";
+import { productosTheme as t } from "../theme/productos.theme";
 
 export const PRODUCTOS_DATA: Producto[] = [];
 

@@ -3,7 +3,9 @@ export type CompanyPlan = 'Starter' | 'Business' | 'Premium';
 
 export interface Company {
   id: number;
+  active?: boolean;
   name: string;
+  email?: string;
   ruc?: string;
   sector?: string;
   website?: string;

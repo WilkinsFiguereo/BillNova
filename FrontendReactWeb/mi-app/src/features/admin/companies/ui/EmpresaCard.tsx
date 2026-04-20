@@ -7,9 +7,12 @@ import type { Company } from '../types/company.types';
 
 interface EmpresaCardProps {
   company: Company;
+  onView: (company: Company) => void;
+  onEdit: (company: Company) => void;
+  onToggleActive: (company: Company) => void;
 }
 
-export function EmpresaCard({ company }: EmpresaCardProps) {
+export function EmpresaCard({ company, onView, onEdit, onToggleActive }: EmpresaCardProps) {
   return (
     <tr>
       <td
@@ -79,28 +82,51 @@ export function EmpresaCard({ company }: EmpresaCardProps) {
           textAlign: 'right',
         }}
       >
-        <button
-          style={{
-            padding: '5px 12px',
-            background: 'transparent',
-            border: `1px solid ${colors.border}`,
-            borderRadius: radius.md,
-            color: colors.text.secondary,
-            fontSize: font.sizes.sm,
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.borderColor = colors.accent;
-            e.currentTarget.style.color = colors.accent;
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.borderColor = colors.border;
-            e.currentTarget.style.color = colors.text.secondary;
-          }}
-        >
-          Ver detalles
-        </button>
+        <div style={{ display: 'inline-flex', gap: 8 }}>
+          <button
+            onClick={() => onView(company)}
+            style={{
+              padding: '5px 12px',
+              background: 'transparent',
+              border: `1px solid ${colors.border}`,
+              borderRadius: radius.md,
+              color: colors.text.secondary,
+              fontSize: font.sizes.sm,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+          >
+            Ver
+          </button>
+          <button
+            onClick={() => onEdit(company)}
+            style={{
+              padding: '5px 12px',
+              background: 'transparent',
+              border: `1px solid ${colors.accent}`,
+              borderRadius: radius.md,
+              color: colors.accent,
+              fontSize: font.sizes.sm,
+              cursor: 'pointer',
+            }}
+          >
+            Editar
+          </button>
+          <button
+            onClick={() => onToggleActive(company)}
+            style={{
+              padding: '5px 12px',
+              background: company.active === false ? colors.success : colors.error,
+              border: 'none',
+              borderRadius: radius.md,
+              color: '#fff',
+              fontSize: font.sizes.sm,
+              cursor: 'pointer',
+            }}
+          >
+            {company.active === false ? 'Activar' : 'Desactivar'}
+          </button>
+        </div>
       </td>
     </tr>
   );

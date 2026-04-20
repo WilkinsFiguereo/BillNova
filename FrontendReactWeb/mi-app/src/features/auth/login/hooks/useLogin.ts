@@ -88,9 +88,9 @@ export function useLogin() {
             uid: sessionInfo?.uid ?? response.uid,
             email: sessionInfo?.email ?? values.username,
             name: sessionInfo?.name ?? values.username,
-            role: sessionInfo?.role ?? "seller",
-            sessionToken: sessionInfo?.session_token ?? response.session_token ?? null,
-            sessionExpiresAt: sessionInfo?.session_expires_at ?? null,
+            role: sessionInfo?.role ?? "admin",
+            sessionToken: sessionInfo?.session_token ?? response.session_token ?? undefined,
+            sessionExpiresAt: sessionInfo?.session_expires_at ?? undefined,
           };
 
           persistAuthState(sessionUser, values.rememberMe);

@@ -1,1 +1,1 @@
-export { default } from "../navigation/auth/login/page";
+export { default } from "../navigation/auth/login/page/page";

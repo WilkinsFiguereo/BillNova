@@ -32,8 +32,8 @@ interface FormData {
 
 const EMPTY: FormData = { name: "", email: "", role: "", active: true };
 
-const RES_ROLES      = ["admin", "editor", "viewer"] as const;
-const BILLNOVA_ROLES = ["admin", "billing", "support", "viewer"] as const;
+const RES_ROLES      = ["admin", "moderation", "seller", "user"] as const;
+const BILLNOVA_ROLES = ["admin", "moderation", "seller", "user"] as const;
 
 // ── Styles ───────────────────────────────────────────────────────────────────
 

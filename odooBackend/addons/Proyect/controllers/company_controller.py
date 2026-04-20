@@ -8,7 +8,7 @@ class CompanyApiController(http.Controller):
         origin = request.httprequest.headers.get('Origin')
         return {
             "Access-Control-Allow-Origin": origin or "*",
-            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
             "Access-Control-Allow-Headers": "Content-Type, Authorization",
             "Access-Control-Allow-Credentials": "true",
         }
@@ -45,19 +45,70 @@ class CompanyApiController(http.Controller):
                 data.append({
                     "id": company.id,
                     "name": company.name,
+                    "active": company.active,
                     "ruc": company.ruc or None,
                     "sector": company.sector or None,
                     "website": company.website or None,
+                    "company_size": company.company_size or None,
                     "contact_name": company.contact_name or None,
                     "contact_email": company.contact_email or None,
                     "contact_phone": company.contact_phone or None,
                     "city": company.address_city or None,
                     "state": company.address_state or None,
                     "address": company.street or None,
+                    "created_at": company.create_date.isoformat() if company.create_date else None,
                 })
             return self._json_response({"data": data})
         except Exception as e:
             return self._json_response({"error": str(e)}, 500)
+
+    @http.route(
+        "/api/companies/<int:company_id>",
+        type="http",
+        auth="public",
+        methods=["PUT", "OPTIONS"],
+        csrf=False,
+    )
+    def update_company(self, company_id):
+        if request.httprequest.method == "OPTIONS":
+            return self._options_response()
+
+        company = request.env["res.company"].sudo().browse(company_id)
+        if not company.exists():
+            return self._json_response({"ok": False, "error": "Company not found"}, 404)
+
+        payload = request.httprequest.get_json(silent=True) or {}
+
+        vals = {}
+        field_map = {
+            "name": "name",
+            "company_name": "name",
+            "ruc": "ruc",
+            "sector": "sector",
+            "website": "website",
+            "company_size": "company_size",
+            "contact_name": "contact_name",
+            "contact_email": "contact_email",
+            "contact_phone": "contact_phone",
+            "state": "address_state",
+            "city": "address_city",
+            "address": "street",
+            "password": "access_password",
+            "active": "active",
+        }
+
+        for payload_key, model_key in field_map.items():
+            if payload_key in payload:
+                vals[model_key] = payload.get(payload_key)
+
+        if not vals:
+            return self._json_response({"ok": False, "error": "No fields to update"}, 400)
+
+        try:
+            company.write(vals)
+            return self._json_response({"ok": True, "id": company.id})
+        except Exception as e:
+            return self._json_response({"ok": False, "error": str(e)}, 500)
 
     # =========================
     # REGISTER COMPANY
@@ -109,7 +160,7 @@ class CompanyApiController(http.Controller):
                 "address_state": payload.get("state"),
                 "address_city": payload.get("city"),
                 "street": payload.get("address"),
-                "zip": payload.get("postal_code"),
+                "postal_code": payload.get("postal_code"),
 
                 # acceso
                 "access_password": payload.get("password"),

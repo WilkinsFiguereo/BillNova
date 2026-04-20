@@ -1,57 +1,15 @@
-/* ─────────────────────────────────────────
-   REGISTER FEATURE — Theme
-   Tokens de diseño centralizados
-───────────────────────────────────────── */
-
 export const registerTheme = {
-  colors: {
-    bg:           "#080b12",
-    surface:      "#0d1117",
-    surfaceBorder:"#1a2235",
-    accent:       "#4f8ef7",
-    accentHover:  "#6ba3ff",
-    accentMuted:  "rgba(79,142,247,0.12)",
-    textPrimary:  "#e4ebf5",
-    textSecondary:"#7a8fa8",
-    textMuted:    "#3d5166",
-    error:        "#f47c7c",
-    errorBg:      "rgba(244,124,124,0.08)",
-    success:      "#4fbe8e",
-    successBg:    "rgba(79,190,142,0.08)",
-    inputBorder:  "#1e2d42",
-    inputFocus:   "#4f8ef7",
-  },
-  spacing: {
-    cardPadding: "clamp(1.5rem, 4vw, 2.5rem)",
-  },
-  radius: {
-    card:   "2px",
-    input:  "2px",
-    button: "2px",
-    badge:  "9999px",
-  },
   strength: {
-    colors: ["#3d5166", "#f47c7c", "#f0a050", "#e8d44d", "#4fbe8e"],
-    labels: ["", "Débil", "Regular", "Buena", "Fuerte"],
+    colors: ["#475569", "#ef4444", "#f59e0b", "#3b82f6", "#22c55e"],
+    labels: ["Vacia", "Debil", "Media", "Buena", "Fuerte"],
   },
-} as const;
+};
 
-/** Clases Tailwind base para inputs */
 export const inputBase =
-<<<<<<< HEAD:FrontendReactWeb/mi-app/src/features/auth/register/theme/register.theme.ts
   "w-full bg-transparent text-[#e4ebf5] placeholder:text-[#3d5166] " +
   "text-sm border border-[#1e2d42] rounded-[2px] " +
   "py-3 pl-10 pr-4 outline-none transition-all duration-200 " +
-  "focus:border-[#4f8ef7] focus:ring-1 focus:ring-[#4f8ef7]/20 resize-none";
+  "focus:border-[#4f8ef7] focus:ring-4 focus:ring-[#4f8ef7]/10";
 
 export const labelBase =
   "block text-[10px] font-semibold tracking-[0.2em] text-[#7a8fa8] uppercase mb-1.5";
-=======
-  "w-full bg-[#0a1628]/65 text-[#e4ebf5] placeholder:text-[#547098] " +
-  "text-sm border border-[#27406a] rounded-[2px] " +
-  "py-3 pl-10 pr-4 outline-none transition-all duration-200 " +
-  "focus:border-[#67b8ff] focus:ring-2 focus:ring-[#67b8ff]/25 resize-none";
-
-export const labelBase =
-  "block text-[10px] font-semibold tracking-[0.2em] text-[#9db2ce] uppercase mb-1.5";
->>>>>>> dff76de22c0a24dc5ae37d61aec817b910d4b235:FrontendReactWeb/mi-app/src/features/register/theme/register.theme.ts

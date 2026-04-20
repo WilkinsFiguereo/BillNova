@@ -1,7 +1,10 @@
 # controllers/product_api.py
-from odoo import http
+from odoo import SUPERUSER_ID, http
 from odoo.http import request, Response
 import json as json_lib
+import logging
+
+_logger = logging.getLogger(__name__)
 
 class ProductApiController(http.Controller):
 
@@ -26,6 +29,13 @@ class ProductApiController(http.Controller):
     def _options_response(self):
         return Response('', status=200, headers=self._cors_headers())
 
+    def _product_env(self):
+        # auth='none' requests do not always have a concrete env.user, so force a real user context.
+        return request.env['product.product'].with_user(SUPERUSER_ID).sudo()
+
+    def _company_env(self):
+        return request.env['res.company'].with_user(SUPERUSER_ID).sudo()
+
     def _serialize(self, p):
         """Serializa un product.product a dict."""
         return {
@@ -33,8 +43,16 @@ class ProductApiController(http.Controller):
             'name': p.name,
             'default_code': p.default_code,
             'list_price': p.list_price,
+            'standard_price': p.standard_price,
+            'qty_available': p.qty_available,
+            'description': p.description_sale or p.description or '',
+            'category_name': p.categ_id.name if p.categ_id else None,
             'company_id': p.company_id.id or None,
             'company_name': p.company_id.name or None,
+            'company_email': p.company_id.contact_email or None,
+            'moderation_status': p.billnova_moderation_status or 'pending',
+            'rejection_reason': p.billnova_rejection_reason or '',
+            'created_at': p.create_date.isoformat() if p.create_date else None,
         }
 
     def _parse_company_id(self, payload):
@@ -50,7 +68,7 @@ class ProductApiController(http.Controller):
                 {'ok': False, 'error': 'company_id must be an integer'}, 400
             )
 
-        company = request.env['res.company'].sudo().browse(company_id_int)
+        company = self._company_env().browse(company_id_int)
         if not company.exists():
             return self._json_response(
                 {'ok': False, 'error': f'Company {company_id_int} not found'}, 404
@@ -76,7 +94,7 @@ class ProductApiController(http.Controller):
                     {'ok': False, 'error': 'company_id must be an integer'}, 400
                 )
 
-        products = request.env['product.product'].sudo().search(domain)
+        products = self._product_env().search(domain)
         return self._json_response({'ok': True, 'data': [self._serialize(p) for p in products]})
 
     # ── GET ONE  /api/products/<id> ───────────────────────────
@@ -86,7 +104,7 @@ class ProductApiController(http.Controller):
         if request.httprequest.method == 'OPTIONS':
             return self._options_response()
 
-        product = request.env['product.product'].sudo().browse(product_id)
+        product = self._product_env().browse(product_id)
         if not product.exists():
             return self._json_response({'ok': False, 'error': 'Product not found'}, 404)
 
@@ -120,11 +138,15 @@ class ProductApiController(http.Controller):
             'name': name,
             'default_code': payload.get('default_code'),
             'list_price': payload.get('list_price', 0.0),
+            'standard_price': payload.get('standard_price', 0.0),
+            'description_sale': payload.get('description') or '',
+            'billnova_moderation_status': payload.get('moderation_status') or 'pending',
+            'billnova_rejection_reason': payload.get('rejection_reason') or '',
         }
         if company_id_int:
             vals['company_id'] = company_id_int
 
-        product = request.env['product.product'].sudo().create(vals)
+        product = self._product_env().create(vals)
         return self._json_response({'ok': True, 'id': product.id}, 201)
 
     # ── UPDATE/DELETE  /api/products/<id> ─────────────────────
@@ -134,13 +156,31 @@ class ProductApiController(http.Controller):
         if request.httprequest.method == 'OPTIONS':
             return self._options_response()
 
-        product = request.env['product.product'].sudo().browse(product_id)
+        product = self._product_env().browse(product_id)
         if not product.exists():
             return self._json_response({'ok': False, 'error': 'Product not found'}, 404)
 
         if request.httprequest.method == 'DELETE':
-            product.unlink()
-            return self._json_response({'ok': True})
+            try:
+                product.unlink()
+                return self._json_response({'ok': True, 'deleted': True})
+            except Exception as exc:
+                _logger.exception("Error deleting product %s, archiving instead", product_id)
+                try:
+                    product.write({'active': False})
+                    return self._json_response({
+                        'ok': True,
+                        'deleted': False,
+                        'archived': True,
+                        'message': 'El producto no se pudo eliminar fisicamente y fue archivado.',
+                    })
+                except Exception as archive_exc:
+                    _logger.exception("Error archiving product %s after delete failure", product_id)
+                    return self._json_response({
+                        'ok': False,
+                        'error': str(exc),
+                        'details': str(archive_exc),
+                    }, 409)
 
         payload = request.httprequest.get_json(silent=True) or {}
 
@@ -151,6 +191,14 @@ class ProductApiController(http.Controller):
             vals['default_code'] = payload.get('default_code')
         if 'list_price' in payload:
             vals['list_price'] = payload.get('list_price', 0.0)
+        if 'standard_price' in payload:
+            vals['standard_price'] = payload.get('standard_price', 0.0)
+        if 'description' in payload:
+            vals['description_sale'] = payload.get('description') or ''
+        if 'moderation_status' in payload:
+            vals['billnova_moderation_status'] = payload.get('moderation_status') or 'pending'
+        if 'rejection_reason' in payload:
+            vals['billnova_rejection_reason'] = payload.get('rejection_reason') or ''
 
         company_id_int = self._parse_company_id(payload)
         if isinstance(company_id_int, Response):
