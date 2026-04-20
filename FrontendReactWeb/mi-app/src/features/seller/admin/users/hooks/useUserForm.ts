@@ -40,9 +40,10 @@ export function useUserForm(
   // Cargar datos cuando mode = edit | view
   useEffect(() => {
     if ((mode === "edit" || mode === "view") && userId) {
-      setLoading(true);
-      Promise.all([apiGetResUserById(userId), apiGetBillnovaUsers()])
-        .then(([ru, bus]) => {
+      const loadUser = async () => {
+        setLoading(true);
+        try {
+          const [ru, bus] = await Promise.all([apiGetResUserById(userId), apiGetBillnovaUsers()]);
           const bu = bus.find((b) => b.res_user_id === userId);
           setForm({
             name:           ru.name,
@@ -53,9 +54,13 @@ export function useUserForm(
             address:        bu?.address        ?? "",
             is_mobile_user: bu?.is_mobile_user ?? false,
           });
-        })
-        .catch((e) => setError((e as Error).message))
-        .finally(()  => setLoading(false));
+        } catch (e) {
+          setError((e as Error).message);
+        } finally {
+          setLoading(false);
+        }
+      };
+      void loadUser();
     } else {
       setForm(EMPTY_FORM);
       setError(null);

@@ -82,7 +82,10 @@ export function useModeration(options: UseModerationOptions = {}): UseModeration
   }, [showToast, useMock]);
 
   useEffect(() => {
-    void load();
+    const loadData = async () => {
+      await load();
+    };
+    void loadData();
   }, [load]);
 
   const cambiarStatus = useCallback(

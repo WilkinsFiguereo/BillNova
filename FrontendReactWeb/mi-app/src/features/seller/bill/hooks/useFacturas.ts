@@ -124,7 +124,10 @@ export function useFacturasOdoo(companyId?: number): UseFacturasOdooReturn {
   }, [companyId, showToast]);
 
   useEffect(() => {
-    fetchFacturas();
+    const loadFacturas = async () => {
+      await fetchFacturas();
+    };
+    void loadFacturas();
   }, [fetchFacturas]);
 
   // ── Filtrado y ordenamiento ──────────────────────────────────────
@@ -155,8 +158,14 @@ export function useFacturasOdoo(companyId?: number): UseFacturasOdooReturn {
         : ordenCampo === "status" ? "status"
         : "fecha";
 
-      let valA: string | number = (a as any)[campo];
-      let valB: string | number = (b as any)[campo];
+      const orderKey: keyof Pick<OdooFactura, "numero" | "cliente" | "fecha" | "total" | "status"> =
+        campo === "numero" ? "numero"
+          : campo === "cliente" ? "cliente"
+          : campo === "fecha" ? "fecha"
+          : campo === "total" ? "total"
+          : "status";
+      let valA: string | number = a[orderKey];
+      let valB: string | number = b[orderKey];
       if (typeof valA === "string") valA = valA.toLowerCase();
       if (typeof valB === "string") valB = valB.toLowerCase();
       if (valA < valB) return ordenDir === "asc" ? -1 : 1;

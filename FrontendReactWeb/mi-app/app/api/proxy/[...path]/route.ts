@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const ODOO_URL = (process.env.ODOO_URL ?? "https://jwfn4vcd-8079.use2.devtunnels.ms").replace(/\/+$/, "");
+let ODOO_URL = process.env.ODOO_URL ?? process.env.NEXT_PUBLIC_ODOO_URL ?? "https://jwfn4vcd-8079.use2.devtunnels.ms";
+while (ODOO_URL.endsWith("/")) {
+  ODOO_URL = ODOO_URL.slice(0, -1);
+}
 const PROXY_TIMEOUT_MS = Number(process.env.ODOO_PROXY_TIMEOUT_MS ?? 60000);
 
 function buildForwardHeaders(request: NextRequest) {

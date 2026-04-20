@@ -27,7 +27,7 @@ function FilaInfo({
   label,
   value,
 }: {
-  icon: any;
+  icon: React.ElementType;
   label: string;
   value: string;
 }) {

@@ -41,7 +41,12 @@ export function useUsers(): UseUsersReturn {
     }
   }, []);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    const refreshData = async () => {
+      await refresh();
+    };
+    void refreshData();
+  }, [refresh]);
 
   const removeUser = useCallback(async (resUserId: number) => {
     setDeleting(resUserId);

@@ -38,6 +38,33 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+function InfoRow({ icon: Icon, label, value, theme }: { icon: React.ElementType; label: string; value: string; theme: typeof t }) {
+  return (
+    <div style={{
+      display: "flex", gap: 11, alignItems: "flex-start",
+      padding: "9px 0", borderBottom: `1px solid ${theme.border}`,
+    }}>
+      <div style={{
+        width: 30, height: 30, borderRadius: 7, flexShrink: 0,
+        background: theme.bgAlt, display: "flex", alignItems: "center", justifyContent: "center",
+      }}>
+        <Icon size={13} style={{ color: theme.textDisabled }} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontSize: 10, fontWeight: 700, color: theme.textDisabled,
+          textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 2,
+        }}>
+          {label}
+        </div>
+        <div style={{ fontSize: 13, color: theme.textPrimary, fontWeight: 500, wordBreak: "break-word" }}>
+          {value || "—"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Icono de orden ──────────────────────────────────────────────────────
 function OrdenIcon({ campo, activo, dir }: { campo: OrdenCampo; activo: OrdenCampo; dir: OrdenDir }) {
   if (campo !== activo) return <ArrowUpDown size={11} style={{ opacity: 0.3 }} />;
@@ -217,33 +244,6 @@ function InvoiceDetailPanel({
 }) {
   const status = STATUS_STYLES[factura.status] || STATUS_STYLES.borrador;
 
-  function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
-    return (
-      <div style={{
-        display: "flex", gap: 11, alignItems: "flex-start",
-        padding: "9px 0", borderBottom: `1px solid ${t.border}`,
-      }}>
-        <div style={{
-          width: 30, height: 30, borderRadius: 7, flexShrink: 0,
-          background: t.bgAlt, display: "flex", alignItems: "center", justifyContent: "center",
-        }}>
-          <Icon size={13} style={{ color: t.textDisabled }} />
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{
-            fontSize: 10, fontWeight: 700, color: t.textDisabled,
-            textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 2,
-          }}>
-            {label}
-          </div>
-          <div style={{ fontSize: 13, color: t.textPrimary, fontWeight: 500, wordBreak: "break-word" }}>
-            {value || "—"}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <>
       {/* Overlay */}
@@ -345,20 +345,20 @@ function InvoiceDetailPanel({
           <div style={{ fontSize: 10, fontWeight: 700, color: t.textDisabled, textTransform: "uppercase", letterSpacing: "0.08em", padding: "16px 0 2px" }}>
             Comprador
           </div>
-          <InfoRow icon={User}     label="Nombre"    value={factura.cliente} />
-          <InfoRow icon={Mail}     label="Email"     value={factura.clienteEmail} />
-          <InfoRow icon={Phone}    label="Teléfono"  value={factura.phone} />
-          <InfoRow icon={MapPin}   label="Dirección" value={factura.address} />
+          <InfoRow icon={User}     label="Nombre"    value={factura.cliente} theme={t} />
+          <InfoRow icon={Mail}     label="Email"     value={factura.clienteEmail} theme={t} />
+          <InfoRow icon={Phone}    label="Teléfono"  value={factura.phone} theme={t} />
+          <InfoRow icon={MapPin}   label="Dirección" value={factura.address} theme={t} />
 
           {/* Datos de factura */}
           <div style={{ fontSize: 10, fontWeight: 700, color: t.textDisabled, textTransform: "uppercase", letterSpacing: "0.08em", padding: "16px 0 2px" }}>
             Datos de factura
           </div>
-          <InfoRow icon={Hash}       label="Referencia"    value={factura.numero} />
-          <InfoRow icon={Calendar}   label="Fecha emisión" value={factura.fecha} />
-          <InfoRow icon={Clock}      label="Vencimiento"   value={factura.fechaVencimiento} />
+          <InfoRow icon={Hash}       label="Referencia"    value={factura.numero} theme={t} />
+          <InfoRow icon={Calendar}   label="Fecha emisión" value={factura.fecha} theme={t} />
+          <InfoRow icon={Clock}      label="Vencimiento"   value={factura.fechaVencimiento} theme={t} />
           {factura.invoice?.state && (
-            <InfoRow icon={CreditCard} label="Estado Odoo" value={factura.invoice.state} />
+            <InfoRow icon={CreditCard} label="Estado Odoo" value={factura.invoice.state} theme={t} />
           )}
 
           {/* Líneas de productos */}

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Reporte, EstadoReporte } from '../types/reportes.types';
-import { colors, estadoConfig, categoriaConfig, prioridadConfig } from '../theme/reportes.theme';
+import { colors, estadoConfig, categoriaConfig } from '../theme/reportes.theme';
 import { EstadoBadge, PrioridadBadge } from '../ui/StatusBadge';
 
 interface ReporteDetailModalProps {
@@ -73,12 +73,14 @@ export function ReporteDetailModal({
   const [notaGuardada, setNotaGuardada] = useState(false);
 
   useEffect(() => {
-    if (reporte) {
+    const reset = () => {
+      if (!reporte) return;
       setNuevoEstado('');
       setNotaCambio('');
       setNotaModerador(reporte.notasModerador || '');
       setNotaGuardada(false);
-    }
+    };
+    reset();
   }, [reporte]);
 
   if (!isOpen || !reporte) return null;

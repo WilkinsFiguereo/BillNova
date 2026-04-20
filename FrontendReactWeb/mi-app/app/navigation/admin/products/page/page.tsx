@@ -2,9 +2,9 @@ import { Metadata } from "next";
 import AdminProductsPage from "@/features/admin/products/AdminProductsPage";
 
 export const metadata: Metadata = {
-  title: "Moderación de Productos",
+  title: "Productos Admin",
   description:
-    "Gestiona los productos registrados en la plataforma, revisa su informacion y toma decisiones de moderacion.",
+    "Gestiona los productos de la plataforma, crea categorías y revisa la lista de productos registrados.",
 };
 
 export default function Page() {

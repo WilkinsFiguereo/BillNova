@@ -118,13 +118,11 @@ interface DonutChartProps {
 
 export function DonutChart({ datos }: DonutChartProps) {
   const total = datos.reduce((s, d) => s + d.valor, 0);
-  let acumulado = 0;
 
-  // Construir segmentos como conic-gradient
-  const gradientParts = datos.map((d) => {
-    const inicio = acumulado;
-    acumulado += d.valor;
-    return `${d.color} ${inicio}% ${acumulado}%`;
+  const gradientParts = datos.map((d, index) => {
+    const inicio = datos.slice(0, index).reduce((sum, item) => sum + item.valor, 0);
+    const fin = inicio + d.valor;
+    return `${d.color} ${inicio}% ${fin}%`;
   });
   const gradient = `conic-gradient(${gradientParts.join(", ")})`;
 

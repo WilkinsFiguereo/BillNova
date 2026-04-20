@@ -26,7 +26,7 @@ const planColors: Record<CompanyPlan, { bg: string; color: string }> = {
 
 export function Badge({ status, plan, type, value, text }: BadgeProps) {
   let colors_map = statusColors['Activa'];
-  let label = text || status || plan || value || '';
+  const label = text || status || plan || value || '';
 
   if (type === 'status' && value && value in statusColors) {
     colors_map = statusColors[value as CompanyStatus];

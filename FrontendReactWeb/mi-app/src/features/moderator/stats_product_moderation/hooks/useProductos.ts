@@ -28,7 +28,7 @@ export function useProductos(): UseProductosReturn {
 
   const productosFiltrados = useMemo(() => {
     const q = filtros.busqueda.toLowerCase();
-    let list = productosMock.filter(p => {
+    const list = productosMock.filter(p => {
       const mq = !q || p.nombre.toLowerCase().includes(q) || p.empresa.toLowerCase().includes(q);
       const mc = filtros.categoria === 'todos' || p.categoria === filtros.categoria;
       const me = filtros.estado === 'todos' || p.estado === filtros.estado;

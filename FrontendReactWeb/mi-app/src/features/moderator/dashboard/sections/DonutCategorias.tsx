@@ -7,7 +7,24 @@ export function DonutCategorias({ data }: { data: DistribucionCategoria[] }) {
   const stroke = 16;
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
-  let offset = 0;
+  const circles = data.map((seg, index) => {
+    const offset = data.slice(0, index).reduce((sum, previous) => sum + (previous.porcentaje / 100) * circumference, 0);
+    const dash = (seg.porcentaje / 100) * circumference;
+    return (
+      <circle
+        key={seg.categoria}
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke={seg.color}
+        strokeWidth={stroke}
+        strokeDasharray={`${dash} ${circumference - dash}`}
+        strokeDashoffset={-offset}
+        strokeLinecap="round"
+      />
+    );
+  });
 
   return (
     <div style={s.card}>
@@ -17,25 +34,7 @@ export function DonutCategorias({ data }: { data: DistribucionCategoria[] }) {
         <div style={s.donutWrap}>
           <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={s.donutSvg}>
             <g transform={`rotate(-90 ${size / 2} ${size / 2})`}>
-              {data.map((seg) => {
-                const dash = (seg.porcentaje / 100) * circumference;
-                const circle = (
-                  <circle
-                    key={seg.categoria}
-                    cx={size / 2}
-                    cy={size / 2}
-                    r={radius}
-                    fill="none"
-                    stroke={seg.color}
-                    strokeWidth={stroke}
-                    strokeDasharray={`${dash} ${circumference - dash}`}
-                    strokeDashoffset={-offset}
-                    strokeLinecap="round"
-                  />
-                );
-                offset += dash;
-                return circle;
-              })}
+              {circles}
             </g>
           </svg>
           <div style={s.center}>
