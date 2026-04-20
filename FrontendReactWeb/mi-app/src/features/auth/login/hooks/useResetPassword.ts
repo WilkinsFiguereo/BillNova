@@ -50,7 +50,7 @@ export function useResetPassword(defaultEmail = "", defaultToken = "") {
         const res = await authApi.resetPassword(values);
         if (res.ok) {
           setSuccess(true);
-          setTimeout(() => router.push("/login"), 1800);
+          setTimeout(() => router.push("/navigation/auth/login/page"), 1800);
           return;
         }
         setServerError(res.error ?? "No fue posible restablecer la contraseña.");

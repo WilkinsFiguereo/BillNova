@@ -1,6 +1,6 @@
 // src/features/users/data/userApi.ts
 
-import odooConfig from "../../../../lib/odooConfig";
+import odooConfig from "@/lib/odooConfig";
 import type {
   ResUser,
   BillnovaUser,

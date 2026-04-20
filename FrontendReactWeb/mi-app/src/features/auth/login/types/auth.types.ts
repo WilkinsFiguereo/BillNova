@@ -2,8 +2,12 @@ export interface AuthUser {
   uid: number;
   name: string;
   email: string;
+  role?: AuthRole;
+  sessionToken?: string;
   sessionExpiresAt?: string;
 }
+
+export type AuthRole = "admin" | "moderation" | "seller" | "user";
 
 export interface LoginPayload {
   username: string;
@@ -16,6 +20,7 @@ export interface LoginResponse {
   uid?: number;
   name?: string;
   email?: string;
+  role?: AuthRole;
   session_token?: string;
   session_expires_at?: string;
   code?: "ACCOUNT_NOT_VERIFIED" | "ACCOUNT_DISABLED";
@@ -27,6 +32,7 @@ export interface SessionResponse {
   uid?: number;
   name?: string;
   email?: string;
+  role?: AuthRole;
   session_token?: string;
   session_expires_at?: string;
   error?: string;
@@ -85,4 +91,10 @@ export interface ActiveSession {
   created_at?: string;
   last_seen_at?: string;
   expires_at?: string;
+}
+
+export interface DeviceSessionsResponse {
+  ok: boolean;
+  sessions?: ActiveSession[];
+  error?: string;
 }

@@ -4,31 +4,31 @@ import { DashboardTheme } from "../types/dashboard.types";
 
 export const dashboardTheme: DashboardTheme = {
   // Brand
-  brand600: "#1E3A8A",
-  brand700: "#1A2F73",
-  brand400: "#3B82F6",
-  brand100: "#DBEAFE",
+  brand600: "var(--brand-600)",
+  brand700: "var(--brand-700)",
+  brand400: "var(--brand-400)",
+  brand100: "var(--brand-100)",
 
   // Fondos
-  bgMain: "#F8FAFC",
-  bgCard: "#FFFFFF",
-  bgAlt: "#F1F5F9",
+  bgMain: "var(--bg-main)",
+  bgCard: "var(--bg-card)",
+  bgAlt: "var(--bg-alt)",
 
-  // Tipografía
-  textPrimary: "#1F2937",
-  textSecondary: "#4B5563",
-  textDisabled: "#9CA3AF",
+  // Tipografia
+  textPrimary: "var(--text-primary)",
+  textSecondary: "var(--text-secondary)",
+  textDisabled: "var(--text-disabled)",
 
   // Estados
-  success: "#10B981",
-  successBg: "#D1FAE5",
-  error: "#EF4444",
-  errorBg: "#FEE2E2",
-  warning: "#F59E0B",
-  warningBg: "#FEF3C7",
+  success: "var(--success-500)",
+  successBg: "var(--success-100)",
+  error: "var(--error-500)",
+  errorBg: "var(--error-100)",
+  warning: "var(--warning-500)",
+  warningBg: "var(--warning-100)",
 
   // Bordes
-  border: "#E2E8F0",
+  border: "var(--border)",
 };
 
 export const globalStyles = (t: DashboardTheme) => `
@@ -48,11 +48,23 @@ export const globalStyles = (t: DashboardTheme) => `
     box-shadow: 0 4px 16px rgba(30,58,138,0.25);
   }
   .btn-secondary {
-    background: white; color: ${t.brand600}; border: 1.5px solid ${t.brand100};
+    background: ${t.bgCard}; color: ${t.brand600}; border: 1.5px solid ${t.brand100};
     padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 600;
     cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s ease;
   }
   .btn-secondary:hover { background: ${t.brand100}; transform: translateY(-1px); }
+
+  .btn-icon {
+    width: 40px; height: 40px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: ${t.bgCard}; color: ${t.textSecondary};
+    border: 1.5px solid ${t.brand100};
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .btn-icon:hover { background: ${t.brand100}; transform: translateY(-1px); }
+  .btn-icon:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
   .nav-item {
     display: flex; align-items: center; gap: 10px; padding: 10px 16px;
@@ -73,6 +85,7 @@ export const globalStyles = (t: DashboardTheme) => `
     from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
   }
+  @keyframes spin { to { transform: rotate(360deg); } }
   @keyframes toastIn {
     from { opacity: 0; transform: translateX(100%); }
     to { opacity: 1; transform: translateX(0); }

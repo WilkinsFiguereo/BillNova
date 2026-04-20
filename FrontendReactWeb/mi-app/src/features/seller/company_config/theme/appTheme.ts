@@ -1,34 +1,34 @@
 // src/styles/appTheme.ts
 
 const T = {
-  brand600: "#1E3A8A",
-  brand700: "#1A2F73",
-  brand400: "#3B82F6",
-  brand100: "#DBEAFE",
+  brand600: "var(--brand-600)",
+  brand700: "var(--brand-700)",
+  brand400: "var(--brand-400)",
+  brand100: "var(--brand-100)",
 
-  bgMain:  "#F8FAFC",
-  bgCard:  "#FFFFFF",
-  bgAlt:   "#F1F5F9",
+  bgMain: "var(--bg-main)",
+  bgCard: "var(--bg-card)",
+  bgAlt: "var(--bg-alt)",
 
-  text1: "#1F2937",
-  text2: "#4B5563",
-  text3: "#9CA3AF",
+  text1: "var(--text-primary)",
+  text2: "var(--text-secondary)",
+  text3: "var(--text-disabled)",
 
-  success:   "#10B981",
-  successBg: "#D1FAE5",
-  error:     "#EF4444",
-  errorBg:   "#FEE2E2",
-  warn:      "#F59E0B",
-  warnBg:    "#FEF3C7",
+  success: "var(--success-500)",
+  successBg: "var(--success-100)",
+  error: "var(--error-500)",
+  errorBg: "var(--error-100)",
+  warn: "var(--warning-500)",
+  warnBg: "var(--warning-100)",
 
-  border:   "#E2E8F0",
-  borderMd: "#CBD5E1",
+  border: "var(--border)",
+  borderMd: "var(--border-md)",
 
   chart: {
-    sales:   "#3B82F6",
-    income:  "#10B981",
-    pending: "#F59E0B",
-    overdue: "#EF4444",
+    sales: "var(--chart-sales)",
+    income: "var(--chart-payments)",
+    pending: "var(--chart-pending)",
+    overdue: "var(--chart-overdue)",
   },
 } as const;
 

@@ -1,6 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const ODOO_URL = (process.env.ODOO_URL ?? "https://jwfn4vcd-8079.use2.devtunnels.ms").replace(/\/+$/, "");
+const PROXY_TIMEOUT_MS = Number(process.env.ODOO_PROXY_TIMEOUT_MS ?? 60000);
+
+function buildForwardHeaders(request: NextRequest) {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+
+  // Forward token-based session as an Odoo session cookie.
+  const sessionToken = request.headers.get("x-auth-session");
+  if (sessionToken) {
+    headers.Cookie = `session_id=${sessionToken}`;
+  }
+
+  return headers;
+}
+
+function withTimeout(request: NextRequest) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), PROXY_TIMEOUT_MS);
+  return { signal: controller.signal, clear: () => clearTimeout(timeout), headers: buildForwardHeaders(request) };
+}
 
 export async function GET(
   request: NextRequest,
@@ -14,19 +36,31 @@ export async function GET(
 
     console.log("[PROXY GET]", fullUrl);
 
-    const response = await fetch(fullUrl, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-      },
-    });
+    const t = withTimeout(request);
+    let response: Response;
+    try {
+      response = await fetch(fullUrl, {
+        method: "GET",
+        headers: t.headers,
+        signal: t.signal,
+        cache: "no-store",
+      });
+    } catch (error) {
+      const isAbort = error instanceof Error && error.name === "AbortError";
+      console.error("[PROXY GET EXCEPTION]", error);
+      return NextResponse.json(
+        { error: isAbort ? `Proxy timeout after ${PROXY_TIMEOUT_MS}ms` : String(error), url: fullUrl },
+        { status: isAbort ? 504 : 500 },
+      );
+    } finally {
+      t.clear();
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`[PROXY GET ERROR] ${response.status}:`, errorText);
       return NextResponse.json(
-        { error: `Backend error: ${response.status}`, details: errorText },
+        { error: `Backend error: ${response.status}`, details: errorText, url: fullUrl },
         { status: response.status }
       );
     }
@@ -52,22 +86,34 @@ export async function POST(
     const body = await request.json();
     const fullUrl = `${ODOO_URL}${pathStr}`;
 
-    console.log("[PROXY POST]", fullUrl, body);
+    // Never log request bodies (credentials / PII may be included).
+    console.log("[PROXY POST]", fullUrl);
 
-    const response = await fetch(fullUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
+    const t = withTimeout(request);
+    let response: Response;
+    try {
+      response = await fetch(fullUrl, {
+        method: "POST",
+        headers: t.headers,
+        signal: t.signal,
+        body: JSON.stringify(body),
+      });
+    } catch (error) {
+      const isAbort = error instanceof Error && error.name === "AbortError";
+      console.error("[PROXY POST EXCEPTION]", error);
+      return NextResponse.json(
+        { error: isAbort ? `Proxy timeout after ${PROXY_TIMEOUT_MS}ms` : String(error), url: fullUrl },
+        { status: isAbort ? 504 : 500 },
+      );
+    } finally {
+      t.clear();
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`[PROXY POST ERROR] ${response.status}:`, errorText);
       return NextResponse.json(
-        { error: `Backend error: ${response.status}`, details: errorText },
+        { error: `Backend error: ${response.status}`, details: errorText, url: fullUrl },
         { status: response.status }
       );
     }
@@ -93,22 +139,34 @@ export async function PUT(
     const body = await request.json();
     const fullUrl = `${ODOO_URL}${pathStr}`;
 
-    console.log("[PROXY PUT]", fullUrl, body);
+    // Never log request bodies (credentials / PII may be included).
+    console.log("[PROXY PUT]", fullUrl);
 
-    const response = await fetch(fullUrl, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
+    const t = withTimeout(request);
+    let response: Response;
+    try {
+      response = await fetch(fullUrl, {
+        method: "PUT",
+        headers: t.headers,
+        signal: t.signal,
+        body: JSON.stringify(body),
+      });
+    } catch (error) {
+      const isAbort = error instanceof Error && error.name === "AbortError";
+      console.error("[PROXY PUT EXCEPTION]", error);
+      return NextResponse.json(
+        { error: isAbort ? `Proxy timeout after ${PROXY_TIMEOUT_MS}ms` : String(error), url: fullUrl },
+        { status: isAbort ? 504 : 500 },
+      );
+    } finally {
+      t.clear();
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`[PROXY PUT ERROR] ${response.status}:`, errorText);
       return NextResponse.json(
-        { error: `Backend error: ${response.status}`, details: errorText },
+        { error: `Backend error: ${response.status}`, details: errorText, url: fullUrl },
         { status: response.status }
       );
     }
@@ -135,19 +193,30 @@ export async function DELETE(
 
     console.log("[PROXY DELETE]", fullUrl);
 
-    const response = await fetch(fullUrl, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-      },
-    });
+    const t = withTimeout(request);
+    let response: Response;
+    try {
+      response = await fetch(fullUrl, {
+        method: "DELETE",
+        headers: t.headers,
+        signal: t.signal,
+      });
+    } catch (error) {
+      const isAbort = error instanceof Error && error.name === "AbortError";
+      console.error("[PROXY DELETE EXCEPTION]", error);
+      return NextResponse.json(
+        { error: isAbort ? `Proxy timeout after ${PROXY_TIMEOUT_MS}ms` : String(error), url: fullUrl },
+        { status: isAbort ? 504 : 500 },
+      );
+    } finally {
+      t.clear();
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`[PROXY DELETE ERROR] ${response.status}:`, errorText);
       return NextResponse.json(
-        { error: `Backend error: ${response.status}`, details: errorText },
+        { error: `Backend error: ${response.status}`, details: errorText, url: fullUrl },
         { status: response.status }
       );
     }

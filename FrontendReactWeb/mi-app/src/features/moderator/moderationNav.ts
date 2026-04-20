@@ -1,4 +1,4 @@
-import { BarChart2, Building2, FileText, LineChart, LayoutDashboard, Package } from "lucide-react";
+import { BarChart2, Building2, FileText, LineChart, LayoutDashboard, Package, Settings } from "lucide-react";
 import type { NavItemData } from "../seller/dashboard/data/chart.data";
 
 export const MODERATOR_NAV_ITEMS: NavItemData[] = [
@@ -37,5 +37,11 @@ export const MODERATOR_NAV_ITEMS: NavItemData[] = [
     Icon: FileText,
     label: "Reportes",
     href: "/navigation/reports/page",
+  },
+  {
+    id: "configuracion",
+    Icon: Settings,
+    label: "Configuracion",
+    href: "/navigation/moderation/config/page",
   },
 ];

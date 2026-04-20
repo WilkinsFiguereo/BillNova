@@ -14,7 +14,7 @@ class AuthApiController(http.Controller):
         headers = {
             'Access-Control-Allow-Origin': origin or '*',
             'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept, Origin',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept, Origin, X-Auth-Session',
             'Access-Control-Allow-Credentials': 'true',
         }
 
@@ -174,10 +174,18 @@ class AuthApiController(http.Controller):
 
         _logger.info("LOGIN OK - UID: %s", uid)
 
+        mobile_user = request.env['billnova.user'].sudo().search(
+            [('res_user_id', '=', uid)], limit=1
+        )
+        user = request.env['res.users'].sudo().browse(uid)
+
         return self._json_response({
             'ok': True,
             'uid': uid,
-            'session_id': request.session.sid,
+            'name': user.name,
+            'email': user.email or login,
+            'role': mobile_user.role if mobile_user else 'seller',
+            'session_token': request.session.sid,
         }, status=200)
     
     @http.route('/api/auth/session', type='http', auth='public', methods=['GET', 'OPTIONS'], csrf=False)

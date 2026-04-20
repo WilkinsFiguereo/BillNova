@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { getStoredAuthState } from '@/features/auth/login/data/storage';
 
 export interface CurrentUser {
   id: string;
@@ -12,16 +13,6 @@ export interface CurrentUser {
   department?: string;
 }
 
-const mockUser: CurrentUser = {
-  id: '1',
-  name: 'Admin Demo',
-  email: 'admin@billnova.com',
-  role: 'Administrador',
-  phone: '+1 (555) 123-4567',
-  department: 'Administración',
-  avatar: undefined,
-};
-
 export function useCurrentUser() {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -32,23 +23,25 @@ export function useCurrentUser() {
       try {
         setLoading(true);
         setError(null);
-        
-        // TODO: Aquí iría la llamada a la API real para obtener el usuario actual
-        // const response = await fetch('/api/user/me');
-        // const data = await response.json();
-        // setUser(data);
-        
-        // Por ahora usamos datos mock
-        setUser(mockUser);
+
+        const stored = getStoredAuthState();
+        setUser({
+          id: String(stored?.uid ?? 1),
+          name: stored?.name ?? 'Admin Demo',
+          email: stored?.email ?? 'admin@billnova.com',
+          role: stored?.role ?? 'admin',
+          phone: '(809) 555-0101',
+          department: 'Operaciones',
+        });
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Error al cargar usuario');
-        setUser(mockUser); // Fallback a mock
+        setUser(null);
       } finally {
         setLoading(false);
       }
     };
 
-    loadUser();
+    void loadUser();
   }, []);
 
   return { user, loading, error };

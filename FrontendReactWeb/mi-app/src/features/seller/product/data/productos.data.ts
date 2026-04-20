@@ -1,14 +1,14 @@
-// archivo de datos viejo. Actualmente la aplicación obtiene la información del backend.
-// conservamos la constante de categorías para compatibilidad posterior si se necesita.
-
+import type { LucideIcon } from "lucide-react";
+import { AlertTriangle, Package, Tag, XCircle } from "lucide-react";
 import type { Producto } from "../types/productos.types";
+import { productosTheme as t } from "../theme/productos.theme";
 
 export const PRODUCTOS_DATA: Producto[] = [];
 
 export const CATEGORIAS = [
   "Todas",
-  "Electrónica",
-  "Periféricos",
+  "Electronica",
+  "Perifericos",
   "Audio",
   "Mobiliario",
   "Accesorios",
@@ -49,7 +49,7 @@ export const PRODUCTO_STATS: ProductoStatCardDef[] = [
     bg: t.errorBg,
   },
   {
-    label: "Categorías",
+    label: "Categorias",
     value: "5",
     Icon: Tag,
     delta: "Activas",

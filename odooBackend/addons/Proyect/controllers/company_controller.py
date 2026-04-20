@@ -2,6 +2,7 @@ from odoo import http
 from odoo.http import request, Response
 import json
 import secrets
+from datetime import datetime, timedelta
 
 class CompanyApiController(http.Controller):
 
@@ -41,6 +42,38 @@ class CompanyApiController(http.Controller):
 
         try:
             companies = request.env["res.company"].sudo().search([])
+
+            revenue_by_company = {}
+            try:
+                # Limit the revenue window by default to keep this endpoint responsive on large POS datasets.
+                # Override by passing `?revenue_days=0` (all-time) or any positive integer value.
+                revenue_days = 30
+                try:
+                    revenue_days = int(request.params.get("revenue_days") or 30)
+                except Exception:
+                    revenue_days = 30
+
+                domain = []
+                if revenue_days and revenue_days > 0:
+                    start = datetime.utcnow() - timedelta(days=revenue_days)
+                    domain = [("date_order", ">=", start.strftime("%Y-%m-%d %H:%M:%S"))]
+
+                groups = request.env["pos.order"].sudo().read_group(
+                    domain,
+                    ["amount_total:sum"],
+                    ["company_id"],
+                    lazy=False,
+                )
+                for g in groups:
+                    company = g.get("company_id")
+                    if not company:
+                        continue
+                    company_id = company[0] if isinstance(company, (list, tuple)) and company else None
+                    if company_id:
+                        revenue_by_company[int(company_id)] = float(g.get("amount_total_sum") or 0.0)
+            except Exception:
+                revenue_by_company = {}
+
             data = []
             for company in companies:
                 data.append({
@@ -55,6 +88,10 @@ class CompanyApiController(http.Controller):
                     "city": company.address_city or None,
                     "state": company.address_state or None,
                     "address": company.street or None,
+                    "status": getattr(company, "billnova_status", None) or "Activa",
+                    "plan": getattr(company, "billnova_plan", None) or "Starter",
+                    "revenue": revenue_by_company.get(company.id, 0.0),
+                    "createdAt": company.create_date.isoformat() if getattr(company, "create_date", None) else None,
                 })
             return self._json_response({"data": data})
         except Exception as e:

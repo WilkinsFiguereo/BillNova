@@ -9,8 +9,6 @@ export const metadata: Metadata = {
 
 export default function Page() {
   return (
-    <main style={{ minHeight: "100vh", background: "#F8FAFC" }}>
-      <UsersPage />
-    </main>
+    <UsersPage />
   );
 }

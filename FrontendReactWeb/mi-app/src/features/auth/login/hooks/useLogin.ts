@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { authApi } from "../data/api";
 import { getRememberMeDefault, getRememberedEmail, persistAuthState } from "../data/storage";
 import { validateLogin } from "../data/validators";
+import { getLandingRouteForRole } from "../navigation";
 import type { LoginPayload } from "../types/auth.types";
 
 type LoginErrors = Partial<Record<keyof LoginPayload, string>>;
@@ -57,21 +58,30 @@ export function useLogin() {
       const response = await authApi.login(values);
       if (response.ok && response.uid) {
         persistAuthState(
-      {
-          uid: response.uid,
-          email: values.username, // 👈 usa esto
-          name: values.username,
-          sessionToken: response.session_id,
-        },
-        values.rememberMe,
-      );
-        router.push("/dashboard");
+          {
+            uid: response.uid,
+            email: response.email ?? values.username,
+            name: response.name ?? values.username,
+            role: response.role,
+            sessionToken: response.session_token,
+            sessionExpiresAt: response.session_expires_at,
+          },
+          values.rememberMe,
+        );
+        router.push(getLandingRouteForRole(response.role));
         return;
       }
 
       setErrorCode(response.code ?? null);
       setVerificationEmail(response.email ?? "");
-      setServerError(response.error ?? "Credenciales invalidas.");
+      const msg = response.error ?? "Credenciales invalidas.";
+      if (msg.includes("Backend error: 404")) {
+        setServerError("Backend no disponible o ruta /api/auth/login no existe (404). Revisa que Odoo esté corriendo y el módulo Proyect instalado.");
+      } else if (msg.includes("Proxy timeout")) {
+        setServerError("El backend no respondió a tiempo. Verifica el devtunnel/ODOO_URL y vuelve a intentar.");
+      } else {
+        setServerError(msg);
+      }
     } catch {
       setServerError("No se pudo conectar con el servidor.");
     } finally {

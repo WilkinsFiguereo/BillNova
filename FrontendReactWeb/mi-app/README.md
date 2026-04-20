@@ -16,6 +16,13 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+### Dev auth (sin backend)
+Si tu `ODOO_URL` / devtunnel no responde y necesitas seguir desarrollando el UI, activa el modo auth local:
+
+- En `.env.local`: `NEXT_PUBLIC_DEV_AUTH=true`
+
+Esto permite iniciar sesión/registrar en el frontend sin llamar al backend. No usar en producción.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

@@ -68,7 +68,7 @@ export function FacturasStatsSection({ stats }: FacturasStatsSectionProps) {
         {[0, 1, 2, 3].map((i) => (
           <div key={i} style={{
             borderRadius: 16, padding: "20px 24px",
-            background: "white", border: `1px solid ${t.border}`,
+            border: `1px solid ${t.border}`,
             height: 120,
             background: "linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%)",
             backgroundSize: "200% 100%",

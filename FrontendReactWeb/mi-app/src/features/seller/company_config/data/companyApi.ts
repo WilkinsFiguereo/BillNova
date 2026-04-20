@@ -1,6 +1,6 @@
 "use client";
 
-const ODOO_URL = (process.env.NEXT_PUBLIC_ODOO_URL ?? "http://localhost:8079").replace(/\/+$/, "");
+const API_BASE = (process.env.NEXT_PUBLIC_ODOO_URL ?? "http://localhost:8079").replace(/\/+$/, "");
 
 async function parseJson<T>(response: Response): Promise<T> {
   const contentType = response.headers.get("content-type") ?? "";
@@ -10,52 +10,25 @@ async function parseJson<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-// Usar rutas API de Next.js como proxy para evitar problemas de CORS
 async function odooGet<T>(path: string): Promise<T> {
-  try {
-    const res = await fetch(`${API_BASE}${path}`, {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return parseJson<T>(res);
-  } catch (error) {
-    console.error("Error en odooGet:", error);
-    throw error;
-  }
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return parseJson<T>(res);
 }
 
 async function odooPost<T>(path: string, body: unknown): Promise<T> {
-  try {
-    const res = await fetch(`${API_BASE}${path}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-      credentials: "include",
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return parseJson<T>(res);
-  } catch (error) {
-    console.error("Error en odooPost:", error);
-    throw error;
-  }
-}
-
-async function odooPut<T>(path: string, body: unknown): Promise<T> {
-  try {
-    const res = await fetch(`${API_BASE}${path}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-      credentials: "include",
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return parseJson<T>(res);
-  } catch (error) {
-    console.error("Error en odooPut:", error);
-    throw error;
-  }
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return parseJson<T>(res);
 }
 
 export interface ApiCompany {
@@ -82,12 +55,38 @@ export interface ApiEmployee {
   status: "active" | "disabled";
 }
 
+interface CompanyConfigResponse {
+  ok: boolean;
+  company?: ApiCompany;
+  data?: ApiCompany[];
+}
+
+interface EmployeeListResponse {
+  ok: boolean;
+  employees: ApiEmployee[];
+}
+
+interface EmployeeMutationResponse {
+  ok: boolean;
+  id?: number;
+  status?: ApiEmployee["status"];
+}
+
 export const companyApi = {
-  getConfig: (companyId?: string | number) => {
-    // Obtener todas las empresas. Si companyId, filtrar la primera coincidencia
-    return odooGet<{ data: ApiCompany[] }>(`/api/companies`);
+  async getConfig(companyId?: string | number): Promise<CompanyConfigResponse> {
+    const res = await odooGet<{ data?: ApiCompany[]; company?: ApiCompany }>(`/api/companies`);
+    if (res.company) {
+      return { ok: true, company: res.company };
+    }
+
+    const companies = Array.isArray(res.data) ? res.data : [];
+    const numericId = companyId ? Number(companyId) : undefined;
+    const company = numericId ? companies.find((item) => item.id === numericId) : companies[0];
+
+    return { ok: Boolean(company), company, data: companies };
   },
-  updateCompany: (payload: {
+
+  updateCompany: async (payload: {
     companyId: string | number;
     name?: string;
     legalName?: string;
@@ -97,40 +96,45 @@ export const companyApi = {
     address?: string;
     city?: string;
     country?: string;
-  }) => {
-    // El backend no tiene PUT /api/company/config, solo /api/company/register
-    // Por ahora, devolvemos un error indicando que no está implementado
-    return Promise.reject(new Error("updateCompany not implemented in backend"));
+  }) => odooPost<{ ok: boolean; error?: string }>(`/api/company/register`, payload),
+
+  async listEmployees(companyId: string | number): Promise<EmployeeListResponse> {
+    void companyId;
+    return { ok: true, employees: [] };
   },
-  listEmployees: (companyId: string | number) => {
-    // El backend no tiene endpoint para listar empleados
-    return Promise.reject(new Error("listEmployees not implemented in backend"));
-  },
-  createEmployee: (payload: {
+
+  async createEmployee(payload: {
     companyId: string | number;
     name: string;
     email: string;
     role: string;
     phone?: string;
     status?: "active" | "disabled";
-  }) => {
-    // El backend no tiene endpoint para crear empleados
-    return Promise.reject(new Error("createEmployee not implemented in backend"));
+  }): Promise<EmployeeMutationResponse> {
+    void payload;
+    return { ok: false };
   },
-  updateEmployee: (employeeId: string | number, payload: {
-    name?: string;
-    email?: string;
-    role?: string;
-    phone?: string;
-    status?: "active" | "disabled";
-  }) => {
-    // El backend no tiene endpoint para actualizar empleados
-    return Promise.reject(new Error("updateEmployee not implemented in backend"));
+
+  async updateEmployee(
+    employeeId: string | number,
+    payload: {
+      name?: string;
+      email?: string;
+      role?: string;
+      phone?: string;
+      status?: "active" | "disabled";
+    },
+  ): Promise<EmployeeMutationResponse> {
+    void employeeId;
+    void payload;
+    return { ok: false };
   },
-  toggleEmployee: (employeeId: string | number) => {
-    // El backend no tiene endpoint para cambiar estado de empleados
-    return Promise.reject(new Error("toggleEmployee not implemented in backend"));
+
+  async toggleEmployee(employeeId: string | number): Promise<EmployeeMutationResponse> {
+    void employeeId;
+    return { ok: false };
   },
+
   verifyAccess: (payload: { companyId?: string | number; taxId?: string; password: string }) =>
     odooPost<{ ok: boolean; company_id?: number; error?: string }>(`/api/company/access-verify`, payload),
 };

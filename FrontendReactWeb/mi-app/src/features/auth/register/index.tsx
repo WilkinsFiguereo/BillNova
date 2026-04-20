@@ -5,7 +5,7 @@ import { RegisterFormSection } from "./sections/RegisterFormSection";
 import { RegisterSuccessSection } from "./sections/RegisterSuccessSection";
 
 export { useRegister } from "./hooks/useRegister";
-export { registerApi } from "./data/api";
+export { registerApi } from "@/features/auth/register/data/api";
 export type { RegisterPayload } from "./types/register.types";
 
 export function RegisterPage() {

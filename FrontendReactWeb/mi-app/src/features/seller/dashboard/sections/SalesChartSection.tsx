@@ -1,15 +1,17 @@
 "use client";
 
 import React from "react";
-import { FileText, Plus } from "lucide-react";
+import { FileText, Plus, RefreshCw } from "lucide-react";
 import { dashboardTheme as t } from "../theme/dashboard.theme";
 
 interface SalesChartSectionProps {
   onNewInvoice: () => void;
   onAddProduct: () => void;
+  onRefresh: () => void;
+  isRefreshing: boolean;
 }
 
-export function SalesChartSection({ onNewInvoice, onAddProduct }: SalesChartSectionProps) {
+export function SalesChartSection({ onNewInvoice, onAddProduct, onRefresh, isRefreshing }: SalesChartSectionProps) {
   return (
     <div
       style={{
@@ -40,6 +42,15 @@ export function SalesChartSection({ onNewInvoice, onAddProduct }: SalesChartSect
 
       {/* ── Acciones Rápidas: 2 botones ── */}
       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <button
+          type="button"
+          className="btn-icon"
+          onClick={onRefresh}
+          disabled={isRefreshing}
+          title="Actualizar"
+        >
+          <RefreshCw size={16} style={isRefreshing ? { animation: "spin .8s linear infinite" } : undefined} />
+        </button>
         <button className="btn-secondary" onClick={onNewInvoice}>
           <FileText size={15} /> Nueva Factura
         </button>

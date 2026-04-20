@@ -2,9 +2,8 @@ import type { Company } from '../types/company.types';
 
 export const mockCompanies: Company[] = [
   {
-    id: '1',
+    id: 1,
     name: 'Comercial Nova',
-    email: 'contacto@nova.com',
     contact_email: 'contacto@nova.com',
     ruc: '20123456789',
     sector: 'Retail',
@@ -15,9 +14,8 @@ export const mockCompanies: Company[] = [
     createdAt: '2025-06-15T10:30:00Z',
   },
   {
-    id: '2',
+    id: 2,
     name: 'Distribuidora Central',
-    email: 'admin@central.com',
     contact_email: 'admin@central.com',
     ruc: '20987654321',
     sector: 'Distribución',
@@ -28,9 +26,8 @@ export const mockCompanies: Company[] = [
     createdAt: '2025-08-22T14:45:00Z',
   },
   {
-    id: '3',
+    id: 3,
     name: 'Grupo Horizonte',
-    email: 'soporte@horizonte.com',
     contact_email: 'soporte@horizonte.com',
     ruc: '20555666777',
     sector: 'Logística',
@@ -41,9 +38,8 @@ export const mockCompanies: Company[] = [
     createdAt: '2025-11-10T09:15:00Z',
   },
   {
-    id: '4',
+    id: 4,
     name: 'Productos Andinos',
-    email: 'ventas@andinos.com',
     contact_email: 'ventas@andinos.com',
     ruc: '20111222333',
     sector: 'Alimentos',
@@ -54,9 +50,8 @@ export const mockCompanies: Company[] = [
     createdAt: '2025-09-05T11:20:00Z',
   },
   {
-    id: '5',
+    id: 5,
     name: 'Tech Solutions Peru',
-    email: 'info@techsol.com',
     contact_email: 'info@techsol.com',
     ruc: '20444555666',
     sector: 'Tecnología',
@@ -67,9 +62,8 @@ export const mockCompanies: Company[] = [
     createdAt: '2025-07-18T16:30:00Z',
   },
   {
-    id: '6',
+    id: 6,
     name: 'Importaciones Export',
-    email: 'contacto@impexp.com',
     contact_email: 'contacto@impexp.com',
     ruc: '20777888999',
     sector: 'Comercio Exterior',

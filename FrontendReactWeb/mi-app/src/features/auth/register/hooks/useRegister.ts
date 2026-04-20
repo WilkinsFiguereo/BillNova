@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { registerApi } from "../data/api";
+import { registerApi } from "@/features/auth/register/data/api";
 import { validateRegisterForm } from "../data/validators";
 import type { RegisterPayload, RegisterFormState } from "../types/register.types";
 
@@ -43,11 +43,16 @@ export function useRegister() {
         const res = await registerApi.register(state.values);
         if (res.ok) {
           setState((prev) => ({ ...prev, isLoading: false, success: true }));
-          setTimeout(() => router.push("/login"), 2200);
+          setTimeout(() => router.push("/navigation/auth/login/page"), 2200);
         } else {
+          const msg = res.error ?? "Error al registrar la cuenta";
           setState((prev) => ({
             ...prev, isLoading: false,
-            serverError: res.error ?? "Error al registrar la cuenta",
+            serverError: msg.includes("Backend error: 404")
+              ? "Backend no disponible o ruta /api/auth/register no existe (404). Revisa que Odoo esté corriendo y el módulo Proyect instalado."
+              : msg.includes("Proxy timeout")
+                ? "El backend no respondió a tiempo. Verifica el devtunnel/ODOO_URL y vuelve a intentar."
+                : msg,
           }));
         }
       } catch {

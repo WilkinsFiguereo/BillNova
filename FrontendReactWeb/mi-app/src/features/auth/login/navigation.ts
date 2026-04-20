@@ -3,10 +3,10 @@ import type { AuthRole } from "./types/auth.types";
 export const AUTH_ENTRY_ROUTE = "/navigation/auth/register/page";
 
 const ROLE_LANDING_ROUTES: Record<AuthRole, string> = {
-  admin: "/navigation/admin/users",
-  moderation: "/navigation/moderation/companies",
-  seller: "/navigation/seller/dashboard",
-  user: "/navigation/seller/dashboard",
+  admin: "/navigation/admin/users/page",
+  moderation: "/navigation/moderation/companies/page",
+  seller: "/navigation/seller/dashboard/page",
+  user: "/navigation/seller/dashboard/page",
 };
 
 export function getLandingRouteForRole(role?: AuthRole | null) {

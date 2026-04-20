@@ -1,12 +1,14 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Zap } from "lucide-react";
 import { StockStatus, InvoiceStatus } from "./types/dashboard.types";
 import { NavItemData } from "./data/chart.data";
 import { dashboardTheme as t } from "./theme/dashboard.theme";
+import { getLandingRouteForRole } from "@/features/auth/login/navigation";
+import { getStoredAuthState } from "@/features/auth/login";
 
 // ─── Stock Badge ────────────────────────────────────────────────────
 interface StockBadgeProps {
@@ -62,6 +64,11 @@ interface SidebarProps {
 export function Sidebar({ navItems }: SidebarProps) {
   const pathname = usePathname();
 
+  const homeHref = useMemo(() => {
+    const user = getStoredAuthState();
+    return getLandingRouteForRole(user?.role ?? null);
+  }, []);
+
   return (
     <aside style={{
       width: 220, background: t.bgCard, borderRight: `1px solid ${t.border}`,
@@ -70,7 +77,7 @@ export function Sidebar({ navItems }: SidebarProps) {
     }}>
       {/* Logo */}
       <div style={{ padding: "0 8px 28px", borderBottom: `1px solid ${t.border}` }}>
-        <Link href="/dashboard" style={{ textDecoration: "none" }}>
+        <Link href={homeHref} style={{ textDecoration: "none" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{
               width: 36, height: 36,

@@ -9,3 +9,16 @@ class ProductProduct(models.Model):
         string="Empresa",
         index=True,
     )
+
+    billnova_moderation_status = fields.Selection(
+        [
+            ("pending", "Pendiente"),
+            ("approved", "Aprobado"),
+            ("rejected", "Rechazado"),
+        ],
+        string="Estado de Moderación (BillNova)",
+        default="pending",
+        index=True,
+    )
+
+    billnova_rejection_reason = fields.Text("Motivo de Rechazo (BillNova)")

@@ -8,6 +8,7 @@ interface UseDashboardReturn {
   // State
   search: string;
   activeNav: string;
+  isRefreshing: boolean;
   toastVisible: boolean;
   toastMsg: string;
   filteredProducts: Product[];
@@ -16,11 +17,13 @@ interface UseDashboardReturn {
   setSearch: (value: string) => void;
   setActiveNav: (id: string) => void;
   showToast: (msg: string) => void;
+  refresh: () => void;
 }
 
 export function useDashboard(): UseDashboardReturn {
   const [search, setSearch] = useState("");
   const [activeNav, setActiveNav] = useState("dashboard");
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
 
@@ -39,14 +42,23 @@ export function useDashboard(): UseDashboardReturn {
     setTimeout(() => setToastVisible(false), 3000);
   }, []);
 
+  const refresh = useCallback(() => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    setTimeout(() => setIsRefreshing(false), 800);
+    showToast("🔄 Dashboard actualizado");
+  }, [isRefreshing, showToast]);
+
   return {
     search,
     activeNav,
+    isRefreshing,
     toastVisible,
     toastMsg,
     filteredProducts,
     setSearch,
     setActiveNav,
     showToast,
+    refresh,
   };
 }

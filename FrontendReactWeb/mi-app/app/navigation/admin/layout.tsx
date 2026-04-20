@@ -10,7 +10,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const user = getStoredAuthState();
-    if (!user) router.replace("/login");
+    if (!user) router.replace("/navigation/auth/login/page");
   }, [router]);
 
   return children;

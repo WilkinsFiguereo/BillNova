@@ -1,50 +1,43 @@
-import { getOdooUrl } from '@/lib/odooServer';
+import { getOdooUrl } from "@/lib/odooServer";
+
+const BACKEND_TIMEOUT_MS = Number(process.env.ODOO_FETCH_TIMEOUT_MS ?? 15000);
 
 export async function GET() {
   try {
     const baseUrl = getOdooUrl();
     const url = `${baseUrl}/api/companies`;
-    console.log('[Companies API] Fetching from:', url);
+    console.log("[Companies API] Fetching from:", url);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), BACKEND_TIMEOUT_MS);
 
     const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
+      cache: "no-store",
     });
 
-    console.log('[Companies API] Response status:', response.status);
+    clearTimeout(timeout);
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`[Companies API] Backend error ${response.status}:`, errorText);
-      
       return Response.json(
-        { 
-          error: `Failed to fetch companies: ${response.statusText}`,
-          message: `Backend returned ${response.status}`,
-          details: errorText || 'No error details provided',
-          status: response.status,
-          debugUrl: url,
-        },
+        { error: `Backend error ${response.status}: ${response.statusText}`, details: errorText, debugUrl: url },
         { status: response.status },
       );
     }
 
     const data = await response.json();
-    console.log('[Companies API] Success, companies count:', data.data?.length || 0);
-    
-    return Response.json(data);
+    return Response.json({ ...data, meta: { source: "backend", debugUrl: url } }, { status: 200 });
   } catch (error) {
-    console.error('[Companies API] Error fetching companies:', error);
-    
+    const isAbort = error instanceof Error && error.name === "AbortError";
+    console.error("[Companies API] Error fetching companies:", error);
     return Response.json(
-      { 
-        error: 'Failed to fetch companies from backend',
-        message: error instanceof Error ? error.message : String(error),
-        details: error instanceof Error ? error.stack : 'Unknown error',
-      },
-      { status: 500 },
+      { error: isAbort ? `Timeout after ${BACKEND_TIMEOUT_MS}ms` : "Fetch error", details: error instanceof Error ? error.message : String(error) },
+      { status: isAbort ? 504 : 500 },
     );
   }
 }
+

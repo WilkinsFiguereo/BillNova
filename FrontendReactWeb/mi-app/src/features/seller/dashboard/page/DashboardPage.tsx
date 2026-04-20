@@ -20,11 +20,13 @@ import { UsersTableSection }   from "../sections/UsersTableSection";
 export default function DashboardPage() {
   const {
     search,
+    isRefreshing,
     toastVisible,
     toastMsg,
     filteredProducts,
     setSearch,
     showToast,
+    refresh,
   } = useDashboard();
 
   return (
@@ -50,6 +52,8 @@ export default function DashboardPage() {
         <SalesChartSection
           onNewInvoice={() => showToast("📄 Factura generada correctamente")}
           onAddProduct={() => showToast("📦 Producto agregado al inventario")}
+          onRefresh={refresh}
+          isRefreshing={isRefreshing}
         />
 
         {/* Section 2: Stat Cards */}

@@ -71,7 +71,7 @@ export default function LoginPage() {
               {user && (
                 <div className="info-box" style={{ marginBottom: "0.875rem" }}>
                   <p className="info-box-text">
-                    Sesion detectada para {user.email}. <Link href="/dashboard">Ir al panel</Link>
+                    Sesion detectada para {user.email}. <Link href="/navigation/admin/users/page">Ir al panel</Link>
                   </p>
                 </div>
               )}
@@ -122,7 +122,9 @@ export default function LoginPage() {
 
                 {errorCode === "ACCOUNT_NOT_VERIFIED" && verificationEmail && (
                   <p className="fh-sub" style={{ marginTop: "-0.5rem" }}>
-                    <Link href={`/verify-email?email=${encodeURIComponent(verificationEmail)}`}>Verificar correo / reenviar codigo</Link>
+                    <Link href={`/navigation/auth/verify-email?email=${encodeURIComponent(verificationEmail)}`}>
+                      Verificar correo / reenviar codigo
+                    </Link>
                   </p>
                 )}
 
@@ -134,7 +136,9 @@ export default function LoginPage() {
               </form>
 
               <p className="terms" style={{ marginTop: "1rem" }}>
-                <Link href="/forgot-password">Olvidaste tu contrasena?</Link> · <Link href="/register">Crear cuenta</Link>
+                <Link href="/navigation/auth/forgot-password">Olvidaste tu contrasena?</Link>
+                {" · "}
+                <Link href="/navigation/auth/register/page">Crear cuenta</Link>
               </p>
             </div>
           </div>

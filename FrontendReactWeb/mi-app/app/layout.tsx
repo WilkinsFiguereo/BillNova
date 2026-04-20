@@ -1,12 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
-
-const inter = Inter({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-sans",
-});
 
 export const metadata: Metadata = {
   title: "MyApp",
@@ -19,8 +12,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es">
-      <body className={inter.variable}>{children}</body>
+    <html lang="es" suppressHydrationWarning>
+      <body>
+        <script
+          // Set theme class before hydration (prevents flash).
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{var m=localStorage.getItem('billnova.color_mode');if(m==='dark'){document.documentElement.classList.add('dark');}}catch(e){}})();",
+          }}
+        />
+        {children}
+      </body>
     </html>
   );
 }

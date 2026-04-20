@@ -57,3 +57,27 @@ class ResCompany(models.Model):
     confirm_password = fields.Char("Confirm Password")
     accept_terms = fields.Boolean("Acepta términos")
     accept_marketing = fields.Boolean("Acepta marketing")
+
+    # =========================
+    # Admin Dashboard (Frontend)
+    # =========================
+
+    billnova_status = fields.Selection(
+        [
+            ("Activa", "Activa"),
+            ("Pendiente", "Pendiente"),
+            ("Inactiva", "Inactiva"),
+        ],
+        string="Estado (BillNova)",
+        default="Activa",
+    )
+
+    billnova_plan = fields.Selection(
+        [
+            ("Starter", "Starter"),
+            ("Business", "Business"),
+            ("Premium", "Premium"),
+        ],
+        string="Plan (BillNova)",
+        default="Starter",
+    )
