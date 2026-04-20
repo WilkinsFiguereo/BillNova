@@ -1,9 +1,44 @@
 from odoo import fields, http
 from odoo.http import Response, request
 import json as json_lib
+import logging
+
+_logger = logging.getLogger(__name__)
 
 
 class ProductApiController(http.Controller):
+    def _get_current_billnova_company_id(self):
+        user = request.env.user
+        if not user or user._is_public():
+            return None
+
+        billnova_user = request.env["billnova.user"].sudo().search([("res_user_id", "=", user.id)], limit=1)
+        return billnova_user.company_id.id if billnova_user and billnova_user.company_id else None
+
+    def _resolve_company_id_for_request(self, raw_company_id=None):
+        current_company_id = self._get_current_billnova_company_id()
+        if not current_company_id:
+            return None
+
+        if raw_company_id in (None, ""):
+            return current_company_id
+
+        try:
+            requested_company_id = int(raw_company_id)
+        except (TypeError, ValueError):
+            return self._json_response({"ok": False, "error": "company_id must be an integer"}, 400)
+
+        if requested_company_id != current_company_id:
+            _logger.warning(
+                "[products] blocked company access user=%s requested_company_id=%s current_company_id=%s",
+                getattr(request.env.user, "login", None),
+                requested_company_id,
+                current_company_id,
+            )
+            return self._json_response({"ok": False, "error": "company_id does not belong to the current user"}, 403)
+
+        return current_company_id
+
     def _log_event(self, company_id, accion, descripcion, detalle="", entidad_id=None, entidad_nombre=""):
         user = request.env.user
         ua = request.httprequest.headers.get("User-Agent", "") or ""
@@ -73,14 +108,11 @@ class ProductApiController(http.Controller):
         }
 
     def _parse_company_id(self, payload):
-        company_id = payload.get("company_id")
-        if company_id is None or company_id == "":
+        company_id_int = self._resolve_company_id_for_request(payload.get("company_id"))
+        if isinstance(company_id_int, Response):
+            return company_id_int
+        if not company_id_int:
             return None
-
-        try:
-            company_id_int = int(company_id)
-        except (TypeError, ValueError):
-            return self._json_response({"ok": False, "error": "company_id must be an integer"}, 400)
 
         company = request.env["res.company"].sudo().browse(company_id_int)
         if not company.exists():
@@ -101,12 +133,12 @@ class ProductApiController(http.Controller):
             return self.create_product()
 
         domain = []
-        company_id = kwargs.get("company_id")
-        if company_id:
-            try:
-                domain.append(("company_id", "=", int(company_id)))
-            except ValueError:
-                return self._json_response({"ok": False, "error": "company_id must be an integer"}, 400)
+        company_id = self._resolve_company_id_for_request(kwargs.get("company_id"))
+        if isinstance(company_id, Response):
+            return company_id
+        if not company_id:
+            return self._json_response({"ok": True, "data": []})
+        domain.append(("company_id", "=", company_id))
 
         products = request.env["product.product"].sudo().search(domain)
         return self._json_response({"ok": True, "data": [self._serialize(product) for product in products]})
@@ -232,12 +264,12 @@ class ProductApiController(http.Controller):
             return self._options_response()
 
         domain = []
-        company_id = kwargs.get("company_id")
-        if company_id:
-            try:
-                domain.append(("company_id", "=", int(company_id)))
-            except ValueError:
-                return self._json_response({"ok": False, "error": "company_id must be an integer"}, 400)
+        company_id = self._resolve_company_id_for_request(kwargs.get("company_id"))
+        if isinstance(company_id, Response):
+            return company_id
+        if not company_id:
+            return self._json_response({"ok": True, "data": []})
+        domain.append(("company_id", "=", company_id))
 
         categories = request.env["product.category"].sudo().search(domain, order="name asc")
         data = [{"id": c.id, "name": c.complete_name or c.name} for c in categories]

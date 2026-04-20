@@ -1,7 +1,6 @@
-// src/features/product/data/productApi.ts
-
 import odooConfig from "../../../../lib/odooConfig";
 import type { Producto } from "../types/productos.types";
+import { getActiveCompanyId } from "@/features/seller/shared/companySession";
 
 const { baseUrl } = odooConfig;
 
@@ -10,17 +9,7 @@ function jsonHeaders(): HeadersInit {
 }
 
 function getCompanyId(): number | null {
-  // Seller flow stores the company id in the browser session after registration.
-  if (typeof window === "undefined") return null;
-  try {
-    const raw =
-      window.sessionStorage.getItem("billnova_company_id") ??
-      window.localStorage.getItem("billnova_company_id"); // fallback para migración
-    const id = raw ? Number(raw) : NaN;
-    return Number.isFinite(id) && id > 0 ? id : null;
-  } catch {
-    return null;
-  }
+  return typeof window === "undefined" ? null : getActiveCompanyId();
 }
 
 async function checkResponse<T>(res: Response): Promise<T> {
@@ -30,7 +19,6 @@ async function checkResponse<T>(res: Response): Promise<T> {
     throw new Error(json.message || json.error || `HTTP ${res.status}`);
   }
 
-  // aceptar success o ok
   if (json.success === false || json.ok === false) {
     throw new Error(json.message || json.error || "Error en API");
   }
@@ -38,63 +26,53 @@ async function checkResponse<T>(res: Response): Promise<T> {
   return json.data ?? json;
 }
 
-// ───────────────────────────
-// API helpers for productos
-// ───────────────────────────
-
 export async function apiListProductos(): Promise<Producto[]> {
   const companyId = getCompanyId();
   const url = companyId
     ? `${baseUrl}/api/products?company_id=${encodeURIComponent(String(companyId))}`
     : `${baseUrl}/api/products`;
 
-  const res = await fetch(url, {
-    headers: jsonHeaders(),
-  });
-
+  const res = await fetch(url, { headers: jsonHeaders() });
   const data = await checkResponse<any>(res);
 
-  return data.map((p: any) => {
-    const stock = p.quantity_on_hand ?? p.stock ?? 0;
+  return data.map((product: any) => {
+    const stock = product.quantity_on_hand ?? product.stock ?? 0;
 
     return {
-      id: String(p.id),
-      nombre: p.name ?? "",
-      sku: p.default_code ?? "",
-      categoria: (p.categ_id?.name ?? "Electrónica"),
+      id: String(product.id),
+      nombre: product.name ?? "",
+      sku: product.default_code ?? "",
+      categoria: product.categ_id?.name ?? "Electrónica",
       stock,
       stockStatus: stock === 0 ? "agotado" : stock < 5 ? "bajo" : "ok",
-      precio: p.list_price ?? 0,
-      costo: p.cost_price ?? p.standard_price ?? 0,
-      proveedor: p.seller_ids?.[0]?.name?.name ?? "",
-      ultimaActualizacion:
-        p.write_date ?? new Date().toISOString().split("T")[0],
+      precio: product.list_price ?? 0,
+      costo: product.cost_price ?? product.standard_price ?? 0,
+      proveedor: product.seller_ids?.[0]?.name?.name ?? "",
+      ultimaActualizacion: product.write_date ?? new Date().toISOString().split("T")[0],
     };
   });
 }
 
 export async function apiGetProducto(id: number): Promise<Producto> {
-  const res = await fetch(`${baseUrl}/api/products/${id}`, {
-    headers: jsonHeaders(),
-  });
-  const p = await checkResponse<any>(res);
-  const stock = p.quantity_on_hand ?? p.stock ?? 0;
+  const res = await fetch(`${baseUrl}/api/products/${id}`, { headers: jsonHeaders() });
+  const product = await checkResponse<any>(res);
+  const stock = product.quantity_on_hand ?? product.stock ?? 0;
+
   return {
-    id: String(p.id),
-    nombre: p.name ?? "",
-    sku: p.default_code ?? "",
-    categoria: (p.categ_id?.name ?? "Electrónica") as Producto["categoria"],
-    stock: stock,
+    id: String(product.id),
+    nombre: product.name ?? "",
+    sku: product.default_code ?? "",
+    categoria: (product.categ_id?.name ?? "Electrónica") as Producto["categoria"],
+    stock,
     stockStatus: stock === 0 ? "agotado" : stock < 5 ? "bajo" : "ok",
-    precio: p.list_price ?? 0,
-    costo: p.cost_price ?? p.standard_price ?? 0,
-    proveedor: p.seller_ids?.[0]?.name?.name ?? "",
-    ultimaActualizacion: p.write_date ?? new Date().toISOString().split('T')[0],
+    precio: product.list_price ?? 0,
+    costo: product.cost_price ?? product.standard_price ?? 0,
+    proveedor: product.seller_ids?.[0]?.name?.name ?? "",
+    ultimaActualizacion: product.write_date ?? new Date().toISOString().split("T")[0],
   };
 }
 
 export async function apiCreateProducto(payload: Partial<Producto>): Promise<{ id: number }> {
-  // Map frontend model to backend fields
   const body: any = {};
   if (payload.nombre) body.name = payload.nombre;
   if (payload.sku) body.default_code = payload.sku;
@@ -106,7 +84,7 @@ export async function apiCreateProducto(payload: Partial<Producto>): Promise<{ i
 
   const companyId = getCompanyId();
   if (!companyId) {
-    throw new Error("No se encontr\u00f3 la empresa (billnova_company_id). Registra/configura tu empresa primero.");
+    throw new Error("No se encontró la empresa del usuario actual. Registra o vincula una empresa primero.");
   }
   body.company_id = companyId;
 
@@ -115,13 +93,11 @@ export async function apiCreateProducto(payload: Partial<Producto>): Promise<{ i
     headers: jsonHeaders(),
     body: JSON.stringify(body),
   });
+
   return checkResponse<{ id: number }>(res);
 }
 
-export async function apiUpdateProducto(
-  id: number,
-  payload: Partial<Producto>
-): Promise<void> {
+export async function apiUpdateProducto(id: number, payload: Partial<Producto>): Promise<void> {
   const body: any = {};
   if (payload.nombre) body.name = payload.nombre;
   if (payload.sku) body.default_code = payload.sku;
@@ -139,6 +115,7 @@ export async function apiUpdateProducto(
     headers: jsonHeaders(),
     body: JSON.stringify(body),
   });
+
   await checkResponse(res);
 }
 
@@ -148,6 +125,7 @@ export async function apiDeleteProducto(id: number): Promise<void> {
     credentials: "include",
     headers: jsonHeaders(),
   });
+
   await checkResponse(res);
 }
 
@@ -164,11 +142,10 @@ export async function apiListCategorias(): Promise<{ id: number; name: string }[
     if (!json.ok) throw new Error("fallback");
     return json.data as { id: number; name: string }[];
   } catch {
-    // Fallback: extraer de los productos existentes
     const productos = await apiListProductos();
     const seen = new Map<string, number>();
-    productos.forEach((p, i) => {
-      if (p.categoria && !seen.has(p.categoria)) seen.set(p.categoria, i);
+    productos.forEach((product, index) => {
+      if (product.categoria && !seen.has(product.categoria)) seen.set(product.categoria, index);
     });
     return Array.from(seen.entries()).map(([name, id]) => ({ id, name }));
   }

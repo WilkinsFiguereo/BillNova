@@ -7,6 +7,7 @@ import { Zap } from "lucide-react";
 import { StockStatus, InvoiceStatus } from "./types/dashboard.types";
 import { NavItemData } from "./data/chart.data";
 import { dashboardTheme as t } from "./theme/dashboard.theme";
+import { getActiveBusinessType, hasCompanyForCurrentUser } from "@/features/seller/shared/companySession";
 
 // ─── Stock Badge ────────────────────────────────────────────────────
 interface StockBadgeProps {
@@ -62,6 +63,15 @@ interface SidebarProps {
 export function Sidebar({ navItems }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const hasCompany = hasCompanyForCurrentUser();
+  const businessType = getActiveBusinessType();
+  const visibleNavItems = navItems.filter((item) => {
+    if (item.id === "empresa") return hasCompany;
+    if (item.id === "registro") return !hasCompany;
+    if (item.id === "productos") return businessType !== "services";
+    if (item.id === "servicios") return businessType === "services";
+    return true;
+  });
 
   const handleLogout = async () => {
     try {
@@ -122,7 +132,7 @@ export function Sidebar({ navItems }: SidebarProps) {
         }}>
           MENÚ PRINCIPAL
         </div>
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link key={item.id} href={item.href} style={{ textDecoration: "none" }}>

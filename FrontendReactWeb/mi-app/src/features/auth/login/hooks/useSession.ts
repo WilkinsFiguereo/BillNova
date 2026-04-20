@@ -10,6 +10,7 @@ import {
 } from "../data/storage";
 import type { AuthUser } from "../types/auth.types";
 import { normalizeUserRole } from "@/features/auth/session/roleRoutes";
+import { syncCompanyIdWithCurrentUser } from "@/features/seller/shared/companySession";
 
 interface UseSessionReturn {
   user: AuthUser | null;
@@ -41,6 +42,7 @@ export function useSession(): UseSessionReturn {
         };
         setUser(sessionUser);
         persistAuthState(sessionUser, getRememberMeDefault());
+        syncCompanyIdWithCurrentUser(sessionUser.companyId);
       } else {
         setUser(null);
         clearStoredAuthState();

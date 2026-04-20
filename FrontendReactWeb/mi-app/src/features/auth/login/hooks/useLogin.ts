@@ -7,6 +7,7 @@ import { getRememberMeDefault, getRememberedEmail, persistAuthState } from "../d
 import { validateLogin } from "../data/validators";
 import type { LoginPayload, UserRole } from "../types/auth.types";
 import { getLandingRouteForRole, normalizeUserRole } from "@/features/auth/session/roleRoutes";
+import { syncCompanyIdWithCurrentUser } from "@/features/seller/shared/companySession";
 
 type LoginErrors = Partial<Record<keyof LoginPayload, string>>;
 
@@ -59,12 +60,14 @@ export function useLogin() {
       if (response.ok && response.uid) {
         const sessionToken = response.session_token ?? response.session_id;
         let userRole: UserRole = normalizeUserRole(response.role);
+        let companyId: number | undefined;
 
         try {
           const sessionRes = await authApi.getSession(sessionToken);
           console.log("[LOGIN] Session response:", sessionRes);
           if (sessionRes.ok) {
             userRole = normalizeUserRole(sessionRes.role ?? userRole);
+            companyId = sessionRes.company_id;
           }
         } catch (e) {
           console.error("[LOGIN] GetSession error:", e);
@@ -78,10 +81,12 @@ export function useLogin() {
             email: values.username,
             name: values.username,
             role: userRole,
+            companyId,
             sessionToken: sessionToken,
           },
           values.rememberMe,
         );
+        syncCompanyIdWithCurrentUser(companyId);
         router.push(getLandingRouteForRole(userRole));
         return;
       }

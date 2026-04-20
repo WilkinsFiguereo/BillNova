@@ -70,6 +70,7 @@ export interface ApiCompany {
   city?: string;
   country?: string;
   founded_year?: string | number;
+  business_type?: string;
   sales_history?: { month: string; sales: number; orders: number }[];
   employees?: ApiEmployee[];
 }

@@ -9,6 +9,38 @@ _logger = logging.getLogger(__name__)
 
 
 class PosApiController(http.Controller):
+    def _get_current_billnova_company_id(self):
+        user = request.env.user
+        if not user or user._is_public():
+            return None
+
+        billnova_user = request.env['billnova.user'].sudo().search([('res_user_id', '=', user.id)], limit=1)
+        return billnova_user.company_id.id if billnova_user and billnova_user.company_id else None
+
+    def _resolve_company_id_for_request(self, raw_company_id=None):
+        current_company_id = self._get_current_billnova_company_id()
+        if not current_company_id:
+            return None
+
+        if raw_company_id in (None, ''):
+            return current_company_id
+
+        try:
+            requested_company_id = int(raw_company_id)
+        except (TypeError, ValueError):
+            return self._json_response({'ok': False, 'error': 'company_id must be integer'}, 400)
+
+        if requested_company_id != current_company_id:
+            _logger.warning(
+                "[seller/reports] blocked company access user=%s requested_company_id=%s current_company_id=%s",
+                getattr(request.env.user, 'login', None),
+                requested_company_id,
+                current_company_id,
+            )
+            return self._json_response({'ok': False, 'error': 'company_id does not belong to the current user'}, 403)
+
+        return current_company_id
+
     def _log_event(self, company_id, accion, descripcion, detalle="", entidad_modelo="", entidad_id=None, entidad_nombre=""):
         user = request.env.user
         ua = request.httprequest.headers.get('User-Agent', '') or ''
@@ -456,12 +488,9 @@ class PosApiController(http.Controller):
             base_url = base_url.rstrip('/')
 
             company_id_raw = request.httprequest.args.get('company_id')
-            company_id_filter = None
-            if company_id_raw:
-                try:
-                    company_id_filter = int(company_id_raw)
-                except (TypeError, ValueError):
-                    pass
+            company_id_filter = self._resolve_company_id_for_request(company_id_raw)
+            if isinstance(company_id_filter, Response):
+                return company_id_filter
 
             _logger.info(
                 "[seller/reports] /api/pos/orders params company_id_raw=%s parsed_company_id=%s user=%s origin=%s",
@@ -471,9 +500,21 @@ class PosApiController(http.Controller):
                 request.httprequest.headers.get('Origin'),
             )
 
-            domain = []
-            if company_id_filter:
-                domain = [('company_id', '=', company_id_filter)]
+            if not company_id_filter:
+                _logger.info("[seller/reports] user has no billnova company, returning empty list")
+                return self._json_response({
+                    'ok': True,
+                    'data': [],
+                    'stats': {
+                        'totalFacturado': 0,
+                        'pagadas': {'count': 0, 'amount': 0},
+                        'pendientes': {'count': 0, 'amount': 0},
+                        'vencidas': {'count': 0, 'amount': 0},
+                        'borradores': {'count': 0, 'amount': 0},
+                    },
+                })
+
+            domain = [('company_id', '=', company_id_filter)]
 
             _logger.info("[seller/reports] /api/pos/orders domain=%s", domain)
 

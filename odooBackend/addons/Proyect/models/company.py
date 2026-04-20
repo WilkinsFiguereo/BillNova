@@ -4,6 +4,11 @@ from odoo import fields, models
 class ResCompany(models.Model):
     _inherit = "res.company"
 
+    BUSINESS_TYPE_SELECTION = [
+        ("products", "Productos"),
+        ("services", "Servicios"),
+    ]
+
     COMPANY_STATUS_SELECTION = [
         ("approved", "Aprobado"),
         ("disabled", "Rechazado/Desactivado"),
@@ -26,6 +31,10 @@ class ResCompany(models.Model):
             ("large", "Grande"),
         ],
         string="Tamano de empresa",
+    )
+    business_type = fields.Selection(
+        BUSINESS_TYPE_SELECTION,
+        string="Tipo de negocio",
     )
 
     contact_name = fields.Char("Nombre contacto")

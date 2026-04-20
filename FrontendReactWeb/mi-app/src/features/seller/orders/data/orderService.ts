@@ -1,5 +1,4 @@
-// src/feature/orders/data/orderService.ts
-
+import { getActiveCompanyId } from "@/features/seller/shared/companySession";
 import { Order, OrderLine, OrderStatus } from "../types/order.types";
 
 const BASE_URL = (process.env.NEXT_PUBLIC_ODOO_URL ?? "http://localhost:8079").replace(/\/+$/, "");
@@ -10,21 +9,11 @@ function debugLog(label: string, payload?: unknown) {
 
 function getCompanyId(): number | null {
   if (typeof window === "undefined") return null;
+
   try {
-    const sessionCompanyId = window.sessionStorage.getItem("billnova_company_id");
-    const localCompanyId = window.localStorage.getItem("billnova_company_id");
-    const legacyCompanyId = window.localStorage.getItem("company_id");
-    const raw = sessionCompanyId ?? localCompanyId;
-    const id = raw ? Number(raw) : NaN;
-
-    debugLog("company ids detected", {
-      session_billnova_company_id: sessionCompanyId,
-      local_billnova_company_id: localCompanyId,
-      legacy_company_id: legacyCompanyId,
-      resolved_company_id: Number.isFinite(id) && id > 0 ? id : null,
-    });
-
-    return Number.isFinite(id) && id > 0 ? id : null;
+    const companyId = getActiveCompanyId();
+    debugLog("resolved company id", { companyId });
+    return companyId;
   } catch (error) {
     debugLog("error reading company id", error);
     return null;
@@ -58,13 +47,6 @@ export async function fetchOrders(): Promise<Order[]> {
     ? rawOrders.filter((order: any) => String(order?.company_id ?? "") === String(companyId))
     : rawOrders;
 
-  debugLog("fetchOrders filtered summary", {
-    raw_orders_count: rawOrders.length,
-    filtered_orders_count: filteredByCompany.length,
-    companyId,
-    sample_company_ids: rawOrders.slice(0, 10).map((order: any) => order?.company_id ?? null),
-  });
-
   const normalizeStatus = (status: unknown): OrderStatus => {
     switch (String(status ?? "").toLowerCase()) {
       case "sent":
@@ -89,7 +71,7 @@ export async function fetchOrders(): Promise<Order[]> {
     }
   };
 
-  const normalizedOrders = filteredByCompany.map((order: any): Order => {
+  return filteredByCompany.map((order: any): Order => {
     const lines: OrderLine[] = Array.isArray(order?.lines)
       ? order.lines.map((line: any) => ({
           id: String(line?.id ?? ""),
@@ -117,22 +99,6 @@ export async function fetchOrders(): Promise<Order[]> {
       lines,
     };
   });
-
-  debugLog(
-    "fetchOrders normalized summary",
-    normalizedOrders.map((order) => ({
-      id: order.id,
-      client: order.client,
-      date: order.date,
-      total: order.total,
-      qty: order.qty,
-      status: order.status,
-      invoiceStatus: order.invoiceStatus,
-      lines_count: order.lines?.length ?? 0,
-    }))
-  );
-
-  return normalizedOrders;
 }
 
 export async function createOrder(payload: {
@@ -154,10 +120,7 @@ export async function createOrder(payload: {
   return res.json();
 }
 
-export async function updateOrderStatus(
-  id: string,
-  status: OrderStatus
-): Promise<{ id: string; status: OrderStatus }> {
+export async function updateOrderStatus(id: string, status: OrderStatus): Promise<{ id: string; status: OrderStatus }> {
   const res = await fetch(`${BASE_URL}/api/pos/orders/${id}/status`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

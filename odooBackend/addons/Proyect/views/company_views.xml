@@ -13,6 +13,8 @@
                 <field name="contact_email"/>
                 <field name="contact_phone"/>
                 <field name="country_name"/>
+                <field name="business_type"/>
+                
             </list>
         </field>
     </record>
@@ -33,6 +35,7 @@
                     <field name="founding_year"/>
                     <field name="company_size"/>
                     <field name="website"/>
+                ````<field name="business_type"/>
                 </group>
 
                 <group string="Direccion Fiscal">

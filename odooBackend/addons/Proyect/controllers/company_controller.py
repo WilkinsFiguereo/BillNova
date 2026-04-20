@@ -2,9 +2,57 @@ from odoo import fields, http
 from odoo.http import Response, request
 import json
 import secrets
+import logging
+
+_logger = logging.getLogger(__name__)
 
 
 class CompanyApiController(http.Controller):
+    def _get_current_res_user(self):
+        session_uid = getattr(request.session, "uid", None)
+        if session_uid:
+            user = request.env["res.users"].sudo().browse(session_uid)
+            if user.exists():
+                return user
+
+        user = request.env.user
+        if user and not user._is_public():
+            return user.sudo()
+
+        return request.env["res.users"]
+
+    def _debug_session_context(self, label, requested_company_id=None, resolved_company=None):
+        user = self._get_current_res_user()
+        billnova_user = self._resolve_current_billnova_user()
+
+        _logger.info("=== COMPANY DEBUG: %s ===", label)
+        _logger.info("SESSION UID: %s", getattr(request.session, "uid", None))
+        _logger.info("SESSION LOGIN: %s", getattr(request.session, "login", None))
+        _logger.info("REQUESTED COMPANY ID: %s", requested_company_id)
+        _logger.info(
+            "RES USER -> id=%s name=%s login=%s public=%s company_id=%s company_ids=%s",
+            getattr(user, "id", None),
+            getattr(user, "name", None),
+            getattr(user, "login", None),
+            user._is_public() if user else None,
+            getattr(getattr(user, "company_id", None), "id", None),
+            getattr(getattr(user, "company_ids", None), "ids", []),
+        )
+        _logger.info(
+            "BILLNOVA USER -> id=%s name=%s role=%s res_user_id=%s company_id=%s",
+            getattr(billnova_user, "id", None),
+            getattr(billnova_user, "name", None),
+            getattr(billnova_user, "role", None),
+            getattr(getattr(billnova_user, "res_user_id", None), "id", None),
+            getattr(getattr(billnova_user, "company_id", None), "id", None),
+        )
+        _logger.info(
+            "RESOLVED COMPANY -> id=%s name=%s",
+            getattr(resolved_company, "id", None) if resolved_company else None,
+            getattr(resolved_company, "name", None) if resolved_company else None,
+        )
+        _logger.info("=== END COMPANY DEBUG ===")
+
     def _log_event(self, company_id, accion, modulo, descripcion, detalle="", entidad_modelo="", entidad_id=None, entidad_nombre=""):
         user = request.env.user
         ua = request.httprequest.headers.get("User-Agent", "") or ""
@@ -87,6 +135,7 @@ class CompanyApiController(http.Controller):
             "moderation_reason": company.moderation_reason or None,
             "moderation_updated_at": company.moderation_updated_at.isoformat() if company.moderation_updated_at else None,
             "status": company.status or ("approved" if company.moderation_status == "approved" else "disabled"),
+            "business_type": company.business_type or None,
         }
 
     def _empty_sales_history(self):
@@ -117,6 +166,26 @@ class CompanyApiController(http.Controller):
             return "moderation"
         return "user"
 
+    def _resolve_current_billnova_user(self):
+        user = self._get_current_res_user()
+        if not user or not user.exists():
+            return request.env["billnova.user"]
+        return request.env["billnova.user"].sudo().search([("res_user_id", "=", user.id)], limit=1)
+
+    def _user_owns_company(self, company_id):
+        if not company_id:
+            return False
+
+        billnova_user = self._resolve_current_billnova_user()
+        return bool(billnova_user and billnova_user.company_id and billnova_user.company_id.id == company_id)
+
+    def _resolve_current_company(self):
+        billnova_user = self._resolve_current_billnova_user()
+        if billnova_user and billnova_user.company_id:
+            return billnova_user.company_id.sudo()
+
+        return request.env["res.company"].browse()
+
     def _company_to_api(self, company):
         country_name = getattr(company, "country_name", None) or (company.country_id.name if getattr(company, "country_id", None) else "")
         address = getattr(company, "full_address", None) or getattr(company, "street", None) or ""
@@ -134,6 +203,7 @@ class CompanyApiController(http.Controller):
             "city": getattr(company, "address_city", None) or getattr(company, "city", None) or "",
             "country": country_name,
             "founded_year": str(founded_year),
+            "business_type": getattr(company, "business_type", None) or "",
             "sales_history": self._empty_sales_history(),
             "employees": [],
         }
@@ -228,6 +298,7 @@ class CompanyApiController(http.Controller):
                     "founding_year": payload.get("founding_year"),
                     "website": payload.get("website"),
                     "company_size": payload.get("company_size"),
+                    "business_type": payload.get("business_type") or payload.get("businessType"),
                     "contact_name": payload.get("contact_name"),
                     "contact_email": payload.get("contact_email"),
                     "contact_phone": payload.get("contact_phone"),
@@ -245,6 +316,27 @@ class CompanyApiController(http.Controller):
                     "moderation_reason": False,
                 }
             )
+
+            current_user = self._get_current_res_user()
+            if current_user and current_user.exists():
+                billnova_user = request.env["billnova.user"].sudo().search([("res_user_id", "=", current_user.id)], limit=1)
+
+                current_user.sudo().write({
+                    "company_id": company.id,
+                    "company_ids": [(4, company.id)],
+                })
+
+                if billnova_user:
+                    billnova_user.sudo().write({"company_id": company.id})
+                else:
+                    request.env["billnova.user"].sudo().create({
+                        "name": current_user.name,
+                        "email": current_user.email,
+                        "role": "seller",
+                        "res_user_id": current_user.id,
+                        "company_id": company.id,
+                    })
+
             self._log_event(
                 company.id,
                 "crear",
@@ -265,9 +357,17 @@ class CompanyApiController(http.Controller):
             return self._options_response()
 
         company_id = self._parse_int(request.httprequest.args.get("company_id"))
-        company = request.env.company if not company_id else request.env["res.company"].sudo().browse(company_id)
+        if company_id and not self._user_owns_company(company_id):
+            self._debug_session_context("company_config_forbidden_company", requested_company_id=company_id, resolved_company=None)
+            return self._json_response({"ok": True, "company": None})
+
+        company = self._resolve_current_company() if not company_id else request.env["res.company"].sudo().browse(company_id)
+        self._debug_session_context("company_config", requested_company_id=company_id, resolved_company=company if company and company.exists() else None)
         if company_id and not company.exists():
             return self._json_response({"ok": False, "error": "Company not found"}, 404)
+
+        if not company or not company.exists():
+            return self._json_response({"ok": True, "company": None})
 
         return self._json_response({"ok": True, "company": self._company_to_api(company.sudo())})
 
