@@ -8,6 +8,7 @@ interface StatsSectionProps {
   totalGanado?: number;
   totalPerdido?: number;
   porMes?: number;
+  stockCritico?: number;
   loading?: boolean;
 }
 
@@ -18,12 +19,18 @@ function formatCurrency(value: number): string {
   return `$${value.toFixed(2)}`;
 }
 
-export function StatsSection({ totalGanado = 0, totalPerdido = 0, porMes = 0, loading = false }: StatsSectionProps) {
+export function StatsSection({
+  totalGanado = 0,
+  totalPerdido = 0,
+  porMes = 0,
+  stockCritico = 0,
+  loading = false,
+}: StatsSectionProps) {
   const values = [
     formatCurrency(totalGanado),
     formatCurrency(totalPerdido),
     formatCurrency(porMes),
-    "0",
+    String(stockCritico),
   ];
 
   return (

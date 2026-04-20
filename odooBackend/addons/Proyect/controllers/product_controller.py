@@ -225,3 +225,20 @@ class ProductApiController(http.Controller):
             product.name,
         )
         return self._json_response({"ok": True, "data": self._serialize(product)})
+
+    @http.route("/api/categories", type="http", auth="none", methods=["GET", "OPTIONS"], csrf=False)
+    def list_categories(self, **kwargs):
+        if request.httprequest.method == "OPTIONS":
+            return self._options_response()
+
+        domain = []
+        company_id = kwargs.get("company_id")
+        if company_id:
+            try:
+                domain.append(("company_id", "=", int(company_id)))
+            except ValueError:
+                return self._json_response({"ok": False, "error": "company_id must be an integer"}, 400)
+
+        categories = request.env["product.category"].sudo().search(domain, order="name asc")
+        data = [{"id": c.id, "name": c.complete_name or c.name} for c in categories]
+        return self._json_response({"ok": True, "data": data})

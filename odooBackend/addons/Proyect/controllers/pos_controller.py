@@ -463,13 +463,27 @@ class PosApiController(http.Controller):
                 except (TypeError, ValueError):
                     pass
 
+            _logger.info(
+                "[seller/reports] /api/pos/orders params company_id_raw=%s parsed_company_id=%s user=%s origin=%s",
+                company_id_raw,
+                company_id_filter,
+                getattr(request.env.user, 'login', None),
+                request.httprequest.headers.get('Origin'),
+            )
+
             domain = []
             if company_id_filter:
                 domain = [('company_id', '=', company_id_filter)]
 
+            _logger.info("[seller/reports] /api/pos/orders domain=%s", domain)
+
             orders = request.env['pos.order'].sudo().search(domain, order='date_order desc', limit=100)
 
             _logger.info("ORDERS COUNT: %s", len(orders))
+            _logger.info(
+                "[seller/reports] orders ids=%s",
+                [o.id for o in orders[:20]]
+            )
 
             def map_invoice_status(invoice):
                 if not invoice:
@@ -597,8 +611,25 @@ class PosApiController(http.Controller):
                     if company_id_filter is not None:
                         entry_company_id = entry.get('company_id')
                         if entry_company_id is None or int(entry_company_id) != company_id_filter:
+                            _logger.info(
+                                "[seller/reports] skipping order id=%s because entry_company_id=%s filter=%s",
+                                o.id,
+                                entry_company_id,
+                                company_id_filter,
+                            )
                             continue
 
+                    _logger.info(
+                        "[seller/reports] mapped order id=%s company_id=%s date=%s total=%s status=%s invoice=%s lines=%s client=%s",
+                        entry.get('id'),
+                        entry.get('company_id'),
+                        entry.get('date'),
+                        entry.get('total'),
+                        entry.get('status'),
+                        bool(entry.get('invoice')),
+                        len(entry.get('lines') or []),
+                        entry.get('client'),
+                    )
                     data.append(entry)
 
                 except Exception as inner_error:
@@ -618,6 +649,13 @@ class PosApiController(http.Controller):
                 'vencidas': {'count': len(vencidas), 'amount': sum(e['total'] for e in vencidas)},
                 'borradores': {'count': len(borradores), 'amount': sum(e['total'] for e in borradores)},
             }
+
+            _logger.info(
+                "[seller/reports] response summary company_filter=%s rows=%s stats=%s",
+                company_id_filter,
+                len(data),
+                stats,
+            )
 
             return self._json_response({'ok': True, 'data': data, 'stats': stats})
 

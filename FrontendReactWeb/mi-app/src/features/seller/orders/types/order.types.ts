@@ -2,6 +2,13 @@
 
 export type OrderStatus = "pending" | "sent" | "delivered" | "cancelled";
 
+export interface OrderLine {
+  id: string;
+  productName: string;
+  quantity: number;
+  priceUnit: number;
+}
+
 export interface Order {
   id:      string;
   client:  string;
@@ -12,6 +19,9 @@ export interface Order {
   status:  OrderStatus;
   address: string;
   phone:   string;
+  email?: string;
+  invoiceStatus?: string;
+  lines?: OrderLine[];
 }
 
 export const STATUS_LABELS: Record<OrderStatus, string> = {

@@ -40,3 +40,11 @@ export interface DistribucionCategoria {
   valor: number;
   color: string;
 }
+
+export interface ReportesResumen {
+  stats: ReporteStatCard[];
+  chart: PuntoGrafica[];
+  productosTop: ProductoTop[];
+  clientesTop: ClienteTop[];
+  distribucion: DistribucionCategoria[];
+}

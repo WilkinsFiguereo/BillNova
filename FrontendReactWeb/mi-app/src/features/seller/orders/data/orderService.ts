@@ -1,19 +1,32 @@
 // src/feature/orders/data/orderService.ts
 
-import { Order, OrderStatus } from "../types/order.types";
-import mockOrders from "./mockOrders";
+import { Order, OrderLine, OrderStatus } from "../types/order.types";
 
 const BASE_URL = (process.env.NEXT_PUBLIC_ODOO_URL ?? "http://localhost:8079").replace(/\/+$/, "");
+
+function debugLog(label: string, payload?: unknown) {
+  console.log(`[seller/orders] ${label}`, payload);
+}
 
 function getCompanyId(): number | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw =
-      window.sessionStorage.getItem("billnova_company_id") ??
-      window.localStorage.getItem("billnova_company_id"); // fallback migración
+    const sessionCompanyId = window.sessionStorage.getItem("billnova_company_id");
+    const localCompanyId = window.localStorage.getItem("billnova_company_id");
+    const legacyCompanyId = window.localStorage.getItem("company_id");
+    const raw = sessionCompanyId ?? localCompanyId;
     const id = raw ? Number(raw) : NaN;
+
+    debugLog("company ids detected", {
+      session_billnova_company_id: sessionCompanyId,
+      local_billnova_company_id: localCompanyId,
+      legacy_company_id: legacyCompanyId,
+      resolved_company_id: Number.isFinite(id) && id > 0 ? id : null,
+    });
+
     return Number.isFinite(id) && id > 0 ? id : null;
-  } catch {
+  } catch (error) {
+    debugLog("error reading company id", error);
     return null;
   }
 }
@@ -21,10 +34,16 @@ function getCompanyId(): number | null {
 export async function fetchOrders(): Promise<Order[]> {
   const companyId = getCompanyId();
   const qs = companyId ? `?company_id=${encodeURIComponent(String(companyId))}` : "";
-  const res = await fetch(`${BASE_URL}/api/pos/orders${qs}`, { cache: "no-store", credentials: "include" });
+  const url = `${BASE_URL}/api/pos/orders${qs}`;
+
+  debugLog("fetchOrders request", { url, companyId });
+
+  const res = await fetch(url, { cache: "no-store", credentials: "include" });
   if (!res.ok) throw new Error("Error al obtener pedidos");
+
   const json = await res.json();
-  // Backend responde en forma: { ok: true, data: Order[] }
+  debugLog("fetchOrders raw response", json);
+
   const rawOrders = Array.isArray(json)
     ? json
     : json?.ok && Array.isArray(json.data)
@@ -35,30 +54,85 @@ export async function fetchOrders(): Promise<Order[]> {
 
   if (!rawOrders) throw new Error("Respuesta inesperada al obtener pedidos");
 
-  // Seguridad extra: si por cualquier razón el backend no filtró,
-  // filtramos en frontend por `company_id` cuando exista.
   const filteredByCompany = companyId
-    ? rawOrders.filter((o: any) => String(o?.company_id ?? "") === String(companyId))
+    ? rawOrders.filter((order: any) => String(order?.company_id ?? "") === String(companyId))
     : rawOrders;
 
-  // Normalización defensiva: si el backend devuelve solo `lines`, la UI igual necesita top-level.
-  return filteredByCompany.map((o: any): Order => {
-    const lines = Array.isArray(o?.lines) ? o.lines : [];
+  debugLog("fetchOrders filtered summary", {
+    raw_orders_count: rawOrders.length,
+    filtered_orders_count: filteredByCompany.length,
+    companyId,
+    sample_company_ids: rawOrders.slice(0, 10).map((order: any) => order?.company_id ?? null),
+  });
+
+  const normalizeStatus = (status: unknown): OrderStatus => {
+    switch (String(status ?? "").toLowerCase()) {
+      case "sent":
+      case "enviado":
+        return "sent";
+      case "delivered":
+      case "pagada":
+      case "paid":
+      case "entregado":
+        return "delivered";
+      case "cancelled":
+      case "cancelado":
+      case "cancelada":
+        return "cancelled";
+      case "pending":
+      case "pendiente":
+      case "vencida":
+      case "borrador":
+      case "draft":
+      default:
+        return "pending";
+    }
+  };
+
+  const normalizedOrders = filteredByCompany.map((order: any): Order => {
+    const lines: OrderLine[] = Array.isArray(order?.lines)
+      ? order.lines.map((line: any) => ({
+          id: String(line?.id ?? ""),
+          productName: String(line?.productName ?? ""),
+          quantity: Number(line?.quantity ?? 0),
+          priceUnit: Number(line?.priceUnit ?? 0),
+        }))
+      : [];
+
     const firstLine = lines[0] ?? {};
-    const qtyFromLines = lines.reduce((acc: number, l: any) => acc + Number(l?.quantity ?? 0), 0);
+    const qtyFromLines = lines.reduce((acc: number, line) => acc + Number(line?.quantity ?? 0), 0);
 
     return {
-      id: String(o?.id ?? ""),
-      client: String(o?.client ?? ""),
-      product: String(o?.product ?? firstLine?.productName ?? ""),
-      qty: Number.isFinite(Number(o?.qty)) ? Number(o.qty) : qtyFromLines,
-      total: Number(o?.total ?? 0),
-      date: String(o?.date ?? ""),
-      status: (o?.status ?? "pending") as OrderStatus,
-      address: String(o?.address ?? ""),
-      phone: String(o?.phone ?? ""),
+      id: String(order?.id ?? ""),
+      client: String(order?.client ?? ""),
+      product: String(order?.product ?? firstLine?.productName ?? ""),
+      qty: Number.isFinite(Number(order?.qty)) ? Number(order.qty) : qtyFromLines,
+      total: Number(order?.total ?? 0),
+      date: String(order?.date ?? ""),
+      status: normalizeStatus(order?.status),
+      address: String(order?.address ?? ""),
+      phone: String(order?.phone ?? ""),
+      email: String(order?.clienteEmail ?? order?.email ?? ""),
+      invoiceStatus: String(order?.status ?? ""),
+      lines,
     };
   });
+
+  debugLog(
+    "fetchOrders normalized summary",
+    normalizedOrders.map((order) => ({
+      id: order.id,
+      client: order.client,
+      date: order.date,
+      total: order.total,
+      qty: order.qty,
+      status: order.status,
+      invoiceStatus: order.invoiceStatus,
+      lines_count: order.lines?.length ?? 0,
+    }))
+  );
+
+  return normalizedOrders;
 }
 
 export async function createOrder(payload: {

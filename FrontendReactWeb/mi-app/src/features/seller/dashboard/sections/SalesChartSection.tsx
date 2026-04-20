@@ -5,11 +5,18 @@ import { FileText, Plus } from "lucide-react";
 import { dashboardTheme as t } from "../theme/dashboard.theme";
 
 interface SalesChartSectionProps {
+  fechaLabel: string;
+  resumenLabel: string;
   onNewInvoice: () => void;
   onAddProduct: () => void;
 }
 
-export function SalesChartSection({ onNewInvoice, onAddProduct }: SalesChartSectionProps) {
+export function SalesChartSection({
+  fechaLabel,
+  resumenLabel,
+  onNewInvoice,
+  onAddProduct,
+}: SalesChartSectionProps) {
   return (
     <div
       style={{
@@ -20,7 +27,6 @@ export function SalesChartSection({ onNewInvoice, onAddProduct }: SalesChartSect
         animation: "slideIn 0.4s ease",
       }}
     >
-      {/* Title Block */}
       <div>
         <h1
           style={{
@@ -33,12 +39,13 @@ export function SalesChartSection({ onNewInvoice, onAddProduct }: SalesChartSect
           Panel Principal
         </h1>
         <p style={{ fontSize: 13, color: t.textSecondary, marginTop: 4 }}>
-          Jueves, 26 de Febrero 2026 ·{" "}
-          <span style={{ color: t.success }}>● Sistema operativo</span>
+          {fechaLabel} - <span style={{ color: t.success }}>Sistema operativo</span>
+        </p>
+        <p style={{ fontSize: 12, color: t.textDisabled, marginTop: 6 }}>
+          {resumenLabel}
         </p>
       </div>
 
-      {/* ── Acciones Rápidas: 2 botones ── */}
       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
         <button className="btn-secondary" onClick={onNewInvoice}>
           <FileText size={15} /> Nueva Factura

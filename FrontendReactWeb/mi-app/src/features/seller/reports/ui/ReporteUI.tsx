@@ -60,7 +60,15 @@ interface BarChartProps {
 }
 
 export function BarChart({ datos }: BarChartProps) {
-  const maxVal = Math.max(...datos.flatMap((d) => [d.ventas, d.cobros, d.gastos]));
+  if (datos.length === 0) {
+    return (
+      <div style={{ height: 220, display: "flex", alignItems: "center", justifyContent: "center", color: t.textDisabled, fontSize: 12 }}>
+        Sin movimientos para graficar en este periodo.
+      </div>
+    );
+  }
+
+  const maxVal = Math.max(1, ...datos.flatMap((d) => [d.ventas, d.cobros, d.gastos]));
   const series = [
     { key: "ventas",  label: "Ventas",  color: t.brand400  },
     { key: "cobros",  label: "Cobros",  color: t.success   },
@@ -117,6 +125,14 @@ interface DonutChartProps {
 }
 
 export function DonutChart({ datos }: DonutChartProps) {
+  if (datos.length === 0) {
+    return (
+      <div style={{ height: 150, display: "flex", alignItems: "center", justifyContent: "center", color: t.textDisabled, fontSize: 12 }}>
+        Sin distribucion disponible.
+      </div>
+    );
+  }
+
   const total = datos.reduce((s, d) => s + d.valor, 0);
   let acumulado = 0;
 

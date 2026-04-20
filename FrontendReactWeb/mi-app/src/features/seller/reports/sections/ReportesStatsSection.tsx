@@ -2,16 +2,20 @@
 
 import React from "react";
 import { ReporteStatCardUI } from "../ui/ReporteUI";
-import { REPORTE_STATS } from "../data/reportes.data";
+import { ReporteStatCard } from "../types/reportes.types";
 
-export function ReportesStatsSection() {
+interface ReportesStatsSectionProps {
+  stats: ReporteStatCard[];
+}
+
+export function ReportesStatsSection({ stats }: ReportesStatsSectionProps) {
   return (
     <div style={{
       display: "grid", gridTemplateColumns: "repeat(4, 1fr)",
       gap: 16, marginBottom: 24,
       animation: "slideIn 0.5s ease 0.1s both",
     }}>
-      {REPORTE_STATS.map((stat) => (
+      {stats.map((stat) => (
         <ReporteStatCardUI key={stat.label} stat={stat} />
       ))}
     </div>

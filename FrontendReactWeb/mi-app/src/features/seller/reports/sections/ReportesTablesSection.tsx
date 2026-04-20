@@ -1,72 +1,138 @@
 "use client";
 
 import React from "react";
-import { Package, User } from "lucide-react";
+import { Package } from "lucide-react";
 import { reportesTheme as t } from "../theme/reportes.theme";
-import { PRODUCTOS_TOP, CLIENTES_TOP } from "../data/reportes.data";
+import type { ClienteTop, ProductoTop } from "../types/reportes.types";
+import { formatCurrency } from "../hooks/useReportes";
 
-// ─── Tabla Productos Top ──────────────────────────────────────────────
-function ProductosTopTable() {
-  const maxIngresos = Math.max(...PRODUCTOS_TOP.map((p) => p.ingresos));
+interface ReportesTablesSectionProps {
+  productos: ProductoTop[];
+  clientes: ClienteTop[];
+}
+
+function EmptyState({ message }: { message: string }) {
+  return (
+    <div
+      style={{
+        padding: "20px 16px",
+        borderRadius: 12,
+        background: t.bgAlt,
+        color: t.textDisabled,
+        fontSize: 12,
+        textAlign: "center",
+      }}
+    >
+      {message}
+    </div>
+  );
+}
+
+function ProductosTopTable({ productos }: { productos: ProductoTop[] }) {
+  const maxIngresos = productos.length > 0 ? Math.max(...productos.map((p) => p.ingresos)) : 0;
 
   return (
-    <div style={{
-      background: "white", borderRadius: 16,
-      border: `1px solid ${t.border}`, padding: "24px",
-      flex: 1,
-    }}>
+    <div
+      style={{
+        background: "white",
+        borderRadius: 16,
+        border: `1px solid ${t.border}`,
+        padding: "24px",
+        flex: 1,
+      }}
+    >
       <div style={{ marginBottom: 20 }}>
-        <h2 style={{ fontSize: 15, fontWeight: 700, color: t.textPrimary }}>
-          Productos más vendidos
-        </h2>
+        <h2 style={{ fontSize: 15, fontWeight: 700, color: t.textPrimary }}>Productos top</h2>
         <p style={{ fontSize: 12, color: t.textDisabled, marginTop: 4 }}>
-          Por ingresos generados
+          Por ingresos generados en el periodo
         </p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        {PRODUCTOS_TOP.map((p, i) => (
-          <div key={p.nombre}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+        {productos.length === 0 && (
+          <EmptyState message="Aun no hay productos vendidos en este periodo." />
+        )}
+
+        {productos.map((producto, index) => (
+          <div key={`${producto.nombre}-${index}`}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 6,
+              }}
+            >
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                {/* Ranking */}
-                <div style={{
-                  width: 24, height: 24, borderRadius: 8,
-                  background: i === 0 ? t.brand600 : t.bgAlt,
-                  color: i === 0 ? "white" : t.textDisabled,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 11, fontWeight: 700, flexShrink: 0,
-                }}>
-                  {i + 1}
+                <div
+                  style={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: 8,
+                    background: index === 0 ? t.brand600 : t.bgAlt,
+                    color: index === 0 ? "white" : t.textDisabled,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    flexShrink: 0,
+                  }}
+                >
+                  {index + 1}
                 </div>
-                <div style={{
-                  width: 32, height: 32, borderRadius: 8,
-                  background: t.brand100, color: t.brand600,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  flexShrink: 0,
-                }}>
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 8,
+                    background: t.brand100,
+                    color: t.brand600,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
                   <Package size={15} />
                 </div>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: t.textPrimary }}>{p.nombre}</div>
-                  <div style={{ fontSize: 11, color: t.textDisabled }}>{p.categoria} · {p.unidades} unid.</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: t.textPrimary }}>
+                    {producto.nombre}
+                  </div>
+                  <div style={{ fontSize: 11, color: t.textDisabled }}>
+                    {producto.categoria} - {producto.unidades} unid.
+                  </div>
                 </div>
               </div>
+
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: t.textPrimary, fontFamily: "'DM Mono', monospace" }}>
-                  ${p.ingresos.toLocaleString()}
+                <div
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: t.textPrimary,
+                    fontFamily: "'DM Mono', monospace",
+                  }}
+                >
+                  {formatCurrency(producto.ingresos)}
                 </div>
-                <div style={{ fontSize: 11, color: t.textDisabled }}>{p.porcentaje}% del total</div>
+                <div style={{ fontSize: 11, color: t.textDisabled }}>
+                  {producto.porcentaje}% del total
+                </div>
               </div>
             </div>
-            {/* Barra de progreso */}
+
             <div style={{ height: 4, background: t.bgAlt, borderRadius: 4 }}>
-              <div style={{
-                height: "100%", borderRadius: 4,
-                width: `${(p.ingresos / maxIngresos) * 100}%`,
-                background: i === 0 ? t.brand400 : t.brand100,
-                transition: "width 0.5s ease",
-              }} />
+              <div
+                style={{
+                  height: "100%",
+                  borderRadius: 4,
+                  width: `${maxIngresos > 0 ? (producto.ingresos / maxIngresos) * 100 : 0}%`,
+                  background: index === 0 ? t.brand400 : t.brand100,
+                  transition: "width 0.5s ease",
+                }}
+              />
             </div>
           </div>
         ))}
@@ -75,64 +141,96 @@ function ProductosTopTable() {
   );
 }
 
-// ─── Tabla Clientes Top ───────────────────────────────────────────────
-function ClientesTopTable() {
+function ClientesTopTable({ clientes }: { clientes: ClienteTop[] }) {
   return (
-    <div style={{
-      background: "white", borderRadius: 16,
-      border: `1px solid ${t.border}`, padding: "24px",
-      flex: 1,
-    }}>
+    <div
+      style={{
+        background: "white",
+        borderRadius: 16,
+        border: `1px solid ${t.border}`,
+        padding: "24px",
+        flex: 1,
+      }}
+    >
       <div style={{ marginBottom: 20 }}>
-        <h2 style={{ fontSize: 15, fontWeight: 700, color: t.textPrimary }}>
-          Clientes principales
-        </h2>
+        <h2 style={{ fontSize: 15, fontWeight: 700, color: t.textPrimary }}>Clientes principales</h2>
         <p style={{ fontSize: 12, color: t.textDisabled, marginTop: 4 }}>
-          Por volumen de compra
+          Por volumen de compra en el periodo
         </p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {CLIENTES_TOP.map((c, i) => (
-          <div key={c.nombre} style={{
-            display: "flex", justifyContent: "space-between",
-            alignItems: "center", padding: "12px",
-            borderRadius: 10, background: t.bgAlt,
-            transition: "background 0.15s",
-          }}
+        {clientes.length === 0 && (
+          <EmptyState message="Aun no hay clientes con compras en este periodo." />
+        )}
+
+        {clientes.map((cliente) => (
+          <div
+            key={`${cliente.nombre}-${cliente.email}`}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "12px",
+              borderRadius: 10,
+              background: t.bgAlt,
+              transition: "background 0.15s",
+            }}
             className="table-row"
           >
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              {/* Avatar */}
-              <div style={{
-                width: 36, height: 36, borderRadius: "50%",
-                background: `linear-gradient(135deg, ${t.brand600}, ${t.brand400})`,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                color: "white", fontSize: 13, fontWeight: 700, flexShrink: 0,
-              }}>
-                {c.nombre.charAt(0)}
+              <div
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: "50%",
+                  background: `linear-gradient(135deg, ${t.brand600}, ${t.brand400})`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "white",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  flexShrink: 0,
+                }}
+              >
+                {cliente.nombre.charAt(0)}
               </div>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: t.textPrimary }}>
-                  {c.nombre}
+                  {cliente.nombre}
                 </div>
-                <div style={{ fontSize: 11, color: t.textDisabled }}>{c.email}</div>
+                <div style={{ fontSize: 11, color: t.textDisabled }}>{cliente.email}</div>
               </div>
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: t.textPrimary, fontFamily: "'DM Mono', monospace" }}>
-                  ${c.total.toLocaleString()}
+                <div
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: t.textPrimary,
+                    fontFamily: "'DM Mono', monospace",
+                  }}
+                >
+                  {formatCurrency(cliente.total)}
                 </div>
-                <div style={{ fontSize: 11, color: t.textDisabled }}>{c.facturas} facturas</div>
+                <div style={{ fontSize: 11, color: t.textDisabled }}>
+                  {cliente.facturas} facturas
+                </div>
               </div>
-              <span style={{
-                padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700,
-                background: c.status === "activo" ? t.successBg : t.bgAlt,
-                color: c.status === "activo" ? t.success : t.textDisabled,
-              }}>
-                {c.status === "activo" ? "Activo" : "Inactivo"}
+              <span
+                style={{
+                  padding: "3px 10px",
+                  borderRadius: 20,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  background: cliente.status === "activo" ? t.successBg : t.bgAlt,
+                  color: cliente.status === "activo" ? t.success : t.textDisabled,
+                }}
+              >
+                {cliente.status === "activo" ? "Activo" : "Inactivo"}
               </span>
             </div>
           </div>
@@ -142,16 +240,18 @@ function ClientesTopTable() {
   );
 }
 
-// ─── Section principal ─────────────────────────────────────────────────
-export function ReportesTablesSection() {
+export function ReportesTablesSection({ productos, clientes }: ReportesTablesSectionProps) {
   return (
-    <div style={{
-      display: "grid", gridTemplateColumns: "1fr 1fr",
-      gap: 16,
-      animation: "slideIn 0.5s ease 0.2s both",
-    }}>
-      <ProductosTopTable />
-      <ClientesTopTable />
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: 16,
+        animation: "slideIn 0.5s ease 0.2s both",
+      }}
+    >
+      <ProductosTopTable productos={productos} />
+      <ClientesTopTable clientes={clientes} />
     </div>
   );
 }

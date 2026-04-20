@@ -150,3 +150,26 @@ export async function apiDeleteProducto(id: number): Promise<void> {
   });
   await checkResponse(res);
 }
+
+export async function apiListCategorias(): Promise<{ id: number; name: string }[]> {
+  const companyId = getCompanyId();
+  const url = companyId
+    ? `${baseUrl}/api/categories?company_id=${encodeURIComponent(String(companyId))}`
+    : `${baseUrl}/api/categories`;
+
+  try {
+    const res = await fetch(url, { headers: jsonHeaders() });
+    if (!res.ok) throw new Error("fallback");
+    const json = await res.json();
+    if (!json.ok) throw new Error("fallback");
+    return json.data as { id: number; name: string }[];
+  } catch {
+    // Fallback: extraer de los productos existentes
+    const productos = await apiListProductos();
+    const seen = new Map<string, number>();
+    productos.forEach((p, i) => {
+      if (p.categoria && !seen.has(p.categoria)) seen.set(p.categoria, i);
+    });
+    return Array.from(seen.entries()).map(([name, id]) => ({ id, name }));
+  }
+}

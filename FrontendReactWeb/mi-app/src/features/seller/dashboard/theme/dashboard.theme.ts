@@ -56,11 +56,9 @@ export const globalStyles = (t: DashboardTheme) => `
 
   .nav-item {
     display: flex; align-items: center; gap: 10px; padding: 10px 16px;
-    border-radius: 10px; cursor: pointer; transition: all 0.2s;
+    border-radius: 10px; cursor: pointer;
     font-size: 14px; font-weight: 500; color: ${t.textSecondary};
   }
-  .nav-item:hover { background: rgba(59,130,246,0.08); color: ${t.brand600}; }
-  .nav-item.active { background: ${t.brand100}; color: ${t.brand600}; font-weight: 600; }
 
   .table-row:hover { background: ${t.bgAlt}; }
   .action-btn {

@@ -3,14 +3,14 @@
 import React from "react";
 import { BarChart, DonutChart } from "../ui/ReporteUI";
 import { reportesTheme as t } from "../theme/reportes.theme";
-import { PuntoGrafica } from "../types/reportes.types";
-import { DISTRIBUCION } from "../data/reportes.data";
+import { DistribucionCategoria, PuntoGrafica } from "../types/reportes.types";
 
 interface ReportesGraficaSectionProps {
   datos: PuntoGrafica[];
+  distribucion: DistribucionCategoria[];
 }
 
-export function ReportesGraficaSection({ datos }: ReportesGraficaSectionProps) {
+export function ReportesGraficaSection({ datos, distribucion }: ReportesGraficaSectionProps) {
   return (
     <div style={{
       display: "grid", gridTemplateColumns: "1fr 340px",
@@ -46,7 +46,7 @@ export function ReportesGraficaSection({ datos }: ReportesGraficaSectionProps) {
             Distribución porcentual
           </p>
         </div>
-        <DonutChart datos={DISTRIBUCION} />
+        <DonutChart datos={distribucion} />
       </div>
     </div>
   );

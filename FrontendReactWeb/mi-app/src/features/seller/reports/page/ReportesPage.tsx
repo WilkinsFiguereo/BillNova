@@ -14,12 +14,40 @@ import { NAV_ITEMS } from "../../dashboard/data/chart.data";
 export default function ReportesPage() {
   const {
     periodo,
+    loading,
+    error,
+    resumen,
     toastVisible,
     toastMsg,
-    datosGrafica,
     setPeriodo,
     showToast,
   } = useReportes();
+
+  const exportCSV = () => {
+    const rows = [
+      ["Metrica", "Valor"],
+      ...resumen.stats.map((stat) => [stat.label, stat.value]),
+      [],
+      ["Periodo", "Ventas", "Cobros", "Gastos"],
+      ...resumen.chart.map((item) => [item.label, item.ventas, item.cobros, item.gastos]),
+    ];
+
+    const content = rows
+      .map((row) => row.map((cell) => `"${String(cell ?? "").replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `reportes-seller-${periodo}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    showToast("Reporte exportado correctamente");
+  };
 
   return (
     <div
@@ -39,11 +67,13 @@ export default function ReportesPage() {
         <ReportesHeaderSection
           periodo={periodo}
           onPeriodoChange={setPeriodo}
-          onExportar={() => showToast("Reporte exportado correctamente")}
+          onExportar={exportCSV}
         />
-        <ReportesStatsSection />
-        <ReportesGraficaSection datos={datosGrafica} />
-        <ReportesTablesSection />
+        {loading && <p>Cargando reportes...</p>}
+        {error && <p style={{ color: t.error }}>{error}</p>}
+        <ReportesStatsSection stats={resumen.stats} />
+        <ReportesGraficaSection datos={resumen.chart} distribucion={resumen.distribucion} />
+        <ReportesTablesSection productos={resumen.productosTop} clientes={resumen.clientesTop} />
       </main>
 
       <Toast message={toastMsg} visible={toastVisible} />
