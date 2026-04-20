@@ -11,15 +11,21 @@ function hasRequiredRole(userRole: UserRole, requiredRole: UserRole): boolean {
   return userRole === requiredRole;
 }
 
-export function useRoleGuard(requiredRole: UserRole) {
+interface RoleGuardOptions {
+  allowAnyAuthenticatedUser?: boolean;
+}
+
+export function useRoleGuard(requiredRole: UserRole, options?: RoleGuardOptions) {
   const router = useRouter();
   const [ready, setReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const lastCheckedRoleRef = useRef<UserRole | null>(null);
+  const lastCheckedRoleRef = useRef<string | null>(null);
+  const allowAnyAuthenticatedUser = options?.allowAnyAuthenticatedUser ?? false;
 
   useEffect(() => {
-    if (lastCheckedRoleRef.current === requiredRole) return;
-    lastCheckedRoleRef.current = requiredRole;
+    const guardKey = `${requiredRole}:${allowAnyAuthenticatedUser ? "auth" : "strict"}`;
+    if (lastCheckedRoleRef.current === guardKey) return;
+    lastCheckedRoleRef.current = guardKey;
 
     const cached = getStoredAuthState();
     
@@ -33,7 +39,7 @@ export function useRoleGuard(requiredRole: UserRole) {
     const userRole = normalizeUserRole(cached.role);
     const userRoute = getLandingRouteForRole(userRole);
 
-    if (!hasRequiredRole(userRole, requiredRole)) {
+    if (!allowAnyAuthenticatedUser && !hasRequiredRole(userRole, requiredRole)) {
       setReady(false);
       setIsLoading(false);
       router.replace(userRoute);
@@ -42,7 +48,7 @@ export function useRoleGuard(requiredRole: UserRole) {
 
     setReady(true);
     setIsLoading(false);
-  }, [requiredRole, router]);
+  }, [allowAnyAuthenticatedUser, requiredRole, router]);
 
   return { isLoading, hasAccess: ready };
 }

@@ -5,6 +5,7 @@ import {
   Package,
   ShoppingCart,
   Users,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
 
@@ -45,5 +46,11 @@ export const ADMIN_NAV_ITEMS: AdminNavItemData[] = [
     Icon: FileText,
     label: "Reportes",
     href: "/navigation/admin/reports/page",
+  },
+  {
+    id: "config",
+    Icon: Settings,
+    label: "Configuración",
+    href: "/navigation/admin/config/page",
   },
 ];

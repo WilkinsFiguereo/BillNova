@@ -1,10 +1,13 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { useRoleGuard } from "@/features/auth/login/hooks/useRoleGuard";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
-  const { isLoading, hasAccess } = useRoleGuard("admin");
+  const pathname = usePathname();
+  const allowAnySession = pathname === "/navigation/admin/config/page";
+  const { isLoading, hasAccess } = useRoleGuard("admin", { allowAnyAuthenticatedUser: allowAnySession });
 
   if (isLoading) {
     return (

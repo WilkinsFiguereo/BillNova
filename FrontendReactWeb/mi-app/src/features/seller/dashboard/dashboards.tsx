@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Zap, LogOut } from "lucide-react";
+import { Zap } from "lucide-react";
 import { StockStatus, InvoiceStatus } from "./types/dashboard.types";
 import { NavItemData } from "./data/chart.data";
 import { dashboardTheme as t } from "./theme/dashboard.theme";
@@ -153,25 +153,6 @@ export function Sidebar({ navItems }: SidebarProps) {
             <div style={{ fontSize: 12, fontWeight: 600, color: t.textPrimary }}>Juan Ramírez</div>
             <div style={{ fontSize: 10, color: t.textDisabled }}>Administrador</div>
           </div>
-        </div>
-        <div
-          onClick={handleLogout}
-          style={{
-            padding: "10px 12px", background: "#FEF2F2",
-            borderRadius: 10, display: "flex", alignItems: "center", gap: 8,
-            cursor: "pointer", transition: "all 0.2s ease",
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLDivElement).style.background = "#FEE2E2";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLDivElement).style.background = "#FEF2F2";
-          }}
-        >
-          <LogOut size={16} color="#DC2626" />
-          <span style={{ fontSize: 12, fontWeight: 500, color: "#DC2626" }}>
-            Cerrar sesión
-          </span>
         </div>
       </div>
     </aside>

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { LogOut } from 'lucide-react';
+
 import { useCurrentUser } from '@/features/admin/profile/hooks/useCurrentUser';
 import { clearStoredAuthState } from '@/features/auth/login/data/storage';
 import { colors } from '@/features/admin/users/theme/tokens';
@@ -83,36 +83,12 @@ export function UserProfileSidebarSection() {
             <div style={{ fontSize: 12, fontWeight: 600, color: colors.text.primary }}>
               {user?.name || 'Admin Demo'}
             </div>
-            <div style={{ fontSize: 10, color: colors.text.tertiary }}>
-              {user?.role || 'Administrador'}
-            </div>
-          </div>
+        <div style={{ fontSize: 10, color: colors.text.tertiary }}>
+          {user?.role || 'Administrador'}
         </div>
-      </Link>
-      <div
-        onClick={handleLogout}
-        style={{
-          padding: '10px 12px',
-          background: '#FEF2F2',
-          borderRadius: 10,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          cursor: 'pointer',
-          transition: 'all 0.2s ease',
-        }}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLDivElement).style.background = '#FEE2E2';
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLDivElement).style.background = '#FEF2F2';
-        }}
-      >
-        <LogOut size={16} color="#DC2626" />
-        <span style={{ fontSize: 12, fontWeight: 500, color: '#DC2626' }}>
-          Cerrar sesión
-        </span>
       </div>
     </div>
-  );
+  </Link>
+</div>
+    );
 }
