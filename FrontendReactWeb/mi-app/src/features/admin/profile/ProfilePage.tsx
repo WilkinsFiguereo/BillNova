@@ -4,26 +4,30 @@ import React, { useState } from 'react';
 import { ArrowLeft, Camera, Save, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCurrentUser } from './hooks/useCurrentUser';
+import { useUpdateProfile } from './hooks/useUpdateProfile';
 import { colors, font } from '../users/theme/tokens';
 
 export function ProfilePage() {
   const router = useRouter();
-  const { user, loading } = useCurrentUser();
+  const { user, loading, refreshUser } = useCurrentUser();
+  const { updateProfile, loading: saving } = useUpdateProfile();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    phone: user?.phone || '',
-    department: user?.department || '',
+    name: '',
+    email: '',
+    phone: '',
+    department: '',
   });
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   React.useEffect(() => {
     if (user) {
       setFormData({
-        name: user.name,
-        email: user.email,
+        name: user.name || '',
+        email: user.email || '',
         phone: user.phone || '',
         department: user.department || '',
       });
@@ -48,12 +52,28 @@ export function ProfilePage() {
   };
 
   const handleSave = async () => {
+    setSaveError(null);
+    setSaveSuccess(false);
     try {
-      // TODO: Aquí iría la llamada a la API para actualizar los datos del usuario
-      console.log('Datos a guardar:', formData, avatarFile);
-      setIsEditing(false);
+      const result = await updateProfile({
+        name: formData.name,
+        phone: formData.phone,
+        avatar: avatarPreview || undefined,
+      });
+      if (result.ok) {
+        setSaveSuccess(true);
+        setIsEditing(false);
+        setAvatarPreview(null);
+        setTimeout(() => {
+          refreshUser();
+        }, 100);
+        setTimeout(() => setSaveSuccess(false), 3000);
+      } else {
+        setSaveError(result.error || 'Error al guardar los cambios');
+      }
     } catch (error) {
       console.error('Error al guardar perfil:', error);
+      setSaveError('Error al guardar los cambios');
     }
   };
 
@@ -153,13 +173,14 @@ export function ProfilePage() {
           <div style={{ display: 'flex', gap: 8 }}>
             <button
               onClick={handleSave}
+              disabled={saving}
               style={{
                 padding: '8px 16px',
-                background: colors.success,
+                background: saving ? colors.text.tertiary : colors.success,
                 color: 'white',
                 border: 'none',
                 borderRadius: 8,
-                cursor: 'pointer',
+                cursor: saving ? 'not-allowed' : 'pointer',
                 fontSize: 14,
                 fontWeight: 600,
                 display: 'flex',
@@ -168,7 +189,7 @@ export function ProfilePage() {
               }}
             >
               <Save size={16} />
-              Guardar
+              {saving ? 'Guardando...' : 'Guardar'}
             </button>
             <button
               onClick={() => {
@@ -212,7 +233,9 @@ export function ProfilePage() {
             height: 120,
             margin: '0 auto 16px',
             borderRadius: '50%',
-            background: avatarPreview ? `url(${avatarPreview})` : `linear-gradient(135deg, ${colors.primary}, #818cf8)`,
+            background: avatarPreview || user?.avatar 
+              ? `url(${avatarPreview || user?.avatar})` 
+              : `linear-gradient(135deg, ${colors.primary}, #818cf8)`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             display: 'flex',
@@ -224,7 +247,7 @@ export function ProfilePage() {
             position: 'relative',
             overflow: 'hidden',
           }}>
-            {!avatarPreview && initials}
+            {!avatarPreview && !user?.avatar && initials}
 
             {isEditing && (
               <label style={{
@@ -349,6 +372,24 @@ export function ProfilePage() {
           </div>
         )}
       </div>
+
+      {(saveSuccess || saveError) && (
+        <div style={{
+          position: 'fixed',
+          bottom: 24,
+          right: 24,
+          padding: '12px 20px',
+          borderRadius: 8,
+          background: saveSuccess ? colors.success : colors.error,
+          color: 'white',
+          fontSize: 14,
+          fontWeight: 500,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          zIndex: 1000,
+        }}>
+          {saveSuccess ? 'Perfil actualizado correctamente' : saveError}
+        </div>
+      )}
     </div>
   );
 }

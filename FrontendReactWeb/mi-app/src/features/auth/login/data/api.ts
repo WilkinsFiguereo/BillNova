@@ -12,9 +12,15 @@ import type {
   VerifyEmailResponse,
 } from "../types/auth.types";
 import { authPath, odooGet, odooPost } from "@/lib/odooApi";
-import { getStoredAuthState } from "./storage";
+import { getStoredAuthState, persistAuthState, getRememberMeDefault } from "./storage";
 
 const DEV_AUTH = process.env.NEXT_PUBLIC_DEV_AUTH === "true";
+
+function isBrowser() {
+  return typeof window !== "undefined";
+}
+
+const AVATAR_STORAGE_KEY = "billnova.user.avatar";
 
 function roleFromLogin(login: string): LoginResponse["role"] {
   const v = login.trim().toLowerCase();
@@ -121,6 +127,11 @@ export const authApi = {
     data: { name?: string; phone?: string },
   ): Promise<{ ok: boolean; error?: string }> => {
     if (DEV_AUTH && process.env.NODE_ENV !== "production") {
+      const stored = getStoredAuthState();
+      if (stored) {
+        const updated = { ...stored, ...data };
+        persistAuthState(updated, getRememberMeDefault());
+      }
       return { ok: true };
     }
     return odooPost<{ ok: boolean; error?: string }>(
@@ -128,5 +139,66 @@ export const authApi = {
       data,
       { sessionToken, allowedStatuses: [400, 401, 403, 404] },
     );
+  },
+
+  updateAvatar: async (
+    sessionToken: string | undefined,
+    avatarBase64: string,
+  ): Promise<{ ok: boolean; avatar_url?: string; error?: string }> => {
+    if (DEV_AUTH && process.env.NODE_ENV !== "production") {
+      if (isBrowser()) {
+        localStorage.setItem(AVATAR_STORAGE_KEY, avatarBase64);
+      }
+      return { ok: true, avatar_url: avatarBase64 };
+    }
+    return odooPost<{ ok: boolean; avatar_url?: string; error?: string }>(
+      authPath("/profile/avatar"),
+      { avatar: avatarBase64 },
+      { sessionToken, allowedStatuses: [400, 401, 403, 404, 413] },
+    );
+  },
+
+  getProfile: async (sessionToken?: string): Promise<{
+    ok: boolean;
+    user?: {
+      id: number;
+      name: string;
+      email: string;
+      phone?: string;
+      avatar_url?: string;
+      role?: string;
+    };
+    error?: string;
+  }> => {
+    if (DEV_AUTH && process.env.NODE_ENV !== "production") {
+      const cached = getStoredAuthState();
+      const avatar = isBrowser() ? localStorage.getItem(AVATAR_STORAGE_KEY) || undefined : undefined;
+      return {
+        ok: true,
+        user: {
+          id: cached?.uid ?? 1,
+          name: cached?.name || "Dev User",
+          email: cached?.email || "dev@local.test",
+          phone: cached?.phone,
+          avatar_url: avatar,
+          role: cached?.role ?? "admin",
+        },
+      };
+    }
+    return odooGet<{
+      ok: boolean;
+      user?: {
+        id: number;
+        name: string;
+        email: string;
+        phone?: string;
+        avatar_url?: string;
+        role?: string;
+      };
+      error?: string;
+    }>(authPath("/profile"), {
+      sessionToken,
+      allowedStatuses: [401, 403],
+    });
   },
 };

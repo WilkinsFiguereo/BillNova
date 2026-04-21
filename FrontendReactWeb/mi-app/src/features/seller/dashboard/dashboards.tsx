@@ -10,6 +10,8 @@ import { dashboardTheme as t } from "./theme/dashboard.theme";
 import { getLandingRouteForRole } from "@/features/auth/login/navigation";
 import { getStoredAuthState } from "@/features/auth/login";
 
+const AVATAR_STORAGE_KEY = "billnova.user.avatar";
+
 // ─── Stock Badge ────────────────────────────────────────────────────
 interface StockBadgeProps {
   status: StockStatus;
@@ -65,6 +67,7 @@ export function Sidebar({ navItems }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<{ name: string; email: string; role?: string } | null>(null);
+  const [userAvatar, setUserAvatar] = useState<string | null>(null);
 
   useEffect(() => {
     const user = getStoredAuthState();
@@ -74,6 +77,10 @@ export function Sidebar({ navItems }: SidebarProps) {
         email: user.email || "",
         role: user.role,
       });
+    }
+    const avatar = localStorage.getItem(AVATAR_STORAGE_KEY);
+    if (avatar) {
+      setUserAvatar(avatar);
     }
   }, []);
 
@@ -157,11 +164,16 @@ export function Sidebar({ navItems }: SidebarProps) {
       >
         <div style={{
           width: 32, height: 32, borderRadius: "50%",
-          background: `linear-gradient(135deg, ${t.brand600}, ${t.brand400})`,
+          background: userAvatar ? "transparent" : `linear-gradient(135deg, ${t.brand600}, ${t.brand400})`,
           display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 13, color: "white", fontWeight: 700,
+          fontSize: 13, color: userAvatar ? "transparent" : "white", fontWeight: 700,
+          overflow: "hidden",
         }}>
-          {initials}
+          {userAvatar ? (
+            <img src={userAvatar} alt="Avatar" style={{ width: 32, height: 32, objectFit: "cover", borderRadius: "50%" }} />
+          ) : (
+            initials
+          )}
         </div>
         <div>
           <div style={{ fontSize: 12, fontWeight: 600, color: t.textPrimary }}>{currentUser?.name || "Usuario"}</div>
