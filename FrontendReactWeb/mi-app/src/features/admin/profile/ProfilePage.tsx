@@ -23,6 +23,8 @@ export function ProfilePage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  const isAdmin = user?.role === 'admin' || user?.role === 'moderation';
+
   React.useEffect(() => {
     if (user) {
       setFormData({
@@ -296,10 +298,10 @@ export function ProfilePage() {
           }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {[
-                { label: 'Nombre completo', name: 'name', type: 'text' },
-                { label: 'Email', name: 'email', type: 'email' },
-                { label: 'Teléfono', name: 'phone', type: 'tel' },
-                { label: 'Departamento', name: 'department', type: 'text' },
+                { label: 'Nombre completo', name: 'name', type: 'text', disabled: false },
+                { label: 'Email', name: 'email', type: 'email', disabled: true },
+                { label: 'Teléfono', name: 'phone', type: 'tel', disabled: false },
+                { label: 'Departamento', name: 'department', type: 'text', disabled: !isAdmin },
               ].map(field => (
                 <div key={field.name}>
                   <label style={{
@@ -316,6 +318,7 @@ export function ProfilePage() {
                     name={field.name}
                     value={formData[field.name as keyof typeof formData] || ''}
                     onChange={handleInputChange}
+                    disabled={field.disabled || !isEditing}
                     style={{
                       width: '100%',
                       padding: '10px 12px',
@@ -327,8 +330,10 @@ export function ProfilePage() {
                       background: colors.bg.primary,
                       boxSizing: 'border-box',
                       transition: 'border-color 0.2s',
+                      opacity: (field.disabled || !isEditing) ? 0.6 : 1,
                     }}
                     onFocus={(e) => {
+                      if (!isEditing) return;
                       (e.target as HTMLInputElement).style.borderColor = colors.primary;
                     }}
                     onBlur={(e) => {

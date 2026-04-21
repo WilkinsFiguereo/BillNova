@@ -60,12 +60,21 @@ export function useSession(): UseSessionReturn {
     }
   }, []);
 
-  const updateProfile = useCallback(async (data: { name?: string; phone?: string }) => {
+  const updateProfile = useCallback(async (data: { name?: string; phone?: string; companyName?: string }) => {
     const cached = getStoredAuthState();
-    const result = await authApi.updateProfile(cached?.sessionToken, data);
+    const result = await authApi.updateProfile(cached?.sessionToken, {
+      name: data.name,
+      phone: data.phone,
+    });
     if (result.ok && user) {
-      setUser({ ...user, name: data.name ?? user.name });
-      persistAuthState({ ...user, name: data.name ?? user.name }, getRememberMeDefault());
+      const updated = {
+        ...user,
+        name: data.name ?? user.name,
+        phone: data.phone ?? user.phone,
+        companyName: data.companyName ?? user.companyName,
+      };
+      setUser(updated);
+      persistAuthState(updated, getRememberMeDefault());
     }
     return result;
   }, [user]);

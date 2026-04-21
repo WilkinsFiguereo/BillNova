@@ -16,6 +16,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { useSession } from "@/features/auth/login/hooks/useSession";
+import { authApi } from "@/features/auth/login/data/api";
+import { getStoredAuthState } from "@/features/auth/login/data/storage";
 import { Sidebar } from "@/features/seller/dashboard/dashboards";
 import { MODERATOR_NAV_ITEMS } from "@/features/moderator/moderationNav";
 import { dashboardTheme as t, globalStyles } from "@/features/seller/dashboard/theme/dashboard.theme";
@@ -33,19 +35,59 @@ export default function ProfilePage() {
     department: "",
   });
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [savedAvatar, setSavedAvatar] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+
+  const userRole = user?.role;
+  const isPrivileged = userRole === "admin" || userRole === "moderation";
 
   useEffect(() => {
-    if (!isLoading && user && !initialized) {
-      setFormData({
-        name: user.name || user.email?.split("@")[0] || "",
-        email: user.email || "",
-        phone: user.phone || "",
-        department: user.companyName || "",
-      });
-      setInitialized(true);
+    const storedAvatar = localStorage.getItem("billnova.user.avatar");
+    if (storedAvatar) {
+      setSavedAvatar(storedAvatar);
     }
-  }, [user, isLoading, initialized]);
+  }, []);
+
+  useEffect(() => {
+    const loadProfileData = async () => {
+      if (isLoading) return;
+      
+      setLoadingProfile(true);
+      try {
+        const stored = getStoredAuthState();
+        if (stored?.sessionToken) {
+          const response = await authApi.getProfile(stored.sessionToken);
+          if (response.ok && response.user) {
+            setFormData({
+              name: response.user.name || user?.name || user?.email?.split("@")[0] || "",
+              email: response.user.email || user?.email || "",
+              phone: response.user.phone || user?.phone || "",
+              department: user?.companyName || "",
+            });
+            setInitialized(true);
+            setLoadingProfile(false);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Error loading profile:", err);
+      }
+      
+      if (user) {
+        setFormData({
+          name: user.name || user.email?.split("@")[0] || "",
+          email: user.email || "",
+          phone: user.phone || "",
+          department: user.companyName || "",
+        });
+      }
+      setInitialized(true);
+      setLoadingProfile(false);
+    };
+
+    loadProfileData();
+  }, [user, isLoading]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -65,19 +107,33 @@ export default function ProfilePage() {
   };
 
   const handleSave = async () => {
-    if (!formData.name.trim() && !formData.phone.trim()) return;
+    if (!formData.name.trim()) return;
     setIsSaving(true);
     setSaveStatus("idle");
     
     try {
-      const result = await updateProfile({
+      if (avatarPreview) {
+        await authApi.updateAvatar(undefined, avatarPreview);
+      }
+      
+      const profileData: { name?: string; phone?: string; companyName?: string } = {
         name: formData.name,
         phone: formData.phone,
-      });
+      };
+      
+      if (isPrivileged && formData.department) {
+        profileData.companyName = formData.department;
+      }
+      
+      const result = await updateProfile(profileData);
       
       if (result.ok) {
         setSaveStatus("success");
         setIsEditing(false);
+        if (avatarPreview) {
+          setSavedAvatar(avatarPreview);
+        }
+        setAvatarPreview(null);
         setTimeout(() => setSaveStatus("idle"), 3000);
       } else {
         setSaveStatus("error");
@@ -99,6 +155,28 @@ export default function ProfilePage() {
         .toUpperCase()
         .slice(0, 2)
     : "U";
+
+  if (loadingProfile || isLoading) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          minHeight: "100vh",
+          fontFamily: "'DM Sans', 'Segoe UI', sans-serif",
+          background: t.bgMain,
+          color: t.textPrimary,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <div style={{ textAlign: "center" }}>
+          <Loader2 size={40} style={{ animation: "spin 1s linear infinite", color: t.brand600 }} />
+          <p style={{ marginTop: 16, color: t.textSecondary }}>Cargando perfil...</p>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -162,18 +240,32 @@ export default function ProfilePage() {
                   width: 80,
                   height: 80,
                   borderRadius: "50%",
-                  background: `linear-gradient(135deg, ${t.brand600}, ${t.brand400})`,
+                  background: avatarPreview || savedAvatar
+                    ? "transparent"
+                    : `linear-gradient(135deg, ${t.brand600}, ${t.brand400})`,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   fontSize: 28,
                   fontWeight: 700,
                   color: "white",
+                  overflow: "hidden",
                 }}
               >
                 {avatarPreview ? (
                   <img
                     src={avatarPreview}
+                    alt="Avatar"
+                    style={{
+                      width: 80,
+                      height: 80,
+                      borderRadius: "50%",
+                      objectFit: "cover",
+                    }}
+                  />
+                ) : savedAvatar ? (
+                  <img
+                    src={savedAvatar}
                     alt="Avatar"
                     style={{
                       width: 80,
@@ -276,7 +368,7 @@ export default function ProfilePage() {
               name="email"
               value={formData.email}
               onChange={handleInputChange}
-              disabled={!isEditing}
+              disabled={true}
               type="email"
             />
             <ProfileField
@@ -294,7 +386,7 @@ export default function ProfilePage() {
               name="department"
               value={formData.department}
               onChange={handleInputChange}
-              disabled={!isEditing}
+              disabled={!isPrivileged}
             />
           </div>
 
