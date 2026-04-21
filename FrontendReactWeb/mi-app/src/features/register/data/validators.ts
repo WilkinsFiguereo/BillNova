@@ -1,4 +1,4 @@
-import type { PasswordStrength, RegisterPayload } from "../types/register.types";
+import type { PasswordStrength, RegisterPayload } from "../../auth/register/types/register.types";
 
 type ValidationErrors = Partial<Record<keyof RegisterPayload, string>>;
 
@@ -11,9 +11,9 @@ export function validateRegisterForm(v: RegisterPayload): ValidationErrors {
   if (!v.email.trim()) err.email = "El correo es requerido";
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email.trim())) err.email = "Debe ser un correo valido";
 
-  if (!v.username.trim()) err.username = "El nombre de usuario es requerido";
-  else if (v.username.trim().length < 3) err.username = "Minimo 3 caracteres";
-  else if (!/^[a-zA-Z0-9._-]+$/.test(v.username.trim())) err.username = "Solo letras, numeros, punto, guion y guion bajo";
+  if (!v.login.trim()) err.login = "El nombre de usuario es requerido";
+  else if (v.login.trim().length < 3) err.login = "Minimo 3 caracteres";
+  else if (!/^[a-zA-Z0-9._-]+$/.test(v.login.trim())) err.login = "Solo letras, numeros, punto, guion y guion bajo";
 
   if (!v.password) err.password = "La contrasena es requerida";
   else if (v.password.length < 6) err.password = "Debe tener al menos 6 caracteres";

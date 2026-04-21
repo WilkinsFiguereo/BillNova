@@ -1,39 +1,8 @@
 "use client";
 
-import { ODOO_URL } from "@/lib/odooApi";
-import { getStoredAuthState } from "@/features/auth/login/data/storage";
-
-const BASE_URL = ODOO_URL.replace(/\/+$/, "");
+import { odooRequest, odooGet, odooPut } from "@/lib/odooApi";
 
 type AnyObj = Record<string, any>;
-
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const url = `${BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
-  let res: Response;
-  const auth = getStoredAuthState();
-
-  try {
-    res = await fetch(url, {
-      ...init,
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        ...(auth?.sessionToken ? { "X-Auth-Session": auth.sessionToken } : {}),
-        ...(init?.headers ?? {}),
-      },
-    });
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : "Unknown network error";
-    throw new Error(`No se pudo conectar con Odoo en ${url}. Verifica NEXT_PUBLIC_ODOO_URL y que el backend este levantado. Detalle: ${detail}`);
-  }
-
-  const text = await res.text().catch(() => "");
-  const json = text ? (JSON.parse(text) as T) : ({} as T);
-  if (!res.ok) {
-    throw new Error(`Odoo respondio con HTTP ${res.status} en ${url}`);
-  }
-  return json;
-}
 
 function unwrapArray(payload: any): any[] {
   if (Array.isArray(payload)) return payload;
@@ -188,7 +157,7 @@ function avatarColorFromId(id: string): string {
 }
 
 export async function apiListModeratorProducts(): Promise<ModeratorProduct[]> {
-  const payload = await request<any>("/api/products", { method: "GET" });
+  const payload = await odooRequest<any>("/api/products", { method: "GET" });
   const rows = unwrapArray(payload);
   return rows.map((r: AnyObj) => ({
     id: String(r.id ?? ""),
@@ -214,7 +183,7 @@ export async function apiSetProductModerationStatus(
   status: "pending" | "approved" | "rejected",
   reason?: string,
 ): Promise<void> {
-  await request(`/api/products/${encodeURIComponent(productId)}`, {
+  await odooRequest(`/api/products/${encodeURIComponent(productId)}`, {
     method: "PUT",
     body: JSON.stringify({
       moderation_status: status,
@@ -225,8 +194,8 @@ export async function apiSetProductModerationStatus(
 
 export async function apiListModeratorUsers(): Promise<ModeratorUser[]> {
   const [usersPayload, bnPayload] = await Promise.all([
-    request<any>("/api/users", { method: "GET" }),
-    request<any>("/api/billnova-users", { method: "GET" }),
+    odooRequest<any>("/api/users", { method: "GET" }),
+    odooRequest<any>("/api/billnova-users", { method: "GET" }),
   ]);
 
   const users = unwrapArray(usersPayload);
@@ -245,7 +214,7 @@ export async function apiListModeratorUsers(): Promise<ModeratorUser[]> {
 export async function apiListRecentReviewsFromProducts(productIds: string[]): Promise<ModeratorReview[]> {
   const tasks = productIds.slice(0, 10).map(async (productId) => {
     try {
-      const payload = await request<any>(`/api/products/${encodeURIComponent(productId)}/reviews`, { method: "GET" });
+      const payload = await odooRequest<any>(`/api/products/${encodeURIComponent(productId)}/reviews`, { method: "GET" });
       const reviews = unwrapArray(payload);
       return reviews.slice(0, 3).map((r: AnyObj) => ({
         reviewId: String(r.review_id ?? ""),
@@ -269,7 +238,7 @@ export async function apiListProductReviewStats(productIds: string[]): Promise<M
   await Promise.all(
     productIds.map(async (productId) => {
       try {
-        const payload = await request<any>(`/api/products/${encodeURIComponent(productId)}/reviews`, { method: "GET" });
+        const payload = await odooRequest<any>(`/api/products/${encodeURIComponent(productId)}/reviews`, { method: "GET" });
         const stats = payload?.stats ?? {};
         const distributionRaw = stats.distribution ?? {};
         statsMap.set(productId, {
@@ -297,7 +266,7 @@ export async function apiListProductReviewStats(productIds: string[]): Promise<M
 }
 
 export async function apiListModeratorCompanies(): Promise<ModeratorCompany[]> {
-  const payload = await request<any>("/api/companies", { method: "GET" });
+  const payload = await odooRequest<any>("/api/companies", { method: "GET" });
   const rows = unwrapArray(payload);
 
   return rows.map((row: AnyObj) => ({
@@ -330,7 +299,7 @@ export async function apiSetCompanyModerationStatus(
   status: "pending" | "approved" | "rejected",
   reason?: string,
 ): Promise<void> {
-  await request(`/api/companies/${encodeURIComponent(companyId)}`, {
+  await odooRequest(`/api/companies/${encodeURIComponent(companyId)}`, {
     method: "PUT",
     body: JSON.stringify({
       moderation_status: status,
@@ -340,7 +309,7 @@ export async function apiSetCompanyModerationStatus(
 }
 
 export async function apiListModeratorPosOrders(): Promise<ModeratorPosOrder[]> {
-  const payload = await request<any>("/api/pos/orders", { method: "GET" });
+  const payload = await odooRequest<any>("/api/pos/orders", { method: "GET" });
   const rows = unwrapArray(payload);
 
   return rows.map((row: AnyObj) => ({
@@ -362,7 +331,7 @@ export async function apiListModeratorPosOrders(): Promise<ModeratorPosOrder[]> 
 }
 
 export async function apiListModeratorReports(): Promise<ModeratorReport[]> {
-  const payload = await request<any>("/api/moderation/reports", { method: "GET" });
+  const payload = await odooRequest<any>("/api/moderation/reports", { method: "GET" });
   return unwrapArray(payload) as ModeratorReport[];
 }
 
@@ -370,7 +339,7 @@ export async function apiUpdateModeratorReport(
   reportId: string,
   payload: { estado?: ModeratorReport["estado"]; nota?: string; notasModerador?: string },
 ): Promise<ModeratorReport> {
-  const res = await request<any>(`/api/moderation/reports/${encodeURIComponent(reportId)}`, {
+  const res = await odooRequest<any>(`/api/moderation/reports/${encodeURIComponent(reportId)}`, {
     method: "PUT",
     body: JSON.stringify(payload),
   });

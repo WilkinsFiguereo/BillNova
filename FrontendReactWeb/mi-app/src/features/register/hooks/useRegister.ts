@@ -2,14 +2,14 @@
 
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
-import { registerApi } from "../data/api";
+import { registerApi } from "../../auth/register/data/api";
 import { validateRegisterForm } from "../data/validators";
-import type { RegisterFormState, RegisterPayload } from "../types/register.types";
+import type { RegisterFormState, RegisterPayload } from "../../auth/register/types/register.types";
 
 const INITIAL_VALUES: RegisterPayload = {
   name: "",
   email: "",
-  username: "",
+  login: "",
   password: "",
 };
 

@@ -3,6 +3,7 @@ import {
   FileText,
   LayoutDashboard,
   Package,
+  Settings,
   ShoppingCart,
   Users,
   type LucideIcon,
@@ -45,5 +46,11 @@ export const ADMIN_NAV_ITEMS: AdminNavItemData[] = [
     Icon: FileText,
     label: "Reportes",
     href: "/navigation/admin/reports/page",
+  },
+  {
+    id: "configuracion",
+    Icon: Settings,
+    label: "Configuración",
+    href: "/navigation/config/page",
   },
 ];

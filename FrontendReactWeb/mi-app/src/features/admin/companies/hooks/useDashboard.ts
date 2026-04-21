@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { odooPut } from '@/lib/odooApi';
 import { mockCompanies } from '../data/mockCompanies';
-import type { Company, CompanyStats, CompaniesData } from '../types/company.types';
+import type { Company, CompanyStats } from '../types/company.types';
 
 interface UseDashboardReturn {
   companies: Company[];
@@ -13,9 +14,44 @@ interface UseDashboardReturn {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   filteredCompanies: Company[];
+  updateCompany: (companyId: number, updates: Partial<Company>) => Promise<Company>;
 }
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
+
+function normalizeCompanyStatus(value: unknown): Company['status'] {
+  if (value === 'Activa' || value === 'Pendiente' || value === 'Inactiva') {
+    return value;
+  }
+
+  if (value === 'approved') return 'Activa';
+  if (value === 'pending') return 'Pendiente';
+  if (value === 'rejected') return 'Inactiva';
+  return 'Pendiente';
+}
+
+function normalizePlan(value: unknown, index: number): Company['plan'] {
+  if (value === 'Starter' || value === 'Business' || value === 'Premium') {
+    return value;
+  }
+
+  return ['Starter', 'Business', 'Premium'][index % 3] as Company['plan'];
+}
+
+function toApiPayload(updates: Partial<Company>) {
+  const payload: Record<string, unknown> = { ...updates };
+
+  if (updates.status) {
+    payload.moderation_status =
+      updates.status === 'Activa'
+        ? 'approved'
+        : updates.status === 'Inactiva'
+          ? 'rejected'
+          : 'pending';
+  }
+
+  return payload;
+}
 
 export function useDashboard(): UseDashboardReturn {
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -69,13 +105,15 @@ export function useDashboard(): UseDashboardReturn {
         console.warn('[Dashboard] No companies found in response, using mock data');
         setCompanies(mockCompanies);
       } else {
-        // Enriquecer datos con status y plan aleatorios
         companiesList = companiesList.map((company: any, index: number) => ({
           ...company,
-          status: index % 3 === 0 ? 'Pendiente' : index % 2 === 0 ? 'Activa' : 'Activa',
-          plan: ['Starter', 'Business', 'Premium'][index % 3] as any,
-          revenue: Math.floor(Math.random() * 500000) + 50000,
-          createdAt: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
+          status: normalizeCompanyStatus(company.status ?? company.moderation_status),
+          plan: normalizePlan(company.plan, index),
+          revenue: company.revenue ?? Math.floor(Math.random() * 500000) + 50000,
+          createdAt:
+            company.createdAt ??
+            company.create_date ??
+            new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
         }));
 
         setCompanies(companiesList);
@@ -121,6 +159,25 @@ export function useDashboard(): UseDashboardReturn {
     );
   }, [companies, searchQuery]);
 
+  const updateCompany = useCallback(async (companyId: number, updates: Partial<Company>) => {
+    const current = companies.find((company) => company.id === companyId);
+    if (!current) {
+      throw new Error('Empresa no encontrada');
+    }
+
+    const nextCompany = { ...current, ...updates };
+
+    if (!USE_MOCK) {
+      await odooPut(`/api/companies/${companyId}`, toApiPayload(updates));
+    }
+
+    setCompanies((prev) =>
+      prev.map((company) => (company.id === companyId ? nextCompany : company)),
+    );
+
+    return nextCompany;
+  }, [companies]);
+
   return {
     companies,
     stats,
@@ -130,5 +187,6 @@ export function useDashboard(): UseDashboardReturn {
     searchQuery,
     setSearchQuery,
     filteredCompanies,
+    updateCompany,
   };
 }

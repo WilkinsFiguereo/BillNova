@@ -4,6 +4,7 @@ export type CompanyPlan = 'Starter' | 'Business' | 'Premium';
 export interface Company {
   id: number;
   name: string;
+  email?: string;
   ruc?: string;
   sector?: string;
   website?: string;

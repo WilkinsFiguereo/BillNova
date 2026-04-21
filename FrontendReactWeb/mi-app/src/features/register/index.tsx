@@ -1,12 +1,12 @@
 "use client";
 
 import { useRegister } from "./hooks/useRegister";
-import { RegisterFormSection } from "./sections/RegisterFormSection";
-import { RegisterSuccessSection } from "./sections/RegisterSuccessSection";
+import { RegisterFormSection } from "../auth/register/sections/RegisterFormSection";
+import { RegisterSuccessSection } from "../auth/register/sections/RegisterSuccessSection";
 
 export { useRegister } from "./hooks/useRegister";
-export { registerApi } from "./data/api";
-export type { RegisterPayload } from "./types/register.types";
+export { registerApi } from "../auth/register/data/api";
+export type { RegisterPayload } from "../auth/register/types/register.types";
 
 export function RegisterPage() {
   const { state, handleChange, handleSubmit } = useRegister();

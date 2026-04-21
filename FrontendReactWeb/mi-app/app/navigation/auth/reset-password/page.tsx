@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useResetPassword } from "@/features/auth/login";
+import { Suspense } from "react";
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email") ?? "";
   const token = searchParams.get("token") ?? "";
@@ -92,7 +93,8 @@ export default function ResetPasswordPage() {
           <div className="card">
             <div className="card-accent" aria-hidden />
             <div className="card-body">
-              {success ? (
+              <Suspense fallback={<div style={{ padding: 40, textAlign: "center" }}>Cargando...</div>}>
+                {success ? (
                 <div className="success-wrap show">
                   <div className="success-ring" aria-hidden>
                     <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
@@ -229,10 +231,19 @@ export default function ResetPasswordPage() {
               <p className="terms" style={{ marginTop: "1rem" }}>
                 <Link href="/navigation/auth/login">Volver a login</Link>
               </p>
+              </Suspense>
             </div>
           </div>
         </div>
       </section>
     </main>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 40, textAlign: "center" }}>Cargando...</div>}>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

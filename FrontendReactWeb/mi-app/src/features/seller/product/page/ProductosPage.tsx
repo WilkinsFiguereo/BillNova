@@ -203,7 +203,6 @@ export default function ProductosPage() {
             open={isModalOpen}
             onClose={closeModal}
             title={modalMode === "create" ? "Agregar producto" : "Editar producto"}
-            width={520}
           >
             <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
 

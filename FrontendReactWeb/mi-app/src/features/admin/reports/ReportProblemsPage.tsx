@@ -58,7 +58,7 @@ export function ReportProblemsPage() {
     if (!formData.title.trim() || !formData.description.trim()) {
       setSubmitError('Por favor completa el título y descripción');
       return;
-    }damaged
+    }
 
     try {
       await submitReport(formData);

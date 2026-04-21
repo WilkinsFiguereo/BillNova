@@ -37,7 +37,7 @@ export function useEmployees(companyId: string) {
     setError(null);
     try {
       const res = await companyApi.listEmployees(companyId);
-      if (res.ok) {
+      if (res.ok && res.employees) {
         setEmployees(res.employees.map(mapEmployeeFromApi));
       }
     } catch (err) {

@@ -11,7 +11,7 @@ import {
   Receipt, CreditCard, Clock,
 } from "lucide-react";
 import { OrdenCampo, OrdenDir, VistaMode } from "../types/facturas.types";
-import { OdooFactura } from "../hooks/useFacturasOdoo";
+import { OdooFactura } from "../hooks/useFacturas";
 import { facturasTheme as t } from "../theme/facturas.theme";
 import { STATUS_FILTERS } from "../data/facturas.data";
 

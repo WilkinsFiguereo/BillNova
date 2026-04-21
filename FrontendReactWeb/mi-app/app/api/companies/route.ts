@@ -1,4 +1,4 @@
-import { getOdooUrl } from '@/lib/odooServer';
+import { getOdooUrl } from "@/lib/odooApi";
 
 export async function GET() {
   try {
@@ -7,9 +7,9 @@ export async function GET() {
     console.log('[Companies API] Fetching from:', url);
 
     const response = await fetch(url, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     });
 
@@ -23,7 +23,7 @@ export async function GET() {
         { 
           error: `Failed to fetch companies: ${response.statusText}`,
           message: `Backend returned ${response.status}`,
-          details: errorText || 'No error details provided',
+          details: errorText || "No error details provided",
           status: response.status,
           debugUrl: url,
         },
@@ -42,7 +42,7 @@ export async function GET() {
       { 
         error: 'Failed to fetch companies from backend',
         message: error instanceof Error ? error.message : String(error),
-        details: error instanceof Error ? error.stack : 'Unknown error',
+        details: error instanceof Error ? error.stack : "Unknown error",
       },
       { status: 500 },
     );

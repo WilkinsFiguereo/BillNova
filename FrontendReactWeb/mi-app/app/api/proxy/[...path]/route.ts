@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getOdooUrl } from "@/lib/odooApi";
 
-const ODOO_URL = (process.env.ODOO_URL ?? "https://jwfn4vcd-8079.use2.devtunnels.ms").replace(/\/+$/, "");
+const ODOO_URL = getOdooUrl();
 
 export async function GET(
   request: NextRequest,

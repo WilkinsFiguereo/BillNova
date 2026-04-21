@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useVerifyEmail } from "@/features/auth/login";
+import { Suspense } from "react";
 
-export default function VerifyEmailPage() {
+function VerifyEmailForm() {
   const search = useSearchParams();
   const initialEmail = search.get("email") ?? "";
   const {
@@ -155,5 +156,13 @@ export default function VerifyEmailPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 40, textAlign: "center" }}>Cargando...</div>}>
+      <VerifyEmailForm />
+    </Suspense>
   );
 }

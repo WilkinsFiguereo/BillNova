@@ -42,6 +42,6 @@ export const MODERATOR_NAV_ITEMS: NavItemData[] = [
     id: "config",
     Icon: Settings,
     label: "Configuración",
-    href: "/navigation/admin/config/page",
+    href: "/navigation/config/page",
   },
 ];

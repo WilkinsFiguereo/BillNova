@@ -7,9 +7,10 @@ import type { Company } from '../types/company.types';
 
 interface EmpresaCardProps {
   company: Company;
+  onViewDetails: (company: Company) => void;
 }
 
-export function EmpresaCard({ company }: EmpresaCardProps) {
+export function EmpresaCard({ company, onViewDetails }: EmpresaCardProps) {
   return (
     <tr>
       <td
@@ -80,6 +81,7 @@ export function EmpresaCard({ company }: EmpresaCardProps) {
         }}
       >
         <button
+          onClick={() => onViewDetails(company)}
           style={{
             padding: '5px 12px',
             background: 'transparent',

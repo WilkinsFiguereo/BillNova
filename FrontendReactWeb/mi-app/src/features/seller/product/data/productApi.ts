@@ -1,8 +1,6 @@
-import odooConfig from "../../../../lib/odooConfig";
+import { ODOO_URL as baseUrl } from "@/lib/odooApi";
 import type { Producto } from "../types/productos.types";
 import { getActiveCompanyId } from "@/features/seller/shared/companySession";
-
-const { baseUrl } = odooConfig;
 
 function jsonHeaders(): HeadersInit {
   return { "Content-Type": "application/json" };

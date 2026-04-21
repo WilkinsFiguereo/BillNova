@@ -1,134 +1,76 @@
-// src/features/users/data/userApi.ts
-
-import odooConfig from "../../../../lib/odooConfig";
+import {
+  odooDelete,
+  odooGet,
+  odooPost,
+  odooPut,
+} from "@/lib/odooApi";
 import type {
-  ResUser,
   BillnovaUser,
   CreateUserPayload,
+  ResUser,
   UpdateUserPayload,
 } from "../types/user.types";
 
-const { baseUrl } = odooConfig;
+type CreateResponse = { id: number; message: string };
 
-// ── Helper ────────────────────────────────────────────────────────────────────
-function jsonHeaders(): HeadersInit {
-  return { "Content-Type": "application/json" };
-}
-
-async function checkResponse<T>(res: Response): Promise<T> {
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error ?? `HTTP ${res.status}`);
-  }
-  const json = await res.json();
-  return (json.data ?? json) as T;
-}
-
-// ════════════════════════════════════════════════════════════════════════════
-//  res.users  —  /api/users
-// ════════════════════════════════════════════════════════════════════════════
-
+// res.users - /api/users
 export async function apiGetResUsers(): Promise<ResUser[]> {
-  const res = await fetch(`${baseUrl}/api/users`, {
-    credentials: "include",
-    headers:     jsonHeaders(),
-  });
-  return checkResponse<ResUser[]>(res);
+  return odooGet<ResUser[]>("/api/users");
 }
 
 export async function apiGetResUserById(id: number): Promise<ResUser> {
-  const res = await fetch(`${baseUrl}/api/users/${id}`, {
-    credentials: "include",
-    headers:     jsonHeaders(),
-  });
-  return checkResponse<ResUser>(res);
+  return odooGet<ResUser>(`/api/users/${id}`);
 }
 
 export async function apiCreateResUser(
-  payload: Pick<CreateUserPayload, "name" | "login" | "email" | "password">
-): Promise<{ id: number; message: string }> {
-  const res = await fetch(`${baseUrl}/api/users`, {
-    method:      "POST",
-    credentials: "include",
-    headers:     jsonHeaders(),
-    body:        JSON.stringify(payload),
-  });
-  return checkResponse(res);
+  payload: Pick<CreateUserPayload, "name" | "login" | "email" | "password">,
+): Promise<CreateResponse> {
+  return odooPost<CreateResponse>("/api/users", payload);
 }
 
 export async function apiUpdateResUser(
-  id:      number,
-  payload: Partial<Pick<UpdateUserPayload, "name" | "login" | "email" | "password" | "active">>
+  id: number,
+  payload: Partial<
+    Pick<UpdateUserPayload, "name" | "login" | "email" | "password" | "active">
+  >,
 ): Promise<void> {
-  const res = await fetch(`${baseUrl}/api/users/${id}`, {
-    method:      "PUT",
-    credentials: "include",
-    headers:     jsonHeaders(),
-    body:        JSON.stringify(payload),
-  });
-  await checkResponse(res);
+  await odooPut("/api/users/" + id, payload);
 }
 
 export async function apiDeleteResUser(id: number): Promise<void> {
-  const res = await fetch(`${baseUrl}/api/users/${id}`, {
-    method:      "DELETE",
-    credentials: "include",
-    headers:     jsonHeaders(),
-  });
-  await checkResponse(res);
+  await odooDelete("/api/users/" + id);
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-//  billnova.user  —  /api/billnova-users
-// ════════════════════════════════════════════════════════════════════════════
-
+// billnova.user - /api/billnova-users
 export async function apiGetBillnovaUsers(): Promise<BillnovaUser[]> {
-  const res = await fetch(`${baseUrl}/api/billnova-users`, {
-    credentials: "include",
-    headers:     jsonHeaders(),
-  });
-  return checkResponse<BillnovaUser[]>(res);
+  return odooGet<BillnovaUser[]>("/api/billnova-users");
 }
 
 export async function apiGetBillnovaUserByResId(
-  resUserId: number
+  resUserId: number,
 ): Promise<BillnovaUser | null> {
   const all = await apiGetBillnovaUsers();
-  return all.find((u) => u.res_user_id === resUserId) ?? null;
+  return all.find((user) => user.res_user_id === resUserId) ?? null;
 }
 
 export async function apiCreateBillnovaUser(
-  payload: Pick<CreateUserPayload, "name" | "email" | "phone" | "address" | "is_mobile_user"> & {
+  payload: Pick<
+    CreateUserPayload,
+    "name" | "email" | "phone" | "address" | "is_mobile_user"
+  > & {
     res_user_id: number;
-  }
-): Promise<{ id: number; message: string }> {
-  const res = await fetch(`${baseUrl}/api/billnova-users`, {
-    method:      "POST",
-    credentials: "include",
-    headers:     jsonHeaders(),
-    body:        JSON.stringify(payload),
-  });
-  return checkResponse(res);
+  },
+): Promise<CreateResponse> {
+  return odooPost<CreateResponse>("/api/billnova-users", payload);
 }
 
 export async function apiUpdateBillnovaUser(
-  id:      number,
-  payload: Partial<Pick<UpdateUserPayload, "phone" | "address" | "is_mobile_user">>
+  id: number,
+  payload: Partial<Pick<UpdateUserPayload, "phone" | "address" | "is_mobile_user">>,
 ): Promise<void> {
-  const res = await fetch(`${baseUrl}/api/billnova-users/${id}`, {
-    method:      "PUT",
-    credentials: "include",
-    headers:     jsonHeaders(),
-    body:        JSON.stringify(payload),
-  });
-  await checkResponse(res);
+  await odooPut("/api/billnova-users/" + id, payload);
 }
 
 export async function apiDeleteBillnovaUser(id: number): Promise<void> {
-  const res = await fetch(`${baseUrl}/api/billnova-users/${id}`, {
-    method:      "DELETE",
-    credentials: "include",
-    headers:     jsonHeaders(),
-  });
-  await checkResponse(res);
+  await odooDelete("/api/billnova-users/" + id);
 }
