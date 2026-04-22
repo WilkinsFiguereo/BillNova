@@ -88,7 +88,7 @@ export function useLogin() {
             uid: sessionInfo?.uid ?? response.uid,
             email: sessionInfo?.email ?? values.username,
             name: sessionInfo?.name ?? values.username,
-            role: sessionInfo?.role ?? "admin",
+            role: sessionInfo?.role ?? "moderation",
             sessionToken: sessionInfo?.session_token ?? response.session_token ?? undefined,
             sessionExpiresAt: sessionInfo?.session_expires_at ?? undefined,
           };

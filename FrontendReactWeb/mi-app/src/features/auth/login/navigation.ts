@@ -13,6 +13,6 @@ export function getLandingRouteForRole(role?: AuthRole | null): string {
     case "user":
       return "/navigation/seller/dashboard";
     default:
-      return "/navigation/admin/dashboard/page";
+      return "/navigation/moderation/dashboard/page";
   }
 }

@@ -37,7 +37,7 @@ export function useVerifyEmail(initialEmail = "") {
       const res = await authApi.verifyEmail({ email, code });
       if (res.ok) {
         setMessage("Correo verificado. Ya puedes continuar.");
-        setTimeout(() => router.push("/navigation/admin/dashboard/page"), 1200);
+        setTimeout(() => router.push("/navigation/moderation/dashboard/page"), 1200);
         return;
       }
       if (res.retry_after_seconds) setCooldown(res.retry_after_seconds);
