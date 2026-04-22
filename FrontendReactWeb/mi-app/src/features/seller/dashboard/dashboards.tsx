@@ -71,6 +71,8 @@ function getRoleLabel(role: string | undefined): string {
       return 'Vendedor';
     case 'gerente':
       return 'Gerente';
+    case 'worker':
+      return 'Trabajador';
     default:
       return role || 'Usuario';
   }

@@ -5,6 +5,7 @@ export const ROLE_LANDING_ROUTES: Record<UserRole, string> = {
   moderator: "/navigation/moderation/dashboard/page",
   seller: "/navigation/seller/dashboard/page",
   gerente: "/navigation/seller/dashboard/page",
+  worker: "/navigation/seller/dashboard/page",
 };
 
 export function normalizeUserRole(role: unknown): UserRole {
@@ -25,6 +26,9 @@ export function normalizeUserRole(role: unknown): UserRole {
 
     gerente: "gerente",
     manager: "gerente",
+
+    worker: "worker",
+    trabajador: "worker",
   };
 
   return aliases[normalized] ?? "seller";

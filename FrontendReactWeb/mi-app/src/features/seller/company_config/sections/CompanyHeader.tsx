@@ -8,9 +8,10 @@ import T from "@/features/seller/company_config/theme/appTheme";
 interface Props {
   company:  Company;
   onEdit:   () => void;
+  canEdit?: boolean;
 }
 
-export default function CompanyHeader({ company, onEdit }: Props) {
+export default function CompanyHeader({ company, onEdit, canEdit = true }: Props) {
   return (
     <div style={{
       background: T.bgCard, border: `1px solid ${T.border}`,
@@ -43,18 +44,20 @@ export default function CompanyHeader({ company, onEdit }: Props) {
         </div>
       </div>
 
-      <button
-        onClick={onEdit}
-        style={{
-          background: T.brand600, border: "none", borderRadius: 8,
-          padding: "9px 18px", fontSize: 13, fontWeight: 600, color: "#fff",
-          cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 7,
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.background = T.brand700)}
-        onMouseLeave={(e) => (e.currentTarget.style.background = T.brand600)}
-      >
-        <Pencil size={14} /> Editar empresa
-      </button>
+      {canEdit ? (
+        <button
+          onClick={onEdit}
+          style={{
+            background: T.brand600, border: "none", borderRadius: 8,
+            padding: "9px 18px", fontSize: 13, fontWeight: 600, color: "#fff",
+            cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 7,
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = T.brand700)}
+          onMouseLeave={(e) => (e.currentTarget.style.background = T.brand600)}
+        >
+          <Pencil size={14} /> Editar empresa
+        </button>
+      ) : null}
     </div>
   );
 }

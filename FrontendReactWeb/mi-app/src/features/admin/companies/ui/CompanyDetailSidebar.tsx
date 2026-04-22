@@ -161,11 +161,7 @@ export function CompanyDetailSidebar({
               <Badge status={company.status} />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 14 }}>
-              <div style={{ padding: 12, borderRadius: radius.md, background: '#fff', border: `1px solid ${colors.border}` }}>
-                <div style={{ fontSize: font.sizes.xs, color: colors.text.tertiary }}>Plan</div>
-                <div style={{ marginTop: 4 }}><Badge plan={company.plan} /></div>
-              </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10, marginTop: 14 }}>
               <div style={{ padding: 12, borderRadius: radius.md, background: '#fff', border: `1px solid ${colors.border}` }}>
                 <div style={{ fontSize: font.sizes.xs, color: colors.text.tertiary }}>Ingresos</div>
                 <div style={{ marginTop: 4, fontWeight: font.weights.bold }}>
@@ -197,7 +193,7 @@ export function CompanyDetailSidebar({
                 />
               </label>
               <label>
-                <div style={{ marginBottom: 6, fontSize: font.sizes.xs, color: colors.text.tertiary }}>Sector</div>
+                <div style={{ marginBottom: 6, fontSize: font.sizes.xs, color: colors.text.tertiary }}>Tipo de empresa</div>
                 <input
                   value={draft.sector ?? ''}
                   disabled={disabled}

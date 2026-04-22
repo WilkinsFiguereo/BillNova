@@ -52,14 +52,6 @@ export function EmpresaCard({ company, onViewDetails }: EmpresaCardProps) {
           borderBottom: `1px solid ${colors.border}`,
         }}
       >
-        <Badge plan={company.plan} />
-      </td>
-      <td
-        style={{
-          padding: '14px',
-          borderBottom: `1px solid ${colors.border}`,
-        }}
-      >
         <Badge status={company.status} />
       </td>
       <td

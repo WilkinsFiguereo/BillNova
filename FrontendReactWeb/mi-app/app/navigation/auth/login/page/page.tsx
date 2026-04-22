@@ -125,7 +125,7 @@ export default function LoginPage() {
 
                 {errorCode === "ACCOUNT_NOT_VERIFIED" && verificationEmail && (
                   <p className="fh-sub" style={{ marginTop: "-0.5rem" }}>
-                    <Link href={`/navigation/auth/verify-email?email=${encodeURIComponent(verificationEmail)}`}>Verificar correo / reenviar codigo</Link>
+                    <Link href={`/navigation/auth/verify-email?email=${encodeURIComponent(verificationEmail)}`}>Verificar correo / reenviar email</Link>
                   </p>
                 )}
 

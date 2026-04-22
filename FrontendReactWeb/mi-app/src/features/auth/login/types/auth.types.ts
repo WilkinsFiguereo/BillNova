@@ -1,4 +1,4 @@
-export type UserRole = "admin" | "moderator" | "seller" | "gerente";
+export type UserRole = "admin" | "moderator" | "seller" | "gerente" | "worker";
 
 export interface AuthUser {
   uid: number;
@@ -66,11 +66,12 @@ export interface ResetPasswordPayload {
 
 export interface VerifyEmailPayload {
   email: string;
-  code: string;
+  token: string;
 }
 
 export interface VerifyEmailResponse {
   ok: boolean;
+  message?: string;
   error?: string;
   code?: "OTP_TEMP_BLOCK" | "OTP_COOLDOWN" | "OTP_RESEND_LIMIT";
   retry_after_seconds?: number;

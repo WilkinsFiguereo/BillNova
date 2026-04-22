@@ -47,7 +47,7 @@ export const authApi = {
     odooPost<VerifyEmailResponse>(
       authPath("/verify-email"),
       payload,
-      { allowedStatuses: [400, 401, 403, 404, 409, 429] },
+      { allowedStatuses: [400, 401, 403, 404, 409, 410, 429] },
     ),
 
   resendVerificationCode: async (email: string): Promise<ResendCodeResponse> =>

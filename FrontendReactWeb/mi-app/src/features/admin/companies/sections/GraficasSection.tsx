@@ -9,24 +9,24 @@ interface GraficasSectionProps {
 }
 
 export function GraficasSection({ companies }: GraficasSectionProps) {
-  // Calculate distribution data
   const chartData = useMemo(() => {
     const statusDist = {
-      Activa: companies.filter(c => c.status === 'Activa').length,
-      Pendiente: companies.filter(c => c.status === 'Pendiente').length,
-      Inactiva: companies.filter(c => c.status === 'Inactiva').length,
+      Activa: companies.filter((company) => company.status === 'Activa').length,
+      Pendiente: companies.filter((company) => company.status === 'Pendiente').length,
+      Inactiva: companies.filter((company) => company.status === 'Inactiva').length,
     };
 
-    const planDist = {
-      Starter: companies.filter(c => c.plan === 'Starter').length,
-      Business: companies.filter(c => c.plan === 'Business').length,
-      Premium: companies.filter(c => c.plan === 'Premium').length,
-    };
+    const topRevenue = [...companies]
+      .sort((a, b) => (b.revenue ?? 0) - (a.revenue ?? 0))
+      .slice(0, 5)
+      .reduce<Record<string, number>>((acc, company) => {
+        acc[company.name] = company.revenue ?? 0;
+        return acc;
+      }, {});
 
-    return { statusDist, planDist };
+    return { statusDist, topRevenue };
   }, [companies]);
 
-  // Helper function to render a simple bar chart
   const renderBarChart = (
     title: string,
     data: Record<string, number>,
@@ -94,16 +94,16 @@ export function GraficasSection({ companies }: GraficasSectionProps) {
     Inactiva: colors.error,
   };
 
-  const planColorMap: Record<string, string> = {
-    Starter: '#DBEAFE',
-    Business: '#E0F2FE',
-    Premium: colors.accent,
-  };
+  const revenueColorMap = Object.keys(chartData.topRevenue).reduce<Record<string, string>>((acc, label, index) => {
+    const palette = [colors.success, colors.accent, colors.warning, '#7C3AED', '#0EA5E9'];
+    acc[label] = palette[index % palette.length];
+    return acc;
+  }, {});
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20 }}>
-      {renderBarChart('Distribución por Estado', chartData.statusDist, statusColorMap)}
-      {renderBarChart('Distribución por Plan', chartData.planDist, planColorMap)}
+      {renderBarChart('Distribucion por estado', chartData.statusDist, statusColorMap)}
+      {renderBarChart('Top empresas por ingresos', chartData.topRevenue, revenueColorMap)}
     </div>
   );
 }

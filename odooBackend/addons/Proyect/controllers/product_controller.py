@@ -13,22 +13,31 @@ class ProductApiController(http.Controller):
     # HELPERS
     # ──────────────────────────────────────────────
 
-    def _get_current_billnova_company_id(self):
+    def _get_current_billnova_user(self):
         user = request.env.user
-
         if not user or not user.id:
-            return None
+            return request.env["billnova.user"]
 
         try:
             if user._is_public():
-                return None
-        except:
-            return None
+                return request.env["billnova.user"]
+        except Exception:
+            return request.env["billnova.user"]
 
-        billnova_user = request.env["billnova.user"].sudo().search(
+        return request.env["billnova.user"].sudo().search(
             [("res_user_id", "=", user.id)], limit=1
         )
 
+    def _is_company_scoped_user(self):
+        billnova_user = self._get_current_billnova_user()
+        return bool(
+            billnova_user
+            and billnova_user.exists()
+            and billnova_user.role in ("seller", "gerente")
+        )
+
+    def _get_current_billnova_company_id(self):
+        billnova_user = self._get_current_billnova_user()
         if not billnova_user or not billnova_user.company_id:
             return None
 
@@ -36,8 +45,26 @@ class ProductApiController(http.Controller):
 
     def _resolve_company_id_for_request(self, raw_company_id=None):
         current_company_id = self._get_current_billnova_company_id()
+        is_scoped_user = self._is_company_scoped_user()
 
-        # 👉 si no mandan company_id → usar el del usuario si existe
+        if is_scoped_user:
+            if not current_company_id:
+                return None
+            if raw_company_id in (None, ""):
+                return current_company_id
+            try:
+                requested_company_id = int(raw_company_id)
+            except (TypeError, ValueError):
+                return self._json_response(
+                    {"ok": False, "error": "company_id must be an integer"}, 400
+                )
+            if requested_company_id != current_company_id:
+                return self._json_response(
+                    {"ok": False, "error": "company_id does not belong to the current user"},
+                    403,
+                )
+            return current_company_id
+
         if raw_company_id in (None, ""):
             return current_company_id
 
@@ -56,6 +83,14 @@ class ProductApiController(http.Controller):
             )
 
         return requested_company_id
+
+    def _can_access_product(self, product):
+        if not self._is_company_scoped_user():
+            return True
+        current_company_id = self._get_current_billnova_company_id()
+        if not current_company_id:
+            return False
+        return bool(product.company_id and product.company_id.id == current_company_id)
 
     def _cors_headers(self):
         origin = request.httprequest.headers.get("Origin")
@@ -124,7 +159,7 @@ class ProductApiController(http.Controller):
     # LIST PRODUCTS
     # ──────────────────────────────────────────────
 
-    @http.route("/api/products", type="http", auth="none",
+    @http.route("/api/products", type="http", auth="public",
                 methods=["GET", "POST", "OPTIONS"], csrf=False)
     def list_products(self, **kwargs):
 
@@ -143,11 +178,15 @@ class ProductApiController(http.Controller):
 
         domain = []
 
-        # ✅ SI hay company_id → filtra
         if company_id:
             domain.append(("company_id", "=", company_id))
 
-        # ✅ SI NO hay → trae todos (como antes)
+        if self._is_company_scoped_user() and not company_id:
+            return self._json_response({
+                "ok": True,
+                "data": [],
+            })
+
         products = request.env["product.product"].sudo().search(domain)
 
         return self._json_response({
@@ -160,7 +199,7 @@ class ProductApiController(http.Controller):
     # ──────────────────────────────────────────────
 
     @http.route("/api/products/<int:product_id>", type="http",
-                auth="none", methods=["GET", "OPTIONS"], csrf=False)
+                auth="public", methods=["GET", "OPTIONS"], csrf=False)
     def get_product(self, product_id):
 
         if request.httprequest.method == "OPTIONS":
@@ -171,6 +210,10 @@ class ProductApiController(http.Controller):
         if not product.exists():
             return self._json_response(
                 {"ok": False, "error": "Product not found"}, 404
+            )
+        if not self._can_access_product(product):
+            return self._json_response(
+                {"ok": False, "error": "Product does not belong to the current user company"}, 403
             )
 
         return self._json_response({
@@ -227,7 +270,7 @@ class ProductApiController(http.Controller):
     # ──────────────────────────────────────────────
 
     @http.route("/api/products/<int:product_id>", type="http",
-                auth="none", methods=["PUT", "DELETE", "OPTIONS"], csrf=False)
+                auth="public", methods=["PUT", "DELETE", "OPTIONS"], csrf=False)
     def update_delete_product(self, product_id):
 
         if request.httprequest.method == "OPTIONS":
@@ -238,6 +281,10 @@ class ProductApiController(http.Controller):
         if not product.exists():
             return self._json_response(
                 {"ok": False, "error": "Product not found"}, 404
+            )
+        if not self._can_access_product(product):
+            return self._json_response(
+                {"ok": False, "error": "Product does not belong to the current user company"}, 403
             )
 
         # DELETE

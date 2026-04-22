@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { odooPut } from '@/lib/odooApi';
+import { odooPut, odooRequest } from '@/lib/odooApi';
 import { mockCompanies } from '../data/mockCompanies';
 import type { Company, CompanyStats } from '../types/company.types';
 
@@ -19,6 +19,17 @@ interface UseDashboardReturn {
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
 
+type PosOrderApi = {
+  total?: number | string;
+  status?: string;
+  company_id?: number | string | [number | string, string];
+};
+
+type CompanyStatsApi = {
+  ok?: boolean;
+  total_ganado?: number;
+};
+
 function normalizeCompanyStatus(value: unknown): Company['status'] {
   if (value === 'Activa' || value === 'Pendiente' || value === 'Inactiva') {
     return value;
@@ -28,14 +39,6 @@ function normalizeCompanyStatus(value: unknown): Company['status'] {
   if (value === 'pending') return 'Pendiente';
   if (value === 'rejected') return 'Inactiva';
   return 'Pendiente';
-}
-
-function normalizePlan(value: unknown, index: number): Company['plan'] {
-  if (value === 'Starter' || value === 'Business' || value === 'Premium') {
-    return value;
-  }
-
-  return ['Starter', 'Business', 'Premium'][index % 3] as Company['plan'];
 }
 
 function toApiPayload(updates: Partial<Company>) {
@@ -51,6 +54,12 @@ function toApiPayload(updates: Partial<Company>) {
   }
 
   return payload;
+}
+
+function normalizeBusinessType(value: unknown): Company['sector'] {
+  if (value === 'products') return 'Productos';
+  if (value === 'services') return 'Servicios';
+  return typeof value === 'string' && value.trim() ? value : undefined;
 }
 
 export function useDashboard(): UseDashboardReturn {
@@ -105,11 +114,29 @@ export function useDashboard(): UseDashboardReturn {
         console.warn('[Dashboard] No companies found in response, using mock data');
         setCompanies(mockCompanies);
       } else {
-        companiesList = companiesList.map((company: any, index: number) => ({
+        const revenues = await Promise.all(
+          companiesList.map(async (company: any) => {
+            try {
+              const stats = await odooRequest<CompanyStatsApi>(`/api/company/${company.id}/stats`, {
+                method: 'GET',
+                cache: 'no-store',
+              });
+              return [company.id, Number(stats?.total_ganado ?? 0)] as const;
+            } catch (error) {
+              console.warn(`[Dashboard] Company stats unavailable for ${company.id}`, error);
+              return [company.id, Number(company.revenue ?? 0)] as const;
+            }
+          }),
+        );
+
+        const revenueByCompanyId = new Map<number, number>(revenues);
+
+        companiesList = companiesList.map((company: any) => ({
           ...company,
           status: normalizeCompanyStatus(company.status ?? company.moderation_status),
-          plan: normalizePlan(company.plan, index),
-          revenue: company.revenue ?? Math.floor(Math.random() * 500000) + 50000,
+          businessType: company.business_type ?? '',
+          sector: normalizeBusinessType(company.business_type) ?? company.sector ?? 'Sin tipo',
+          revenue: revenueByCompanyId.get(Number(company.id)) ?? Number(company.revenue ?? 0),
           createdAt:
             company.createdAt ??
             company.create_date ??

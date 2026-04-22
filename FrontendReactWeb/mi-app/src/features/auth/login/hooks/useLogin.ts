@@ -91,6 +91,12 @@ export function useLogin() {
         return;
       }
 
+      if (response.code === "ACCOUNT_NOT_VERIFIED") {
+        const nextEmail = encodeURIComponent(response.email ?? values.username);
+        router.push(`/navigation/auth/account-inactive?email=${nextEmail}`);
+        return;
+      }
+
       setErrorCode(response.code ?? null);
       setVerificationEmail(response.email ?? "");
       setServerError(response.error ?? "Credenciales invalidas.");

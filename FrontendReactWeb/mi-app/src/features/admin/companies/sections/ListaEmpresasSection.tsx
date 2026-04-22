@@ -131,20 +131,7 @@ export function ListaEmpresasSection({
                   borderBottom: `1px solid ${colors.border}`,
                 }}
               >
-                Sector
-              </th>
-              <th
-                style={{
-                  padding: '14px',
-                  textAlign: 'left',
-                  fontSize: font.sizes.sm,
-                  fontWeight: font.weights.semibold,
-                  color: colors.text.tertiary,
-                  textTransform: 'uppercase',
-                  borderBottom: `1px solid ${colors.border}`,
-                }}
-              >
-                Plan
+                Tipo
               </th>
               <th
                 style={{

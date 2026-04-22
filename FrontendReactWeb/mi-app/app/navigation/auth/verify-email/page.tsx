@@ -1,27 +1,25 @@
 "use client";
 
 import Link from "next/link";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useVerifyEmail } from "@/features/auth/login";
-import { Suspense } from "react";
 
 function VerifyEmailForm() {
   const search = useSearchParams();
   const initialEmail = search.get("email") ?? "";
+  const initialToken = search.get("token") ?? "";
   const {
     email,
-    code,
     cooldown,
     isLoading,
     isResending,
     error,
     message,
-    devCode,
     setEmail,
-    setCode,
     verify,
     resend,
-  } = useVerifyEmail(initialEmail);
+  } = useVerifyEmail(initialEmail, initialToken);
 
   return (
     <main className="page">
@@ -45,17 +43,17 @@ function VerifyEmailForm() {
         <div className="hero">
           <div className="hero-badge">
             <span className="hero-badge-dot" />
-            <span className="hero-badge-text">Verificación</span>
+            <span className="hero-badge-text">Verificacion</span>
           </div>
           <h1 className="hero-title">
-            Confirma tu <em>correo</em> para activar la cuenta.
+            Activa tu <em>cuenta</em> desde el correo.
           </h1>
           <p className="hero-desc">
-            Ingresa el código OTP recibido por email o reenvíalo si expiró.
+            Odoo te envio un mensaje con un boton de verificacion. Cuando abras el enlace, podras activar tu usuario desde esta pantalla.
           </p>
         </div>
 
-        <p className="left-foot">RF-03 Verificación</p>
+        <p className="left-foot">RF-03 Verificacion</p>
       </section>
 
       <section className="right">
@@ -78,7 +76,7 @@ function VerifyEmailForm() {
               <span>RF-03</span>
             </div>
             <h2 className="fh-title">Verifica tu correo</h2>
-            <p className="fh-sub">Ingresa el código OTP recibido por email.</p>
+            <p className="fh-sub">Usa el enlace recibido por email o solicita uno nuevo.</p>
           </header>
 
           <div className="card">
@@ -94,33 +92,21 @@ function VerifyEmailForm() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="input"
+                    placeholder="tu@email.com"
                   />
                 </div>
               </div>
 
-              <div className="field">
-                <label className="field-label" htmlFor="code">Código</label>
-                <div className="field-wrap">
-                  <input
-                    id="code"
-                    name="code"
-                    type="text"
-                    maxLength={8}
-                    placeholder="123456"
-                    value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    className="input"
-                  />
-                </div>
+              <div className="info-box" style={{ marginTop: 16, marginBottom: 16 }}>
+                <p className="info-box-text">
+                  {initialToken
+                    ? "El enlace de activacion ya esta cargado. Presiona el boton para confirmar tu cuenta."
+                    : "Si aun no abriste el correo, puedes reenviarlo desde aqui."}
+                </p>
               </div>
 
-              <button
-                type="button"
-                onClick={verify}
-                disabled={isLoading}
-                className="btn-submit"
-              >
-                {isLoading ? "Verificando..." : "Verificar cuenta"}
+              <button type="button" onClick={verify} disabled={isLoading} className="btn-submit">
+                {isLoading ? "Verificando..." : "Activar mi cuenta"}
               </button>
 
               <button
@@ -133,19 +119,15 @@ function VerifyEmailForm() {
                   marginTop: 10,
                   background: "transparent",
                   color: "var(--text-300)",
-                  border: "1px solid var(--stroke-200)",
+                  border: "1px solid var(--border)",
+                  boxShadow: "none",
                 }}
               >
-                {cooldown > 0
-                  ? `Reenviar en ${cooldown}s`
-                  : isResending
-                    ? "Reenviando..."
-                    : "Reenviar código"}
+                {cooldown > 0 ? `Reenviar en ${cooldown}s` : isResending ? "Reenviando..." : "Reenviar correo"}
               </button>
 
               {error && <p className="field-err show">{error}</p>}
               {message && <p style={{ color: "#34D399", fontSize: 12, marginTop: 8 }}>{message}</p>}
-              {devCode && <p style={{ color: "var(--text-300)", fontSize: 12, marginTop: 6 }}>Código de desarrollo: {devCode}</p>}
 
               <p className="terms" style={{ marginTop: "1rem" }}>
                 <Link href="/navigation/auth/register">Volver al registro</Link> ·{" "}

@@ -1,19 +1,14 @@
 "use client";
-// src/feature/company/ui/EmployeeModal.tsx
 
 import { useState, FormEvent } from "react";
 import { X } from "lucide-react";
-import { Employee, EmployeeRole } from "../types/company.types";
+import { Employee } from "../types/company.types";
 import T from "@/features/seller/company_config/theme/appTheme";
 
-const ROLES: EmployeeRole[] = [
-  "Administrador", "Vendedor", "Almacén", "Contabilidad", "Soporte",
-];
-
 interface Props {
-  employee?: Employee | null;   // null = crear nuevo
-  onClose:   () => void;
-  onSave:    (emp: Employee) => void;
+  employee?: Employee | null;
+  onClose: () => void;
+  onSave: (emp: Employee) => void;
 }
 
 const inputStyle: React.CSSProperties = {
@@ -32,25 +27,26 @@ export default function EmployeeModal({ employee, onClose, onSave }: Props) {
   const isEdit = Boolean(employee);
 
   const [form, setForm] = useState({
-    name:  employee?.name  ?? "",
+    name: employee?.name ?? "",
     email: employee?.email ?? "",
-    role:  employee?.role  ?? "Vendedor" as EmployeeRole,
     phone: employee?.phone ?? "",
+    password: "",
   });
 
   const set = (key: keyof typeof form) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    (e: React.ChangeEvent<HTMLInputElement>) =>
       setForm((prev) => ({ ...prev, [key]: e.target.value }));
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     const emp: Employee = {
-      id:     employee?.id ?? `EMP-${Date.now()}`,
-      status: employee?.status ?? "active",
-      name:   form.name,
-      email:  form.email,
-      role:   form.role as EmployeeRole,
-      phone:  form.phone,
+      id: employee?.id ?? `EMP-${Date.now()}`,
+      status: employee?.status ?? "disabled",
+      name: form.name,
+      email: form.email,
+      role: "Trabajador",
+      phone: form.phone,
+      password: isEdit ? undefined : form.password,
     };
     onSave(emp);
     onClose();
@@ -69,38 +65,46 @@ export default function EmployeeModal({ employee, onClose, onSave }: Props) {
       }}>
         <div style={{ background: T.brand600, padding: "18px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ fontSize: 17, fontWeight: 700, color: "#fff" }}>
-            {isEdit ? "Editar Empleado" : "Nuevo Empleado"}
+            {isEdit ? "Editar Trabajador" : "Nuevo Trabajador"}
           </div>
-          <button onClick={onClose} style={{ background: "rgba(255,255,255,.15)", border: "none", borderRadius: 8, width: 32, height: 32, cursor: "pointer", color: "#fff", fontSize: 16, fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} /></button>
+          <button onClick={onClose} style={{ background: "rgba(255,255,255,.15)", border: "none", borderRadius: 8, width: 32, height: 32, cursor: "pointer", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <X size={16} />
+          </button>
         </div>
 
         <form onSubmit={handleSubmit} style={{ padding: "20px 24px" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-
             <div style={{ gridColumn: "1 / -1" }}>
               <label style={labelStyle}>Nombre completo</label>
               <input style={inputStyle} value={form.name} onChange={set("name")} required />
             </div>
 
             <div style={{ gridColumn: "1 / -1" }}>
-              <label style={labelStyle}>Correo electrónico</label>
+              <label style={labelStyle}>Correo electronico</label>
               <input style={inputStyle} type="email" value={form.email} onChange={set("email")} required />
             </div>
 
             <div>
               <label style={labelStyle}>Rol</label>
-              <select style={{ ...inputStyle, appearance: "none" }} value={form.role} onChange={set("role")}>
-                {ROLES.map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
+              <div style={{ ...inputStyle, background: T.bgAlt, color: T.text2 }}>Trabajador</div>
             </div>
 
             <div>
-              <label style={labelStyle}>Teléfono</label>
+              <label style={labelStyle}>Telefono</label>
               <input style={inputStyle} value={form.phone} onChange={set("phone")} />
             </div>
+
+            {!isEdit ? (
+              <div style={{ gridColumn: "1 / -1" }}>
+                <label style={labelStyle}>Contrasena temporal</label>
+                <input style={inputStyle} type="text" value={form.password} onChange={set("password")} required />
+              </div>
+            ) : null}
           </div>
+
+          <p style={{ marginTop: 14, marginBottom: 0, fontSize: 12, color: T.text3 }}>
+            El trabajador se crea inactivo y recibira un correo con sus credenciales.
+          </p>
 
           <div style={{ display: "flex", gap: 10, marginTop: 20, justifyContent: "flex-end" }}>
             <button type="button" onClick={onClose} style={{
@@ -115,7 +119,7 @@ export default function EmployeeModal({ employee, onClose, onSave }: Props) {
               background: T.brand600, fontSize: 13, fontWeight: 600, color: "#fff",
               cursor: "pointer", fontFamily: "inherit",
             }}>
-              {isEdit ? "Guardar cambios" : "Agregar empleado"}
+              {isEdit ? "Guardar cambios" : "Agregar trabajador"}
             </button>
           </div>
         </form>

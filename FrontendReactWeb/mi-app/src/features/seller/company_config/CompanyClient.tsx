@@ -20,6 +20,7 @@ import Toast            from "@/features/seller/orders/ui/Toast";   // reutiliza
 import { Sidebar } from "../dashboard/dashboards";
 import { NAV_ITEMS } from "../dashboard/data/chart.data";
 import { dashboardTheme, globalStyles } from "../dashboard/theme/dashboard.theme";
+import { getStoredAuthState } from "@/features/auth/login/data/storage";
 
 type ToastType = "success" | "error" | "warning" | "info";
 interface ToastState { msg: string; type: ToastType; }
@@ -28,6 +29,8 @@ export default function CompanyClient() {
   const { company, companyId, isLoading, error, updateCompany } = useCompany();
   const { employees, addEmployee, updateEmployee, toggleStatus } =
     useEmployees(companyId);
+  const currentRole = getStoredAuthState()?.role;
+  const canManageCompany = currentRole !== "worker";
 
   const [editCompanyOpen, setEditCompanyOpen] = useState(false);
   const [accessModalOpen, setAccessModalOpen] = useState(false);
@@ -125,6 +128,7 @@ export default function CompanyClient() {
         <CompanyHeader
           company={{ ...company, employees }}
           onEdit={handleRequestEdit}
+          canEdit={canManageCompany}
         />
       )}
 
@@ -139,6 +143,7 @@ export default function CompanyClient() {
         onAdd={() => setEmployeeModal(null)}
         onEdit={(emp) => setEmployeeModal(emp)}
         onToggle={handleToggle}
+        canManage={canManageCompany}
       />
 
       {/* Modals */}
@@ -150,7 +155,7 @@ export default function CompanyClient() {
         />
       )}
 
-      {accessModalOpen && (
+      {accessModalOpen && canManageCompany && (
         <AccessPasswordModal
           onClose={() => setAccessModalOpen(false)}
           onConfirm={handleVerifyAccess}
@@ -159,7 +164,7 @@ export default function CompanyClient() {
         />
       )}
 
-      {employeeModal !== undefined && (
+      {employeeModal !== undefined && canManageCompany && (
         <EmployeeModal
           employee={employeeModal}
           onClose={() => setEmployeeModal(undefined)}

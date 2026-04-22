@@ -7,7 +7,7 @@ import { getStoredAuthState } from "../data/storage";
 import { getLandingRouteForRole, normalizeUserRole } from "@/features/auth/session/roleRoutes";
 
 function hasRequiredRole(userRole: UserRole, requiredRole: UserRole): boolean {
-  if (requiredRole === "seller") return userRole === "seller" || userRole === "gerente";
+  if (requiredRole === "seller") return userRole === "seller" || userRole === "gerente" || userRole === "worker";
   return userRole === requiredRole;
 }
 

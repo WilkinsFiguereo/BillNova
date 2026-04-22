@@ -5,37 +5,39 @@ export type EmployeeStatus = "active" | "disabled";
 export type EmployeeRole =
   | "Administrador"
   | "Vendedor"
-  | "Almacén"
+  | "Trabajador"
+  | "Almacen"
   | "Contabilidad"
   | "Soporte";
 
 export interface Employee {
-  id:     string;
-  name:   string;
-  email:  string;
-  role:   EmployeeRole;
-  phone:  string;
+  id: string;
+  name: string;
+  email: string;
+  role: EmployeeRole;
+  phone: string;
   status: EmployeeStatus;
+  password?: string;
 }
 
 export interface MonthlySale {
-  month: string;   // "Ene", "Feb", ...
-  sales: number;   // total RD$
-  orders: number;  // cantidad de pedidos
+  month: string;
+  sales: number;
+  orders: number;
 }
 
 export interface Company {
-  id:          string;
-  name:        string;
-  legalName:   string;
-  rnc:         string;
-  email:       string;
-  phone:       string;
-  address:     string;
-  city:        string;
-  country:     string;
+  id: string;
+  name: string;
+  legalName: string;
+  rnc: string;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  country: string;
   logoInitials: string;
   foundedYear: number;
-  employees:   Employee[];
+  employees: Employee[];
   salesHistory: MonthlySale[];
 }

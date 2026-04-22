@@ -115,6 +115,7 @@ export const companyApi = {
     name: string;
     email: string;
     role: string;
+    password: string;
     phone?: string;
     status?: "active" | "disabled";
   }) => {

@@ -1,7 +1,6 @@
 from odoo import fields, http
 from odoo.http import Response, request
 import json
-import secrets
 import logging
 from psycopg2 import IntegrityError
 
@@ -154,6 +153,8 @@ class CompanyApiController(http.Controller):
             return "Administrador"
         if internal_role == "seller":
             return "Vendedor"
+        if internal_role == "worker":
+            return "Trabajador"
         if internal_role == "moderation":
             return "Soporte"
         return "Almacen"
@@ -163,6 +164,8 @@ class CompanyApiController(http.Controller):
             return "admin"
         if api_role == "Vendedor":
             return "seller"
+        if api_role == "Trabajador":
+            return "worker"
         if api_role in ("Soporte", "Contabilidad"):
             return "moderation"
         return "user"
@@ -172,6 +175,19 @@ class CompanyApiController(http.Controller):
         if not user or not user.exists():
             return request.env["billnova.user"]
         return request.env["billnova.user"].sudo().search([("res_user_id", "=", user.id)], limit=1)
+
+    def _current_billnova_role(self):
+        billnova_user = self._resolve_current_billnova_user()
+        return billnova_user.role if billnova_user else None
+
+    def _can_manage_company_settings(self):
+        return self._current_billnova_role() in ("seller", "gerente", "admin")
+
+    def _forbidden_manage_response(self):
+        return self._json_response(
+            {"ok": False, "error": "No tienes permisos para gestionar la empresa."},
+            403,
+        )
 
     def _user_owns_company(self, company_id):
         if not company_id:
@@ -225,9 +241,14 @@ class CompanyApiController(http.Controller):
         if request.httprequest.method == "OPTIONS":
             return self._options_response()
 
+        if not self._can_manage_company_settings():
+            return self._forbidden_manage_response()
+
         payload = request.httprequest.get_json(silent=True) or {}
         company = request.env["res.company"].sudo().browse(company_id)
         if not company.exists():
+            return self._json_response({"ok": False, "error": "Company not found"}, 404)
+        if not self._user_owns_company(company_id):
             return self._json_response({"ok": False, "error": "Company not found"}, 404)
 
         vals = {}
@@ -390,10 +411,15 @@ class CompanyApiController(http.Controller):
         if request.httprequest.method == "OPTIONS":
             return self._options_response()
 
+        if not self._can_manage_company_settings():
+            return self._forbidden_manage_response()
+
         payload = request.httprequest.get_json(silent=True) or {}
         company_id = self._parse_int(payload.get("companyId"))
         if not company_id:
             return self._json_response({"ok": False, "error": "companyId is required"}, 400)
+        if not self._user_owns_company(company_id):
+            return self._json_response({"ok": False, "error": "Company not found"}, 404)
 
         company = request.env["res.company"].sudo().browse(company_id)
         if not company.exists():
@@ -433,9 +459,11 @@ class CompanyApiController(http.Controller):
         company_id = self._parse_int(request.httprequest.args.get("company_id"))
         if not company_id:
             return self._json_response({"ok": False, "error": "company_id is required"}, 400)
+        if not self._user_owns_company(company_id):
+            return self._json_response({"ok": False, "error": "Company not found"}, 404)
 
-        employees = request.env["billnova.user"].sudo().search([]).filtered(
-            lambda employee: company_id in (employee.res_user_id.company_ids.ids or [])
+        employees = request.env["billnova.user"].sudo().with_context(active_test=False).search(
+            [("company_id", "=", company_id)]
         )
         return self._json_response(
             {
@@ -459,37 +487,67 @@ class CompanyApiController(http.Controller):
         if request.httprequest.method == "OPTIONS":
             return self._options_response()
 
+        if not self._can_manage_company_settings():
+            return self._forbidden_manage_response()
+
         payload = request.httprequest.get_json(silent=True) or {}
         company_id = self._parse_int(payload.get("companyId"))
         if not company_id:
             return self._json_response({"ok": False, "error": "companyId is required"}, 400)
+        if not self._user_owns_company(company_id):
+            return self._json_response({"ok": False, "error": "Company not found"}, 404)
 
-        name = payload.get("name") or ""
-        email = payload.get("email") or ""
-        role_api = payload.get("role") or "Vendedor"
-        phone = payload.get("phone") or ""
-        status_api = payload.get("status") or "active"
-        if not name or not email:
-            return self._json_response({"ok": False, "error": "name and email are required"}, 400)
+        name = (payload.get("name") or "").strip()
+        email = (payload.get("email") or "").strip().lower()
+        role_api = "Trabajador"
+        phone = (payload.get("phone") or "").strip()
+        raw_password = payload.get("password") or ""
+        if not name or not email or not raw_password:
+            return self._json_response({"ok": False, "error": "name, email and password are required"}, 400)
+
+        company = request.env["res.company"].sudo().browse(company_id)
+        if not company.exists():
+            return self._json_response({"ok": False, "error": "Company not found"}, 404)
 
         users = request.env["res.users"].sudo()
-        res_user = users.search([("login", "=", email)], limit=1)
+        res_user = users.with_context(active_test=False).search([("login", "=", email)], limit=1)
+        existing_billnova_user = request.env["billnova.user"].sudo().with_context(active_test=False).search(
+            [("email", "=", email)],
+            limit=1,
+        )
+        if existing_billnova_user and existing_billnova_user.company_id and existing_billnova_user.company_id.id != company_id:
+            return self._json_response({"ok": False, "error": "Ese correo ya pertenece a otra empresa."}, 409)
         if not res_user:
-            res_user = users.create(
+            res_user = users.with_context(no_reset_password=True).create(
                 {
                     "name": name,
                     "login": email,
                     "email": email,
                     "phone": phone,
                     "company_ids": [(6, 0, [company_id])],
-                    "password": secrets.token_urlsafe(16),
+                    "company_id": company_id,
+                    "password": raw_password,
                 }
             )
+            res_user.sudo().write({"active": False})
         else:
-            res_user.write({"name": name, "email": email, "login": email, "phone": phone or ""})
-            res_user.write({"company_ids": [(6, 0, [company_id])]})
+            res_user.write(
+                {
+                    "name": name,
+                    "email": email,
+                    "login": email,
+                    "phone": phone or "",
+                    "company_ids": [(6, 0, [company_id])],
+                    "company_id": company_id,
+                    "password": raw_password,
+                    "active": False,
+                }
+            )
 
-        billnova_user = request.env["billnova.user"].sudo().search([("res_user_id", "=", res_user.id)], limit=1)
+        billnova_user = request.env["billnova.user"].sudo().with_context(active_test=False).search(
+            [("res_user_id", "=", res_user.id)],
+            limit=1,
+        )
         if not billnova_user:
             billnova_user = request.env["billnova.user"].sudo().create(
                 {
@@ -497,10 +555,12 @@ class CompanyApiController(http.Controller):
                     "email": email,
                     "phone": phone,
                     "address": "",
-                    "role": self._map_role_to_internal(role_api),
+                    "role": "worker",
                     "is_mobile_user": True,
                     "company_id": company_id,
                     "res_user_id": res_user.id,
+                    "active": False,
+                    "email_verified_at": fields.Datetime.now(),
                 }
             )
         else:
@@ -509,12 +569,14 @@ class CompanyApiController(http.Controller):
                     "name": name,
                     "email": email,
                     "phone": phone,
-                    "role": self._map_role_to_internal(role_api),
+                    "role": "worker",
                     "company_id": company_id,
+                    "active": False,
+                    "email_verified_at": fields.Datetime.now(),
                 }
             )
 
-        res_user.write({"active": status_api == "active"})
+        billnova_user.action_send_employee_invitation_email(company.name, raw_password)
         self._log_event(
             company_id,
             "crear",
@@ -532,9 +594,14 @@ class CompanyApiController(http.Controller):
         if request.httprequest.method == "OPTIONS":
             return self._options_response()
 
+        if not self._can_manage_company_settings():
+            return self._forbidden_manage_response()
+
         payload = request.httprequest.get_json(silent=True) or {}
-        billnova_user = request.env["billnova.user"].sudo().browse(employee_id)
+        billnova_user = request.env["billnova.user"].sudo().with_context(active_test=False).browse(employee_id)
         if not billnova_user.exists():
+            return self._json_response({"ok": False, "error": "Employee not found"}, 404)
+        if not billnova_user.company_id or not self._user_owns_company(billnova_user.company_id.id):
             return self._json_response({"ok": False, "error": "Employee not found"}, 404)
 
         res_user = billnova_user.res_user_id.sudo()
@@ -545,8 +612,9 @@ class CompanyApiController(http.Controller):
             vals_billnova["email"] = payload.get("email")
         if "phone" in payload and payload.get("phone") is not None:
             vals_billnova["phone"] = payload.get("phone")
-        if "role" in payload and payload.get("role") is not None:
-            vals_billnova["role"] = self._map_role_to_internal(payload.get("role"))
+        vals_billnova["role"] = "worker"
+        if "status" in payload and payload.get("status") is not None:
+            vals_billnova["active"] = payload.get("status") == "active"
         if vals_billnova:
             billnova_user.write(vals_billnova)
 
@@ -582,13 +650,19 @@ class CompanyApiController(http.Controller):
         if request.httprequest.method == "OPTIONS":
             return self._options_response()
 
-        billnova_user = request.env["billnova.user"].sudo().browse(employee_id)
+        if not self._can_manage_company_settings():
+            return self._forbidden_manage_response()
+
+        billnova_user = request.env["billnova.user"].sudo().with_context(active_test=False).browse(employee_id)
         if not billnova_user.exists():
+            return self._json_response({"ok": False, "error": "Employee not found"}, 404)
+        if not billnova_user.company_id or not self._user_owns_company(billnova_user.company_id.id):
             return self._json_response({"ok": False, "error": "Employee not found"}, 404)
 
         res_user = billnova_user.res_user_id.sudo()
         new_active = not getattr(res_user, "active", True)
         res_user.write({"active": new_active})
+        billnova_user.write({"active": new_active})
         employee_company_id = billnova_user.company_id.id if billnova_user.company_id else (res_user.company_id.id if getattr(res_user, "company_id", None) else False)
         self._log_event(
             employee_company_id,

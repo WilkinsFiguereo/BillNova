@@ -1,4 +1,6 @@
-from odoo import http
+from urllib.parse import urlparse
+
+from odoo import fields, http
 from odoo.http import request, Response
 import json as json_lib
 import logging
@@ -8,6 +10,46 @@ TARGET_DB = 'wilkins'
 
 
 class AuthApiController(http.Controller):
+    def _get_mobile_res_user_including_inactive(self, mobile_user):
+        if not mobile_user or not mobile_user.exists() or not mobile_user.res_user_id:
+            return request.env['res.users']
+        return request.env['res.users'].sudo().with_context(active_test=False).browse(mobile_user.res_user_id.id)
+
+    def _find_pending_mobile_user(self, login=None, email=None):
+        domain = []
+        if email and login:
+            domain = ['|', ('email', '=', email), ('res_user_id.login', '=', login)]
+        elif email:
+            domain = [('email', '=', email)]
+        elif login:
+            domain = [('res_user_id.login', '=', login)]
+        else:
+            return request.env['billnova.user']
+
+        mobile_user = request.env['billnova.user'].sudo().with_context(active_test=False).search(domain, limit=1)
+        if not mobile_user:
+            return request.env['billnova.user']
+        res_user = self._get_mobile_res_user_including_inactive(mobile_user)
+        if mobile_user.email_verified_at or mobile_user.active or res_user.active:
+            return request.env['billnova.user']
+        return mobile_user
+
+    def _get_frontend_base_url(self):
+        origin = request.httprequest.headers.get('Origin')
+        if origin:
+            parsed = urlparse(origin)
+            if parsed.scheme and parsed.netloc:
+                return f"{parsed.scheme}://{parsed.netloc}"
+        return None
+
+    def _find_res_user(self, login_value):
+        if not login_value:
+            return request.env['res.users']
+        return request.env['res.users'].sudo().with_context(active_test=False).search(
+            ['|', ('login', '=', login_value), ('email', '=', login_value)],
+            limit=1,
+        )
+
     def _get_current_res_user(self):
         session_uid = getattr(request.session, "uid", None)
         if session_uid:
@@ -82,52 +124,87 @@ class AuthApiController(http.Controller):
         if request.httprequest.method == 'OPTIONS':
             return self._options_response()
 
-        payload = request.httprequest.get_json(silent=True) or {}
-        name = payload.get('name')
-        login = payload.get('login')
-        password = payload.get('password')
-        email = payload.get('email')
-        phone = payload.get('phone')
-        address = payload.get('address')
+        try:
+            payload = request.httprequest.get_json(silent=True) or {}
+            name = payload.get('name')
+            login = payload.get('login')
+            password = payload.get('password')
+            email = payload.get('email')
+            phone = payload.get('phone')
+            address = payload.get('address')
 
-        if not name or not login or not password or not email:
+            if not name or not login or not password or not email:
+                return self._json_response(
+                    {'ok': False, 'error': 'name, login, password and email are required'},
+                    status=400
+                )
+
+            user_model = request.env['res.users'].sudo()
+            user_lookup = user_model.with_context(active_test=False)
+            pending_mobile_user = self._find_pending_mobile_user(login=login, email=email)
+            if pending_mobile_user:
+                res_user = self._get_mobile_res_user_including_inactive(pending_mobile_user)
+                pending_mobile_user.action_send_verification_email(frontend_base_url=self._get_frontend_base_url())
+                return self._json_response(
+                    {
+                        'ok': True,
+                        'user_id': res_user.id,
+                        'mobile_user_id': pending_mobile_user.id,
+                        'email': pending_mobile_user.email or email,
+                        'requires_verification': True,
+                        'message': 'La cuenta ya existe y sigue pendiente de verificacion. Te reenviamos el correo.',
+                    },
+                    status=200
+                )
+
+            if user_lookup.search([('login', '=', login)], limit=1):
+                return self._json_response(
+                    {'ok': False, 'error': 'Ese nombre de usuario ya esta registrado.'},
+                    status=409
+                )
+            if user_lookup.search([('email', '=', email)], limit=1):
+                return self._json_response(
+                    {'ok': False, 'error': 'Ese correo ya esta registrado.'},
+                    status=409
+                )
+
+            user = user_model.create({
+                'name': name,
+                'login': login,
+                'password': password,
+                'email': email,
+                'active': True,
+            })
+            user.sudo().with_context(active_test=False).write({'active': False})
+
+            mobile_user = request.env['billnova.user'].sudo().create({
+                'name': name,
+                'email': email,
+                'phone': phone,
+                'address': address,
+                'is_mobile_user': True,
+                'role': 'seller',
+                'res_user_id': user.id,
+                'active': False,
+            })
+            mobile_user.action_send_verification_email(frontend_base_url=self._get_frontend_base_url())
+
             return self._json_response(
-                {'ok': False, 'error': 'name, login, password and email are required'},
-                status=400
+                {
+                    'ok': True,
+                    'user_id': user.id,
+                    'mobile_user_id': mobile_user.id,
+                    'email': email,
+                    'requires_verification': True,
+                },
+                status=201
             )
-
-        user_model = request.env['res.users'].sudo()
-        if user_model.search([('login', '=', login)], limit=1):
+        except Exception as error:
+            _logger.exception("Register failed: %s", error)
             return self._json_response(
-                {'ok': False, 'error': 'login already exists'},
-                status=409
+                {'ok': False, 'error': 'No se pudo completar el registro en el servidor.'},
+                status=422
             )
-
-        user = user_model.create({
-            'name': name,
-            'login': login,
-            'password': password,
-            'email': email,
-        })
-
-        mobile_user = request.env['billnova.user'].sudo().create({
-            'name': name,
-            'email': email,
-            'phone': phone,
-            'address': address,
-            'is_mobile_user': True,
-            'role': 'seller',
-            'res_user_id': user.id,
-        })
-
-        return self._json_response(
-            {
-                'ok': True,
-                'user_id': user.id,
-                'mobile_user_id': mobile_user.id,
-            },
-            status=201
-        )
 
     @http.route('/api/auth/login', type='http', auth='none', methods=['POST', 'OPTIONS'], csrf=False)
     def login(self):
@@ -158,13 +235,40 @@ class AuthApiController(http.Controller):
                 status=400
             )
 
+        found_user = self._find_res_user(login)
+        auth_login = found_user.login if found_user and found_user.exists() else login
+
+        if found_user and found_user.exists() and not found_user.active:
+            try:
+                found_user._check_credentials(password)
+                mobile_user = request.env['billnova.user'].sudo().with_context(active_test=False).search(
+                    [('res_user_id', '=', found_user.id)],
+                    limit=1,
+                )
+                not_verified = bool(mobile_user and not mobile_user.email_verified_at)
+                return self._json_response(
+                    {
+                        'ok': False,
+                        'code': 'ACCOUNT_NOT_VERIFIED' if not_verified else 'ACCOUNT_DISABLED',
+                        'error': (
+                            'Tu usuario no esta activo. Revisa tu correo electronico.'
+                            if not_verified
+                            else 'Cuenta deshabilitada. Contacta soporte.'
+                        ),
+                        'email': found_user.email or login,
+                    },
+                    status=403
+                )
+            except Exception:
+                pass
+
         env = request.env(context=dict(request.env.context, interactive=True))
         uid = False
 
         try:
             credential = {
                 'type': 'password',
-                'login': login,
+                'login': auth_login,
                 'password': password,
             }
             auth_info = env['res.users'].sudo().authenticate(
@@ -178,7 +282,7 @@ class AuthApiController(http.Controller):
 
         if not uid:
             try:
-                user = env['res.users'].sudo().search([('login', '=', login)], limit=1)
+                user = self._find_res_user(auth_login)
                 if user:
                     user._check_credentials(password)
                     uid = user.id
@@ -199,7 +303,7 @@ class AuthApiController(http.Controller):
                 pass
 
         request.session.uid = uid
-        request.session.login = login
+        request.session.login = auth_login
         try:
             request.session.db = TARGET_DB
         except Exception:
@@ -231,6 +335,60 @@ class AuthApiController(http.Controller):
             'session_id': session_id,
             'session_token': session_token,
         }, status=200)
+
+    @http.route('/api/auth/verify-email', type='http', auth='public', methods=['POST', 'OPTIONS'], csrf=False)
+    def verify_email(self):
+        if request.httprequest.method == 'OPTIONS':
+            return self._options_response()
+
+        payload = request.httprequest.get_json(silent=True) or {}
+        token = payload.get('token')
+        email = payload.get('email')
+        if not token:
+            return self._json_response({'ok': False, 'error': 'token requerido'}, status=400)
+
+        domain = [('verification_token', '=', token)]
+        if email:
+            domain.append(('email', '=', email))
+        mobile_user = request.env['billnova.user'].sudo().with_context(active_test=False).search(domain, limit=1)
+
+        if not mobile_user:
+            return self._json_response({'ok': False, 'error': 'El enlace no es valido o ya fue usado.'}, status=404)
+        if mobile_user.verification_token_expiry and mobile_user.verification_token_expiry < fields.Datetime.now():
+            return self._json_response({'ok': False, 'error': 'El enlace de verificacion ya expiro.'}, status=410)
+
+        mobile_user.write({
+            'active': True,
+            'email_verified_at': fields.Datetime.now(),
+            'verification_token': False,
+            'verification_token_expiry': False,
+        })
+        if mobile_user.res_user_id:
+            mobile_user.res_user_id.sudo().with_context(active_test=False).write({'active': True})
+
+        return self._json_response({'ok': True, 'message': 'Cuenta verificada correctamente.'}, status=200)
+
+    @http.route('/api/auth/resend-code', type='http', auth='public', methods=['POST', 'OPTIONS'], csrf=False)
+    def resend_code(self):
+        if request.httprequest.method == 'OPTIONS':
+            return self._options_response()
+
+        payload = request.httprequest.get_json(silent=True) or {}
+        email = payload.get('email')
+        if not email:
+            return self._json_response({'ok': False, 'error': 'email requerido'}, status=400)
+
+        mobile_user = request.env['billnova.user'].sudo().with_context(active_test=False).search(
+            [('email', '=', email)],
+            limit=1,
+        )
+        if not mobile_user:
+            return self._json_response({'ok': False, 'error': 'No existe una cuenta con ese correo.'}, status=404)
+        if mobile_user.active and mobile_user.email_verified_at:
+            return self._json_response({'ok': True, 'message': 'La cuenta ya esta verificada.'}, status=200)
+
+        mobile_user.action_send_verification_email(frontend_base_url=self._get_frontend_base_url())
+        return self._json_response({'ok': True, 'message': 'Te enviamos un nuevo correo de verificacion.'}, status=200)
 
     @http.route('/api/auth/session', type='http', auth='public', methods=['GET', 'OPTIONS'], csrf=False)
     def session(self):

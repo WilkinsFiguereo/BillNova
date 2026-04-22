@@ -17,6 +17,7 @@ export interface RegisterResponse {
   user_id?: number;
   email?: string;
   requires_verification?: boolean;
+  message?: string;
   dev_code?: string;
   error?: string;
 }

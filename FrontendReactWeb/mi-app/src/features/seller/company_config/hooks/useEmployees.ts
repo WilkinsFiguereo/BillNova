@@ -1,17 +1,16 @@
 "use client";
-// src/feature/company/hooks/useEmployees.ts
 
 import { useCallback, useEffect, useState } from "react";
 import { Employee, EmployeeStatus } from "../types/company.types";
 import { companyApi, ApiEmployee } from "../data/companyApi";
 
 function mapRoleFromApi(role: string): Employee["role"] {
-  if (role === "Almacen") return "Almacén";
+  if (role === "Almacen") return "Almacen";
   return role as Employee["role"];
 }
 
 function mapRoleToApi(role: Employee["role"]): string {
-  if (role === "Almacén") return "Almacen";
+  if (role === "Almacen") return "Almacen";
   return role;
 }
 
@@ -60,11 +59,12 @@ export function useEmployees(companyId: string) {
         name: emp.name,
         email: emp.email,
         role: mapRoleToApi(emp.role),
+        password: emp.password ?? "",
         phone: emp.phone,
         status: emp.status,
       });
       if (res.ok) {
-        setEmployees((prev) => [{ ...emp, id: String(res.id) }, ...prev]);
+        setEmployees((prev) => [{ ...emp, id: String(res.id), password: undefined }, ...prev]);
       }
     } catch (err) {
       console.error(err);
@@ -81,7 +81,7 @@ export function useEmployees(companyId: string) {
         phone: updated.phone,
         status: updated.status,
       });
-      setEmployees((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
+      setEmployees((prev) => prev.map((e) => (e.id === updated.id ? { ...updated, password: undefined } : e)));
     } catch (err) {
       console.error(err);
       setError("No se pudo actualizar empleado");

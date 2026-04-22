@@ -7,6 +7,7 @@ export interface Company {
   email?: string;
   ruc?: string;
   sector?: string;
+  businessType?: 'products' | 'services' | string;
   website?: string;
   contact_name?: string;
   contact_email?: string;
@@ -15,7 +16,7 @@ export interface Company {
   state?: string;
   address?: string;
   status: CompanyStatus;
-  plan: CompanyPlan;
+  plan?: CompanyPlan;
   revenue?: number;
   createdAt?: string;
 }

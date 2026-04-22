@@ -1,13 +1,22 @@
 import { ODOO_URL as baseUrl } from "@/lib/odooApi";
 import type { Producto } from "../types/productos.types";
 import { getActiveCompanyId } from "@/features/seller/shared/companySession";
+import { getStoredAuthState } from "@/features/auth/login/data/storage";
 
 function jsonHeaders(): HeadersInit {
   return { "Content-Type": "application/json" };
 }
 
 function getCompanyId(): number | null {
-  return typeof window === "undefined" ? null : getActiveCompanyId();
+  if (typeof window === "undefined") return null;
+
+  const scopedCompanyId = getActiveCompanyId();
+  if (scopedCompanyId) return scopedCompanyId;
+
+  const authCompanyId = getStoredAuthState()?.companyId;
+  return typeof authCompanyId === "number" && Number.isFinite(authCompanyId) && authCompanyId > 0
+    ? authCompanyId
+    : null;
 }
 
 async function checkResponse<T>(res: Response): Promise<T> {
@@ -24,13 +33,20 @@ async function checkResponse<T>(res: Response): Promise<T> {
   return json.data ?? json;
 }
 
+function requestInit(init: RequestInit = {}): RequestInit {
+  return {
+    credentials: "include",
+    ...init,
+  };
+}
+
 export async function apiListProductos(): Promise<Producto[]> {
   const companyId = getCompanyId();
   const url = companyId
     ? `${baseUrl}/api/products?company_id=${encodeURIComponent(String(companyId))}`
     : `${baseUrl}/api/products`;
 
-  const res = await fetch(url, { headers: jsonHeaders() });
+  const res = await fetch(url, requestInit({ headers: jsonHeaders() }));
   const data = await checkResponse<any>(res);
 
   return data.map((product: any) => {
@@ -52,7 +68,7 @@ export async function apiListProductos(): Promise<Producto[]> {
 }
 
 export async function apiGetProducto(id: number): Promise<Producto> {
-  const res = await fetch(`${baseUrl}/api/products/${id}`, { headers: jsonHeaders() });
+  const res = await fetch(`${baseUrl}/api/products/${id}`, requestInit({ headers: jsonHeaders() }));
   const product = await checkResponse<any>(res);
   const stock = product.quantity_on_hand ?? product.stock ?? 0;
 
@@ -90,6 +106,7 @@ export async function apiCreateProducto(payload: Partial<Producto>): Promise<{ i
     method: "POST",
     headers: jsonHeaders(),
     body: JSON.stringify(body),
+    credentials: "include",
   });
 
   return checkResponse<{ id: number }>(res);
@@ -112,6 +129,7 @@ export async function apiUpdateProducto(id: number, payload: Partial<Producto>):
     method: "PUT",
     headers: jsonHeaders(),
     body: JSON.stringify(body),
+    credentials: "include",
   });
 
   await checkResponse(res);
@@ -134,7 +152,7 @@ export async function apiListCategorias(): Promise<{ id: number; name: string }[
     : `${baseUrl}/api/categories`;
 
   try {
-    const res = await fetch(url, { headers: jsonHeaders() });
+    const res = await fetch(url, requestInit({ headers: jsonHeaders() }));
     if (!res.ok) throw new Error("fallback");
     const json = await res.json();
     if (!json.ok) throw new Error("fallback");

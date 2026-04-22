@@ -4,40 +4,44 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { authApi } from "../data/api";
 
-export function useVerifyEmail(initialEmail = "") {
+export function useVerifyEmail(initialEmail = "", initialToken = "") {
   const router = useRouter();
   const [email, setEmail] = useState(initialEmail);
-  const [code, setCode] = useState("");
+  const [token, setToken] = useState(initialToken);
   const [cooldown, setCooldown] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [devCode, setDevCode] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialEmail) setEmail(initialEmail);
   }, [initialEmail]);
 
   useEffect(() => {
+    if (initialToken) setToken(initialToken);
+  }, [initialToken]);
+
+  useEffect(() => {
     if (cooldown <= 0) return;
-    const timer = setInterval(() => setCooldown((prev) => Math.max(0, prev - 1)), 1000);
-    return () => clearInterval(timer);
+    const timer = window.setInterval(() => setCooldown((prev) => Math.max(0, prev - 1)), 1000);
+    return () => window.clearInterval(timer);
   }, [cooldown]);
 
   const verify = useCallback(async () => {
-    if (!email.trim() || !code.trim()) {
-      setError("Ingresa email y codigo.");
+    if (!email.trim() || !token.trim()) {
+      setError("Abre el enlace que recibiste por correo o solicita uno nuevo.");
       return;
     }
+
     setIsLoading(true);
     setError(null);
     setMessage(null);
     try {
-      const res = await authApi.verifyEmail({ email, code });
+      const res = await authApi.verifyEmail({ email, token });
       if (res.ok) {
-        setMessage("Correo verificado. Ya puedes iniciar sesion.");
-        setTimeout(() => router.push("/navigation/auth/login"), 1200);
+        setMessage(res.message ?? "Correo verificado. Ya puedes iniciar sesion.");
+        window.setTimeout(() => router.push("/navigation/auth/login"), 1400);
         return;
       }
       if (res.retry_after_seconds) setCooldown(res.retry_after_seconds);
@@ -47,7 +51,7 @@ export function useVerifyEmail(initialEmail = "") {
     } finally {
       setIsLoading(false);
     }
-  }, [code, email, router]);
+  }, [email, router, token]);
 
   const resend = useCallback(async () => {
     if (!email.trim()) {
@@ -55,15 +59,15 @@ export function useVerifyEmail(initialEmail = "") {
       return;
     }
     if (cooldown > 0) return;
+
     setIsResending(true);
     setError(null);
     setMessage(null);
     try {
       const res = await authApi.resendVerificationCode(email);
       if (res.ok) {
-        setMessage(res.message ?? "Codigo reenviado.");
+        setMessage(res.message ?? "Correo de verificacion reenviado.");
         setCooldown(60);
-        setDevCode(res.dev_code ?? null);
         return;
       }
       if (res.retry_after_seconds) setCooldown(res.retry_after_seconds);
@@ -77,15 +81,14 @@ export function useVerifyEmail(initialEmail = "") {
 
   return {
     email,
-    code,
+    token,
     cooldown,
     isLoading,
     isResending,
     error,
     message,
-    devCode,
     setEmail,
-    setCode,
+    setToken,
     verify,
     resend,
   };
