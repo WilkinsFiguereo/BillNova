@@ -9,11 +9,6 @@ function mapRoleFromApi(role: string): Employee["role"] {
   return role as Employee["role"];
 }
 
-function mapRoleToApi(role: Employee["role"]): string {
-  if (role === "Almacen") return "Almacen";
-  return role;
-}
-
 function mapEmployeeFromApi(e: ApiEmployee): Employee {
   return {
     id: String(e.id),
@@ -58,7 +53,6 @@ export function useEmployees(companyId: string) {
         companyId,
         name: emp.name,
         email: emp.email,
-        role: mapRoleToApi(emp.role),
         password: emp.password ?? "",
         phone: emp.phone,
         status: emp.status,
@@ -66,9 +60,11 @@ export function useEmployees(companyId: string) {
       if (res.ok) {
         setEmployees((prev) => [{ ...emp, id: String(res.id), password: undefined }, ...prev]);
       }
+      return res;
     } catch (err) {
       console.error(err);
       setError("No se pudo agregar empleado");
+      return { ok: false, error: "No se pudo agregar empleado" };
     }
   }, [companyId]);
 
@@ -77,7 +73,6 @@ export function useEmployees(companyId: string) {
       await companyApi.updateEmployee(updated.id, {
         name: updated.name,
         email: updated.email,
-        role: mapRoleToApi(updated.role),
         phone: updated.phone,
         status: updated.status,
       });

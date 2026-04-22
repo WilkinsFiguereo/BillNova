@@ -84,12 +84,7 @@ export default function EmployeeModal({ employee, onClose, onSave }: Props) {
               <input style={inputStyle} type="email" value={form.email} onChange={set("email")} required />
             </div>
 
-            <div>
-              <label style={labelStyle}>Rol</label>
-              <div style={{ ...inputStyle, background: T.bgAlt, color: T.text2 }}>Trabajador</div>
-            </div>
-
-            <div>
+            <div style={{ gridColumn: "1 / -1" }}>
               <label style={labelStyle}>Telefono</label>
               <input style={inputStyle} value={form.phone} onChange={set("phone")} />
             </div>

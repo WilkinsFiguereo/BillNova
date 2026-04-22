@@ -1,7 +1,7 @@
 from urllib.parse import urlparse
 
 from odoo import fields, http
-from odoo.http import request, Response
+from odoo.http import request, Response, root
 import json as json_lib
 import logging
 
@@ -10,6 +10,193 @@ TARGET_DB = 'wilkins'
 
 
 class AuthApiController(http.Controller):
+    def _get_request_session_token(self):
+        return (
+            request.httprequest.headers.get('X-Auth-Session')
+            or request.httprequest.headers.get('x-auth-session')
+            or request.httprequest.args.get('session_token')
+            or request.httprequest.args.get('session_id')
+        )
+
+    def _ensure_session_from_request(self):
+        if getattr(request.session, "uid", None):
+            return getattr(request.session, "uid", None)
+
+        token = self._get_request_session_token()
+        if not token:
+            return None
+
+        try:
+            stored_session = root.session_store.get(token)
+        except Exception as error:
+            _logger.warning("No se pudo leer la sesion %s desde session_store: %s", token, error)
+            return None
+
+        if not stored_session:
+            _logger.warning("No se encontro sesion activa para token %s", token)
+            return None
+
+        uid = getattr(stored_session, "uid", None)
+        if not uid:
+            _logger.warning("La sesion %s existe pero no tiene uid", token)
+            return None
+
+        request.session.uid = uid
+        request.session.login = getattr(stored_session, "login", None)
+        try:
+            request.session.db = getattr(stored_session, "db", None) or TARGET_DB
+        except Exception:
+            pass
+
+        session_token = getattr(stored_session, "session_token", None) or token
+        try:
+            request.session.session_token = session_token
+        except Exception:
+            pass
+
+        _logger.info(
+            "Sesion restaurada desde header token=%s uid=%s login=%s db=%s",
+            token,
+            uid,
+            getattr(stored_session, "login", None),
+            getattr(stored_session, "db", None),
+        )
+        return uid
+
+    def _serialize_res_user_debug(self, user):
+        return {
+            'id': user.id,
+            'login': user.login,
+            'active': bool(user.active),
+            'share': bool(user.share),
+            'company_id': user.company_id.id if user.company_id else None,
+        }
+
+    def _serialize_billnova_user_debug(self, user):
+        return {
+            'id': user.id,
+            'name': user.name,
+            'email': user.email,
+            'role': user.role,
+            'active': bool(user.active),
+            'is_mobile_user': bool(user.is_mobile_user),
+            'res_user_id': user.res_user_id.id if user.res_user_id else None,
+            'company_id': user.company_id.id if user.company_id else None,
+        }
+
+    def _log_user_snapshots(self, label, *, login=None, email=None):
+        res_user_domain = []
+        billnova_domain = []
+
+        if login and email:
+            res_user_domain = ['|', ('login', '=', login), ('login', '=', email)]
+            billnova_domain = ['|', ('email', '=', email), ('res_user_id.login', '=', login)]
+        elif login:
+            res_user_domain = [('login', '=', login)]
+            billnova_domain = [('res_user_id.login', '=', login)]
+        elif email:
+            res_user_domain = [('login', '=', email)]
+            billnova_domain = [('email', '=', email)]
+
+        res_users = request.env['res.users'].sudo().with_context(active_test=False).search(
+            res_user_domain,
+            order='id asc',
+        ) if res_user_domain else request.env['res.users']
+        billnova_users = request.env['billnova.user'].sudo().with_context(active_test=False).search(
+            billnova_domain,
+            order='id asc',
+        ) if billnova_domain else request.env['billnova.user']
+
+        _logger.info("=== USER SNAPSHOT: %s ===", label)
+        _logger.info("FILTER login=%s email=%s", login, email)
+        _logger.info(
+            "RES.USERS COUNT=%s DATA=%s",
+            len(res_users),
+            [self._serialize_res_user_debug(user) for user in res_users],
+        )
+        _logger.info(
+            "BILLNOVA.USER COUNT=%s DATA=%s",
+            len(billnova_users),
+            [self._serialize_billnova_user_debug(user) for user in billnova_users],
+        )
+        _logger.info("=== END USER SNAPSHOT: %s ===", label)
+
+    def _log_all_users_overview(self, label):
+        res_users = request.env['res.users'].sudo().with_context(active_test=False).search([], order='id asc')
+        billnova_users = request.env['billnova.user'].sudo().with_context(active_test=False).search([], order='id asc')
+        _logger.info("=== ALL USERS OVERVIEW: %s ===", label)
+        _logger.info(
+            "ALL RES.USERS COUNT=%s DATA=%s",
+            len(res_users),
+            [self._serialize_res_user_debug(user) for user in res_users],
+        )
+        _logger.info(
+            "ALL BILLNOVA.USER COUNT=%s DATA=%s",
+            len(billnova_users),
+            [self._serialize_billnova_user_debug(user) for user in billnova_users],
+        )
+        _logger.info("=== END ALL USERS OVERVIEW: %s ===", label)
+
+    def _build_res_user_vals(self, *, name, login, password, email, phone=None, company_id=None):
+        user_vals = {
+            'name': name,
+            'login': login,
+            'password': password,
+            'email': email,
+            'phone': phone,
+            'active': True,
+        }
+        if company_id:
+            user_vals.update({
+                'company_id': company_id,
+                'company_ids': [(4, company_id)],
+            })
+        return user_vals
+
+    def _ensure_res_user_for_billnova_user(
+        self,
+        mobile_user,
+        *,
+        name,
+        login,
+        password,
+        email,
+        phone=None,
+        company_id=None,
+    ):
+        user_model = request.env['res.users'].sudo().with_context(active_test=False)
+        res_user = self._get_mobile_res_user_including_inactive(mobile_user)
+
+        if res_user and res_user.exists():
+            vals = {
+                'name': name,
+                'login': login,
+                'email': email,
+                'phone': phone,
+            }
+            if password:
+                vals['password'] = password
+            if company_id:
+                vals.update({
+                    'company_id': company_id,
+                    'company_ids': [(4, company_id)],
+                })
+            res_user.sudo().write(vals)
+            return res_user
+
+        res_user = user_model.create(
+            self._build_res_user_vals(
+                name=name,
+                login=login,
+                password=password,
+                email=email,
+                phone=phone,
+                company_id=company_id,
+            )
+        )
+        mobile_user.sudo().write({'res_user_id': res_user.id})
+        return res_user
+
     def _get_mobile_res_user_including_inactive(self, mobile_user):
         if not mobile_user or not mobile_user.exists() or not mobile_user.res_user_id:
             return request.env['res.users']
@@ -51,6 +238,7 @@ class AuthApiController(http.Controller):
         )
 
     def _get_current_res_user(self):
+        self._ensure_session_from_request()
         session_uid = getattr(request.session, "uid", None)
         if session_uid:
             user = request.env["res.users"].sudo().browse(session_uid)
@@ -70,6 +258,17 @@ class AuthApiController(http.Controller):
         return request.env['billnova.user'].sudo().search(
             [('res_user_id', '=', current_user.id)], limit=1
         )
+
+    def _get_effective_company_id(self, user=None, mobile_user=None):
+        current_mobile_user = mobile_user or self._get_current_billnova_user(user)
+        if current_mobile_user and current_mobile_user.exists() and current_mobile_user.company_id:
+            return current_mobile_user.company_id.id
+
+        current_user = user or self._get_current_res_user()
+        if current_user and current_user.exists() and current_user.company_id:
+            return current_user.company_id.id
+
+        return None
 
     def _log_session_snapshot(self, label, user, mobile_user, role, company_id, session_id=None, session_token=None):
         _logger.info("=== AUTH DEBUG: %s ===", label)
@@ -119,6 +318,143 @@ class AuthApiController(http.Controller):
     def _options_response(self):
         return Response('', status=200, headers=self._cors_headers())
 
+    def _register_billnova_user(
+        self,
+        *,
+        name,
+        login,
+        password,
+        email,
+        phone=None,
+        address=None,
+        role='seller',
+        company_id=None,
+        is_mobile_user=True,
+        frontend_base_url=None,
+        invitation_company_name=None,
+    ):
+        self._log_user_snapshots(
+            'register_billnova_user_before',
+            login=login,
+            email=email,
+        )
+        self._log_all_users_overview('register_billnova_user_before')
+        user_model = request.env['res.users'].sudo()
+        user_lookup = user_model.with_context(active_test=False)
+        pending_mobile_user = self._find_pending_mobile_user(login=login, email=email)
+        if pending_mobile_user:
+            res_user = self._ensure_res_user_for_billnova_user(
+                pending_mobile_user,
+                name=name,
+                login=login,
+                password=password,
+                email=email,
+                phone=phone,
+                company_id=company_id,
+            )
+            res_user.sudo().with_context(active_test=False).write({'active': False})
+            pending_mobile_user.sudo().write({
+                'name': name,
+                'email': email,
+                'phone': phone,
+                'address': address,
+                'role': role,
+                'is_mobile_user': is_mobile_user,
+                'active': False,
+                'email_verified_at': False,
+            })
+            if company_id:
+                res_user.sudo().with_context(active_test=False).write({
+                    'company_id': company_id,
+                    'company_ids': [(4, company_id)],
+                })
+                pending_mobile_user.sudo().write({
+                    'company_id': company_id,
+                    'role': role,
+                    'is_mobile_user': is_mobile_user,
+                })
+            if role == 'worker':
+                email_sent = pending_mobile_user.action_send_employee_invitation_email(
+                    company_name=invitation_company_name,
+                    password=password,
+                    frontend_base_url=frontend_base_url,
+                )
+            else:
+                email_sent = pending_mobile_user.action_send_verification_email(frontend_base_url=frontend_base_url)
+            self._log_user_snapshots(
+                'register_billnova_user_after_pending_reuse',
+                login=login,
+                email=email,
+            )
+            self._log_all_users_overview('register_billnova_user_after_pending_reuse')
+            return {
+                'ok': True,
+                'status': 200,
+                'user_id': res_user.id,
+                'mobile_user_id': pending_mobile_user.id,
+                'email': pending_mobile_user.email or email,
+                'requires_verification': True,
+                'email_sent': bool(email_sent),
+                'message': 'La cuenta ya existe y sigue pendiente de verificacion. Te reenviamos el correo.',
+            }
+
+        if user_lookup.search([('login', '=', login)], limit=1):
+            return {'ok': False, 'status': 409, 'error': 'Ese nombre de usuario ya esta registrado.'}
+        if user_lookup.search([('email', '=', email)], limit=1):
+            return {'ok': False, 'status': 409, 'error': 'Ese correo ya esta registrado.'}
+
+        user = user_model.create(
+            self._build_res_user_vals(
+                name=name,
+                login=login,
+                password=password,
+                email=email,
+                phone=phone,
+                company_id=company_id,
+            )
+        )
+        user.sudo().with_context(active_test=False).write({'active': False})
+
+        mobile_user_vals = {
+            'name': name,
+            'email': email,
+            'phone': phone,
+            'address': address,
+            'is_mobile_user': is_mobile_user,
+            'role': role,
+            'res_user_id': user.id,
+            'active': False,
+            'email_verified_at': False,
+        }
+        if company_id:
+            mobile_user_vals['company_id'] = company_id
+
+        mobile_user = request.env['billnova.user'].sudo().create(mobile_user_vals)
+        if role == 'worker':
+            email_sent = mobile_user.action_send_employee_invitation_email(
+                company_name=invitation_company_name,
+                password=password,
+                frontend_base_url=frontend_base_url,
+            )
+        else:
+            email_sent = mobile_user.action_send_verification_email(frontend_base_url=frontend_base_url)
+
+        self._log_user_snapshots(
+            'register_billnova_user_after_create',
+            login=login,
+            email=email,
+        )
+        self._log_all_users_overview('register_billnova_user_after_create')
+        return {
+            'ok': True,
+            'status': 201,
+            'user_id': user.id,
+            'mobile_user_id': mobile_user.id,
+            'email': email,
+            'requires_verification': True,
+            'email_sent': bool(email_sent),
+        }
+
     @http.route('/api/auth/register', type='http', auth='public', methods=['POST', 'OPTIONS'], csrf=False)
     def register(self):
         if request.httprequest.method == 'OPTIONS':
@@ -139,66 +475,20 @@ class AuthApiController(http.Controller):
                     status=400
                 )
 
-            user_model = request.env['res.users'].sudo()
-            user_lookup = user_model.with_context(active_test=False)
-            pending_mobile_user = self._find_pending_mobile_user(login=login, email=email)
-            if pending_mobile_user:
-                res_user = self._get_mobile_res_user_including_inactive(pending_mobile_user)
-                pending_mobile_user.action_send_verification_email(frontend_base_url=self._get_frontend_base_url())
-                return self._json_response(
-                    {
-                        'ok': True,
-                        'user_id': res_user.id,
-                        'mobile_user_id': pending_mobile_user.id,
-                        'email': pending_mobile_user.email or email,
-                        'requires_verification': True,
-                        'message': 'La cuenta ya existe y sigue pendiente de verificacion. Te reenviamos el correo.',
-                    },
-                    status=200
-                )
-
-            if user_lookup.search([('login', '=', login)], limit=1):
-                return self._json_response(
-                    {'ok': False, 'error': 'Ese nombre de usuario ya esta registrado.'},
-                    status=409
-                )
-            if user_lookup.search([('email', '=', email)], limit=1):
-                return self._json_response(
-                    {'ok': False, 'error': 'Ese correo ya esta registrado.'},
-                    status=409
-                )
-
-            user = user_model.create({
-                'name': name,
-                'login': login,
-                'password': password,
-                'email': email,
-                'active': True,
-            })
-            user.sudo().with_context(active_test=False).write({'active': False})
-
-            mobile_user = request.env['billnova.user'].sudo().create({
-                'name': name,
-                'email': email,
-                'phone': phone,
-                'address': address,
-                'is_mobile_user': True,
-                'role': 'seller',
-                'res_user_id': user.id,
-                'active': False,
-            })
-            mobile_user.action_send_verification_email(frontend_base_url=self._get_frontend_base_url())
-
-            return self._json_response(
-                {
-                    'ok': True,
-                    'user_id': user.id,
-                    'mobile_user_id': mobile_user.id,
-                    'email': email,
-                    'requires_verification': True,
-                },
-                status=201
+            result = self._register_billnova_user(
+                name=name,
+                login=login,
+                password=password,
+                email=email,
+                phone=phone,
+                address=address,
+                role='seller',
+                is_mobile_user=True,
+                frontend_base_url=self._get_frontend_base_url(),
             )
+            if not result.get('ok'):
+                return self._json_response({'ok': False, 'error': result.get('error')}, status=result.get('status', 400))
+            return self._json_response(result, status=result.get('status', 201))
         except Exception as error:
             _logger.exception("Register failed: %s", error)
             return self._json_response(
@@ -322,7 +612,7 @@ class AuthApiController(http.Controller):
         user = self._get_current_res_user()
         mobile_user = self._get_current_billnova_user(user)
         user_role = mobile_user.role if mobile_user else 'seller'
-        company_id = mobile_user.company_id.id if mobile_user and mobile_user.company_id else None
+        company_id = self._get_effective_company_id(user=user, mobile_user=mobile_user)
         self._log_session_snapshot('login', user, mobile_user, user_role, company_id, session_id, session_token)
 
         return self._json_response({
@@ -410,7 +700,7 @@ class AuthApiController(http.Controller):
 
         mobile_user = self._get_current_billnova_user(user)
         user_role = mobile_user.role if mobile_user else 'seller'
-        company_id = mobile_user.company_id.id if mobile_user and mobile_user.company_id else None
+        company_id = self._get_effective_company_id(user=user, mobile_user=mobile_user)
 
         session_id = getattr(request.session, "sid", None)
         session_token = getattr(request.session, "session_token", None) or session_id

@@ -3,12 +3,14 @@ from odoo.http import Response, request
 import json
 import logging
 from psycopg2 import IntegrityError
+from .auth_controller import AuthApiController
 
 _logger = logging.getLogger(__name__)
 
 
 class CompanyApiController(http.Controller):
     def _get_current_res_user(self):
+        AuthApiController()._ensure_session_from_request()
         session_uid = getattr(request.session, "uid", None)
         if session_uid:
             user = request.env["res.users"].sudo().browse(session_uid)
@@ -52,6 +54,37 @@ class CompanyApiController(http.Controller):
             getattr(resolved_company, "name", None) if resolved_company else None,
         )
         _logger.info("=== END COMPANY DEBUG ===")
+
+    def _log_company_scope_debug(self, label, requested_company_id=None):
+        user = self._get_current_res_user()
+        billnova_user = self._resolve_current_billnova_user()
+        effective_company = None
+        if billnova_user and billnova_user.company_id:
+            effective_company = billnova_user.company_id.id
+        elif user and user.exists() and user.company_id:
+            effective_company = user.company_id.id
+
+        _logger.info("=== COMPANY SCOPE DEBUG: %s ===", label)
+        _logger.info("SESSION UID: %s", getattr(request.session, "uid", None))
+        _logger.info("SESSION LOGIN: %s", getattr(request.session, "login", None))
+        _logger.info("REQUESTED COMPANY ID: %s", requested_company_id)
+        _logger.info(
+            "RES USER -> id=%s login=%s active=%s company_id=%s",
+            getattr(user, "id", None),
+            getattr(user, "login", None),
+            getattr(user, "active", None),
+            getattr(getattr(user, "company_id", None), "id", None),
+        )
+        _logger.info(
+            "BILLNOVA USER -> id=%s email=%s role=%s company_id=%s res_user_id=%s",
+            getattr(billnova_user, "id", None),
+            getattr(billnova_user, "email", None),
+            getattr(billnova_user, "role", None),
+            getattr(getattr(billnova_user, "company_id", None), "id", None),
+            getattr(getattr(billnova_user, "res_user_id", None), "id", None),
+        )
+        _logger.info("EFFECTIVE COMPANY ID: %s", effective_company)
+        _logger.info("=== END COMPANY SCOPE DEBUG ===")
 
     def _log_event(self, company_id, accion, modulo, descripcion, detalle="", entidad_modelo="", entidad_id=None, entidad_nombre=""):
         user = request.env.user
@@ -183,6 +216,14 @@ class CompanyApiController(http.Controller):
     def _can_manage_company_settings(self):
         return self._current_billnova_role() in ("seller", "gerente", "admin")
 
+    def _can_moderate_companies(self):
+        return self._current_billnova_role() in ("moderator", "moderation", "admin")
+
+    def _is_company_moderation_payload(self, payload):
+        allowed_keys = {"moderation_status", "moderation_reason", "status"}
+        payload_keys = {key for key, value in payload.items() if value is not None}
+        return bool(payload_keys) and payload_keys.issubset(allowed_keys)
+
     def _forbidden_manage_response(self):
         return self._json_response(
             {"ok": False, "error": "No tienes permisos para gestionar la empresa."},
@@ -194,12 +235,20 @@ class CompanyApiController(http.Controller):
             return False
 
         billnova_user = self._resolve_current_billnova_user()
-        return bool(billnova_user and billnova_user.company_id and billnova_user.company_id.id == company_id)
+        if billnova_user and billnova_user.company_id and billnova_user.company_id.id == company_id:
+            return True
+
+        current_user = self._get_current_res_user()
+        return bool(current_user and current_user.exists() and current_user.company_id and current_user.company_id.id == company_id)
 
     def _resolve_current_company(self):
         billnova_user = self._resolve_current_billnova_user()
         if billnova_user and billnova_user.company_id:
             return billnova_user.company_id.sudo()
+
+        current_user = self._get_current_res_user()
+        if current_user and current_user.exists() and current_user.company_id:
+            return current_user.company_id.sudo()
 
         return request.env["res.company"].browse()
 
@@ -241,17 +290,24 @@ class CompanyApiController(http.Controller):
         if request.httprequest.method == "OPTIONS":
             return self._options_response()
 
-        if not self._can_manage_company_settings():
+        payload = request.httprequest.get_json(silent=True) or {}
+        is_moderation_update = self._is_company_moderation_payload(payload)
+
+        if is_moderation_update:
+            if not self._can_moderate_companies():
+                return self._forbidden_manage_response()
+        elif not self._can_manage_company_settings():
             return self._forbidden_manage_response()
 
-        payload = request.httprequest.get_json(silent=True) or {}
         company = request.env["res.company"].sudo().browse(company_id)
         if not company.exists():
             return self._json_response({"ok": False, "error": "Company not found"}, 404)
-        if not self._user_owns_company(company_id):
+        if not is_moderation_update and not self._user_owns_company(company_id):
             return self._json_response({"ok": False, "error": "Company not found"}, 404)
 
         vals = {}
+        previous_moderation_status = company.moderation_status
+        previous_moderation_reason = company.moderation_reason
         simple_fields = [
             "name",
             "ruc",
@@ -288,6 +344,15 @@ class CompanyApiController(http.Controller):
 
         if vals:
             company.write(vals)
+            if (
+                "moderation_status" in vals
+                and vals["moderation_status"] in ("approved", "rejected")
+                and (
+                    vals["moderation_status"] != previous_moderation_status
+                    or vals.get("moderation_reason", company.moderation_reason) != previous_moderation_reason
+                )
+            ):
+                company.action_send_moderation_status_email()
             self._log_event(
                 company.id,
                 "actualizar",
@@ -392,6 +457,7 @@ class CompanyApiController(http.Controller):
             return self._options_response()
 
         company_id = self._parse_int(request.httprequest.args.get("company_id"))
+        self._log_company_scope_debug("get_company_config", requested_company_id=company_id)
         if company_id and not self._user_owns_company(company_id):
             self._debug_session_context("company_config_forbidden_company", requested_company_id=company_id, resolved_company=None)
             return self._json_response({"ok": True, "company": None})
@@ -509,74 +575,71 @@ class CompanyApiController(http.Controller):
         if not company.exists():
             return self._json_response({"ok": False, "error": "Company not found"}, 404)
 
-        users = request.env["res.users"].sudo()
-        res_user = users.with_context(active_test=False).search([("login", "=", email)], limit=1)
         existing_billnova_user = request.env["billnova.user"].sudo().with_context(active_test=False).search(
             [("email", "=", email)],
             limit=1,
         )
         if existing_billnova_user and existing_billnova_user.company_id and existing_billnova_user.company_id.id != company_id:
             return self._json_response({"ok": False, "error": "Ese correo ya pertenece a otra empresa."}, 409)
-        if not res_user:
-            res_user = users.with_context(no_reset_password=True).create(
-                {
-                    "name": name,
-                    "login": email,
-                    "email": email,
-                    "phone": phone,
-                    "company_ids": [(6, 0, [company_id])],
-                    "company_id": company_id,
-                    "password": raw_password,
-                }
-            )
-            res_user.sudo().write({"active": False})
-        else:
-            res_user.write(
-                {
-                    "name": name,
-                    "email": email,
-                    "login": email,
-                    "phone": phone or "",
-                    "company_ids": [(6, 0, [company_id])],
-                    "company_id": company_id,
-                    "password": raw_password,
-                    "active": False,
-                }
-            )
-
-        billnova_user = request.env["billnova.user"].sudo().with_context(active_test=False).search(
-            [("res_user_id", "=", res_user.id)],
-            limit=1,
+        auth_api = AuthApiController()
+        _logger.info(
+            "[EMPLOYEE CREATE] start company_id=%s name=%s email=%s phone=%s current_uid=%s",
+            company_id,
+            name,
+            email,
+            phone,
+            getattr(request.session, "uid", None),
         )
-        if not billnova_user:
-            billnova_user = request.env["billnova.user"].sudo().create(
-                {
-                    "name": name,
-                    "email": email,
-                    "phone": phone,
-                    "address": "",
-                    "role": "worker",
-                    "is_mobile_user": True,
-                    "company_id": company_id,
-                    "res_user_id": res_user.id,
-                    "active": False,
-                    "email_verified_at": fields.Datetime.now(),
-                }
-            )
-        else:
-            billnova_user.write(
-                {
-                    "name": name,
-                    "email": email,
-                    "phone": phone,
-                    "role": "worker",
-                    "company_id": company_id,
-                    "active": False,
-                    "email_verified_at": fields.Datetime.now(),
-                }
-            )
+        auth_api._log_user_snapshots(
+            "company_employee_before_register",
+            login=email,
+            email=email,
+        )
+        auth_api._log_all_users_overview("company_employee_before_register")
+        result = auth_api._register_billnova_user(
+            name=name,
+            login=email,
+            password=raw_password,
+            email=email,
+            phone=phone,
+            address="",
+            role='worker',
+            company_id=company_id,
+            is_mobile_user=False,
+            frontend_base_url=auth_api._get_frontend_base_url(),
+            invitation_company_name=company.name,
+        )
+        if not result.get("ok"):
+            return self._json_response({"ok": False, "error": result.get("error")}, result.get("status", 400))
 
-        billnova_user.action_send_employee_invitation_email(company.name, raw_password)
+        billnova_user = request.env["billnova.user"].sudo().with_context(active_test=False).browse(result.get("mobile_user_id"))
+        _logger.info("[EMPLOYEE CREATE] register result=%s", result)
+        if billnova_user.exists():
+            billnova_user.write({
+                "company_id": company_id,
+                "role": "worker",
+                "is_mobile_user": False,
+            })
+            _logger.info(
+                "[EMPLOYEE CREATE] billnova_user linked id=%s res_user_id=%s active=%s company_id=%s",
+                billnova_user.id,
+                getattr(billnova_user.res_user_id, "id", None),
+                billnova_user.active,
+                getattr(billnova_user.company_id, "id", None),
+            )
+        if not billnova_user.exists() or not billnova_user.res_user_id or not billnova_user.res_user_id.exists():
+            return self._json_response(
+                {"ok": False, "error": "No se pudo completar el alta del usuario del sistema."},
+                500,
+            )
+        auth_api._log_user_snapshots(
+            "company_employee_after_register",
+            login=email,
+            email=email,
+        )
+        auth_api._log_all_users_overview("company_employee_after_register")
+
+        email_sent = result.get("email_sent")
         self._log_event(
             company_id,
             "crear",
@@ -587,7 +650,10 @@ class CompanyApiController(http.Controller):
             billnova_user.id,
             name,
         )
-        return self._json_response({"ok": True, "id": billnova_user.id}, status=201)
+        response = {"ok": True, "id": billnova_user.id, "email_sent": bool(email_sent), "requires_verification": True}
+        if not email_sent:
+            response["warning"] = "El trabajador fue creado, pero Odoo no pudo enviar el correo."
+        return self._json_response(response, status=201)
 
     @http.route("/api/company/employees/<int:employee_id>", type="http", auth="public", methods=["PUT", "OPTIONS"], csrf=False)
     def update_employee(self, employee_id, **kwargs):

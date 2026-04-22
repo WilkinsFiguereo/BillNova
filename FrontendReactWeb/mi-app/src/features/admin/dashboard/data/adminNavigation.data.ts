@@ -4,8 +4,8 @@ import {
   LayoutDashboard,
   Package,
   Settings,
-  ShoppingCart,
   Users,
+  Tag,
   type LucideIcon,
 } from "lucide-react";
 
@@ -22,6 +22,12 @@ export const ADMIN_NAV_ITEMS: AdminNavItemData[] = [
     Icon: LayoutDashboard,
     label: "Dashboard",
     href: "/navigation/admin/dashboard/page",
+  },
+  {
+    id: "categorias",
+    Icon: Tag,
+    label: "Categorías",
+    href: "/navigation/admin/category/page",
   },
   {
     id: "usuarios",
@@ -50,7 +56,7 @@ export const ADMIN_NAV_ITEMS: AdminNavItemData[] = [
   {
     id: "configuracion",
     Icon: Settings,
-    label: "Configuración",
-    href: "/navigation/config/page",
+    label: "Configuracion",
+    href: "/navigation/admin/configuracion/page",
   },
 ];

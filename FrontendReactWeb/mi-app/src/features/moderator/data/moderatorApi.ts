@@ -14,6 +14,8 @@ function unwrapArray(payload: any): any[] {
 
 export interface ModeratorProduct {
   id: string;
+  sourceId: string;
+  itemType: "product" | "service";
   name: string;
   sku: string;
   companyId: string;
@@ -157,10 +159,17 @@ function avatarColorFromId(id: string): string {
 }
 
 export async function apiListModeratorProducts(): Promise<ModeratorProduct[]> {
-  const payload = await odooRequest<any>("/api/products", { method: "GET" });
-  const rows = unwrapArray(payload);
-  return rows.map((r: AnyObj) => ({
-    id: String(r.id ?? ""),
+  const [productsPayload, servicesPayload] = await Promise.all([
+    odooRequest<any>("/api/products", { method: "GET" }),
+    odooRequest<any>("/api/services", { method: "GET" }),
+  ]);
+  const productRows = unwrapArray(productsPayload);
+  const serviceRows = unwrapArray(servicesPayload);
+
+  const products = productRows.map((r: AnyObj) => ({
+    id: `product:${String(r.id ?? "")}`,
+    sourceId: String(r.id ?? ""),
+    itemType: "product" as const,
     name: String(r.name ?? ""),
     sku: String(r.default_code ?? ""),
     companyId: String(r.company_id ?? ""),
@@ -176,6 +185,28 @@ export async function apiListModeratorProducts(): Promise<ModeratorProduct[]> {
     moderationReason: r.moderation_reason ? String(r.moderation_reason) : undefined,
     updatedAt: String(r.moderation_updated_at ?? r.write_date ?? r.create_date ?? ""),
   }));
+
+  const services = serviceRows.map((r: AnyObj) => ({
+    id: `service:${String(r.id ?? "")}`,
+    sourceId: String(r.id ?? ""),
+    itemType: "service" as const,
+    name: String(r.name ?? ""),
+    sku: `SRV-${String(r.id ?? "")}`,
+    companyId: String(r.company_id ?? ""),
+    companyName: String(r.company_name ?? ""),
+    companyEmail: String(r.company_email ?? ""),
+    categoryId: "",
+    categoryName: "Servicios",
+    price: Number(r.price ?? 0),
+    cost: 0,
+    stock: r.active === false ? 0 : 1,
+    description: String(r.description ?? r.details ?? ""),
+    moderationStatus: normalizeModeratorProductStatus(r.moderation_status),
+    moderationReason: r.moderation_reason ? String(r.moderation_reason) : undefined,
+    updatedAt: String(r.moderation_updated_at ?? r.write_date ?? r.create_date ?? ""),
+  }));
+
+  return [...products, ...services];
 }
 
 export async function apiSetProductModerationStatus(
@@ -183,7 +214,12 @@ export async function apiSetProductModerationStatus(
   status: "pending" | "approved" | "rejected",
   reason?: string,
 ): Promise<void> {
-  await odooRequest(`/api/products/${encodeURIComponent(productId)}`, {
+  const [itemType, rawId] = productId.includes(":") ? productId.split(":", 2) : ["product", productId];
+  const path = itemType === "service"
+    ? `/api/services/${encodeURIComponent(rawId)}`
+    : `/api/products/${encodeURIComponent(rawId)}`;
+
+  await odooRequest(path, {
     method: "PUT",
     body: JSON.stringify({
       moderation_status: status,

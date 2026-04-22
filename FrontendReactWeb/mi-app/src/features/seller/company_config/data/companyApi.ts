@@ -1,7 +1,14 @@
 "use client";
 
+import { getStoredAuthState } from "@/features/auth/login/data/storage";
+
 const ODOO_URL = (process.env.NEXT_PUBLIC_ODOO_URL ?? "http://localhost:8079").replace(/\/+$/, "");
 const API_BASE = ODOO_URL;
+
+function authHeaders(): HeadersInit {
+  const sessionToken = getStoredAuthState()?.sessionToken;
+  return sessionToken ? { "X-Auth-Session": sessionToken } : {};
+}
 
 async function parseJson<T>(response: Response): Promise<T> {
   const contentType = response.headers.get("content-type") ?? "";
@@ -16,7 +23,7 @@ async function odooGet<T>(path: string): Promise<T> {
   try {
     const res = await fetch(`${API_BASE}${path}`, {
       method: "GET",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       credentials: "include",
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -31,7 +38,7 @@ async function odooPost<T>(path: string, body: unknown): Promise<T> {
   try {
     const res = await fetch(`${API_BASE}${path}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify(body),
       credentials: "include",
     });
@@ -47,7 +54,7 @@ async function odooPut<T>(path: string, body: unknown): Promise<T> {
   try {
     const res = await fetch(`${API_BASE}${path}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify(body),
       credentials: "include",
     });
@@ -114,18 +121,16 @@ export const companyApi = {
     companyId: string | number;
     name: string;
     email: string;
-    role: string;
     password: string;
     phone?: string;
     status?: "active" | "disabled";
   }) => {
     // El backend no tiene endpoint para crear empleados
-    return odooPost<{ ok: boolean; id?: number; error?: string }>(`/api/company/employees`, payload);
+    return odooPost<{ ok: boolean; id?: number; error?: string; email_sent?: boolean; warning?: string }>(`/api/company/employees`, payload);
   },
   updateEmployee: (employeeId: string | number, payload: {
     name?: string;
     email?: string;
-    role?: string;
     phone?: string;
     status?: "active" | "disabled";
   }) => {

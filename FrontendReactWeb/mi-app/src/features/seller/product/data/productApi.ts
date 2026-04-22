@@ -4,7 +4,11 @@ import { getActiveCompanyId } from "@/features/seller/shared/companySession";
 import { getStoredAuthState } from "@/features/auth/login/data/storage";
 
 function jsonHeaders(): HeadersInit {
-  return { "Content-Type": "application/json" };
+  const sessionToken = getStoredAuthState()?.sessionToken;
+  return {
+    "Content-Type": "application/json",
+    ...(sessionToken ? { "X-Auth-Session": sessionToken } : {}),
+  };
 }
 
 function getCompanyId(): number | null {

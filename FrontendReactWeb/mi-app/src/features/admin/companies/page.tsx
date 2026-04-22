@@ -11,49 +11,14 @@ import { StatsSection } from './sections/StatsSection';
 import { ListaEmpresasSection } from './sections/ListaEmpresasSection';
 import { GraficasSection } from './sections/GraficasSection';
 import { TopEmpresasSection } from './sections/TopEmpresasSection';
-import { CompanyDetailSidebar } from './ui/CompanyDetailSidebar';
-import type { Company } from './types/company.types';
 
 export default function CompaniesPage() {
-  const {
-    companies,
-    filteredCompanies,
-    stats,
-    isLoading,
-    error,
-    setSearchQuery,
-    updateCompany,
-  } = useDashboard();
+  const { companies, filteredCompanies, stats, isLoading, error, setSearchQuery } = useDashboard();
   const [searchInput, setSearchInput] = useState('');
-  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
-  const [sidebarError, setSidebarError] = useState<string | null>(null);
-  const [isSavingCompany, setIsSavingCompany] = useState(false);
 
   const handleSearch = (query: string) => {
     setSearchInput(query);
     setSearchQuery(query);
-  };
-
-  const handleSaveCompany = async (updates: Partial<Company>) => {
-    if (!selectedCompany) return;
-
-    setIsSavingCompany(true);
-    setSidebarError(null);
-    try {
-      const nextCompany = await updateCompany(selectedCompany.id, updates);
-      setSelectedCompany(nextCompany);
-    } catch (err) {
-      setSidebarError(err instanceof Error ? err.message : 'No se pudo guardar la empresa');
-    } finally {
-      setIsSavingCompany(false);
-    }
-  };
-
-  const handleToggleCompanyStatus = async () => {
-    if (!selectedCompany) return;
-
-    const nextStatus = selectedCompany.status === 'Activa' ? 'Inactiva' : 'Activa';
-    await handleSaveCompany({ status: nextStatus });
   };
 
   return (
@@ -73,8 +38,6 @@ export default function CompaniesPage() {
           flex: 1,
           overflow: 'auto',
           padding: '32px 36px',
-          marginRight: selectedCompany ? 440 : 0,
-          transition: 'margin-right 0.24s ease',
         }}
       >
         <div style={{ maxWidth: 1120, margin: '0 auto' }}>
@@ -145,31 +108,10 @@ export default function CompaniesPage() {
             <h2 style={{ fontSize: font.sizes.lg, fontWeight: font.weights.semibold, marginBottom: 16 }}>
               Listado de Empresas
             </h2>
-            <ListaEmpresasSection
-              companies={filteredCompanies}
-              isLoading={isLoading}
-              error={error}
-              onViewDetails={(company) => {
-                setSidebarError(null);
-                setSelectedCompany(company);
-              }}
-            />
+            <ListaEmpresasSection companies={filteredCompanies} isLoading={isLoading} error={error} />
           </div>
         </div>
       </main>
-
-      <CompanyDetailSidebar
-        company={selectedCompany}
-        isOpen={Boolean(selectedCompany)}
-        isSaving={isSavingCompany}
-        error={sidebarError}
-        onClose={() => {
-          setSidebarError(null);
-          setSelectedCompany(null);
-        }}
-        onSave={handleSaveCompany}
-        onToggleStatus={handleToggleCompanyStatus}
-      />
     </div>
   );
 }

@@ -37,7 +37,7 @@ export default function AdminProductsPage() {
     abrirModalRechazar,
     cerrarModalRechazar,
     confirmarRechazo,
-  } = useModeration();
+  } = useModeration({ useMock: true });
 
   return (
     <div

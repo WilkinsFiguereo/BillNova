@@ -1,8 +1,55 @@
+import logging
+
 from odoo import fields, models
+
+_logger = logging.getLogger(__name__)
 
 
 class ResCompany(models.Model):
     _inherit = "res.company"
+
+    def _get_moderation_email_to(self):
+        self.ensure_one()
+        return self.admin_email or self.contact_email or self.email or False
+
+    def action_send_moderation_status_email(self):
+        self.ensure_one()
+        email_to = self._get_moderation_email_to()
+        if not email_to:
+            return False
+
+        config = self.env["ir.config_parameter"].sudo()
+        email_from = (
+            config.get_param("mail.default.from")
+            or self.env.company.email
+            or "no-reply@billnova.local"
+        )
+        status_label = "aprobada" if self.moderation_status == "approved" else "rechazada"
+        reason_html = (
+            f"<p><strong>Motivo:</strong> {self.moderation_reason}</p>"
+            if self.moderation_status == "rejected" and self.moderation_reason
+            else ""
+        )
+        body_html = f"""
+            <div style="font-family: Arial, sans-serif; color: #1f2937; line-height: 1.6;">
+                <p>Hola {self.admin_full_name or self.contact_name or self.name},</p>
+                <p>La empresa <strong>{self.name}</strong> ha sido <strong>{status_label}</strong> en BillNova.</p>
+                {reason_html}
+                <p>Puedes entrar a la plataforma para revisar el estado actualizado.</p>
+            </div>
+        """
+        mail = self.env["mail.mail"].sudo().create({
+            "subject": f"Estado de moderacion de empresa: {self.name}",
+            "email_to": email_to,
+            "email_from": email_from,
+            "body_html": body_html,
+        })
+        try:
+            mail.send(raise_exception=True)
+            return True
+        except Exception:
+            _logger.exception("No se pudo enviar el correo de moderacion de empresa a %s", email_to)
+            return False
 
     BUSINESS_TYPE_SELECTION = [
         ("products", "Productos"),

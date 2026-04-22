@@ -6,7 +6,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { getStoredAuthState } from "@/features/auth/login/data/storage";
 import { getUserRoleRoute } from "@/features/auth/login/hooks/useRoleGuard";
 
-const PUBLIC_ROUTE_PREFIXES = [
+const AUTH_OPTIONAL_ROUTE_PREFIXES = [
+  "/navigation/privacy",
+  "/navigation/terms",
+];
+
+const PUBLIC_ONLY_ROUTE_PREFIXES = [
   "/navigation/welcome",
   "/navigation/auth/login",
   "/navigation/auth/register",
@@ -20,19 +25,25 @@ export default function NavigationLayout({ children }: { children: ReactNode }) 
   const pathname = usePathname();
 
   const [allowed, setAllowed] = useState(() => {
-    if (PUBLIC_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return true;
+    if (
+      AUTH_OPTIONAL_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix)) ||
+      PUBLIC_ONLY_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+    ) {
+      return true;
+    }
     const stored = getStoredAuthState();
     return Boolean(stored?.uid && stored?.sessionToken);
   });
 
   useEffect(() => {
-    const isPublic = PUBLIC_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+    const isAuthOptional = AUTH_OPTIONAL_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+    const isPublicOnly = PUBLIC_ONLY_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 
     const stored = getStoredAuthState();
     const hasSession = Boolean(stored?.uid && stored?.sessionToken);
 
     if (hasSession) {
-      if (isPublic) {
+      if (isPublicOnly) {
         setAllowed(false);
         router.replace(getUserRoleRoute(stored?.role));
         return;
@@ -42,7 +53,7 @@ export default function NavigationLayout({ children }: { children: ReactNode }) 
       return;
     }
 
-    if (isPublic) {
+    if (isAuthOptional || isPublicOnly) {
       setAllowed(true);
       return;
     }

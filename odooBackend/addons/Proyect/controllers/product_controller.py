@@ -3,45 +3,90 @@ from odoo import fields, http
 from odoo.http import Response, request
 import json as json_lib
 import logging
+from .auth_controller import AuthApiController
 
 _logger = logging.getLogger(__name__)
 
 
 class ProductApiController(http.Controller):
+    def _get_current_res_user(self):
+        AuthApiController()._ensure_session_from_request()
+        session_uid = getattr(request.session, "uid", None)
+        if session_uid:
+            user = request.env["res.users"].sudo().with_context(active_test=False).browse(session_uid)
+            if user.exists():
+                return user
+
+        user = request.env.user
+        if user and getattr(user, "id", False):
+            try:
+                if user._is_public():
+                    return request.env["res.users"]
+            except Exception:
+                return request.env["res.users"]
+            return user.sudo().with_context(active_test=False)
+
+        return request.env["res.users"]
 
     # ──────────────────────────────────────────────
     # HELPERS
     # ──────────────────────────────────────────────
 
     def _get_current_billnova_user(self):
-        user = request.env.user
-        if not user or not user.id:
-            return request.env["billnova.user"]
-
-        try:
-            if user._is_public():
-                return request.env["billnova.user"]
-        except Exception:
+        user = self._get_current_res_user()
+        if not user or not user.exists():
             return request.env["billnova.user"]
 
         return request.env["billnova.user"].sudo().search(
             [("res_user_id", "=", user.id)], limit=1
         )
 
+    def _get_effective_company_id(self):
+        billnova_user = self._get_current_billnova_user()
+        if billnova_user and billnova_user.exists() and billnova_user.company_id:
+            return billnova_user.company_id.id
+
+        res_user = self._get_current_res_user()
+        if res_user and res_user.exists() and res_user.company_id:
+            return res_user.company_id.id
+
+        return None
+
+    def _log_scope_debug(self, label, requested_company_id=None, resolved_company_id=None):
+        res_user = self._get_current_res_user()
+        billnova_user = self._get_current_billnova_user()
+        _logger.info("=== PRODUCT SCOPE DEBUG: %s ===", label)
+        _logger.info("SESSION UID: %s", getattr(request.session, "uid", None))
+        _logger.info("SESSION LOGIN: %s", getattr(request.session, "login", None))
+        _logger.info("REQUESTED COMPANY ID: %s", requested_company_id)
+        _logger.info(
+            "RES USER -> id=%s login=%s active=%s company_id=%s",
+            getattr(res_user, "id", None),
+            getattr(res_user, "login", None),
+            getattr(res_user, "active", None),
+            getattr(getattr(res_user, "company_id", None), "id", None),
+        )
+        _logger.info(
+            "BILLNOVA USER -> id=%s email=%s role=%s company_id=%s res_user_id=%s",
+            getattr(billnova_user, "id", None),
+            getattr(billnova_user, "email", None),
+            getattr(billnova_user, "role", None),
+            getattr(getattr(billnova_user, "company_id", None), "id", None),
+            getattr(getattr(billnova_user, "res_user_id", None), "id", None),
+        )
+        _logger.info("RESOLVED COMPANY ID: %s", resolved_company_id)
+        _logger.info("=== END PRODUCT SCOPE DEBUG ===")
+
     def _is_company_scoped_user(self):
         billnova_user = self._get_current_billnova_user()
         return bool(
             billnova_user
             and billnova_user.exists()
-            and billnova_user.role in ("seller", "gerente")
+            and billnova_user.role in ("seller", "gerente", "worker")
         )
 
     def _get_current_billnova_company_id(self):
-        billnova_user = self._get_current_billnova_user()
-        if not billnova_user or not billnova_user.company_id:
-            return None
-
-        return billnova_user.company_id.id
+        return self._get_effective_company_id()
 
     def _resolve_company_id_for_request(self, raw_company_id=None):
         current_company_id = self._get_current_billnova_company_id()
@@ -66,7 +111,7 @@ class ProductApiController(http.Controller):
             return current_company_id
 
         if raw_company_id in (None, ""):
-            return current_company_id
+            return None
 
         try:
             requested_company_id = int(raw_company_id)
@@ -76,12 +121,6 @@ class ProductApiController(http.Controller):
             )
 
         # 👉 protección multiempresa
-        if current_company_id and requested_company_id != current_company_id:
-            return self._json_response(
-                {"ok": False, "error": "company_id does not belong to the current user"},
-                403,
-            )
-
         return requested_company_id
 
     def _can_access_product(self, product):
@@ -124,9 +163,18 @@ class ProductApiController(http.Controller):
             "list_price": product.list_price,
             "standard_price": product.standard_price,
             "qty_available": product.qty_available,
+            "moderation_status": product.moderation_status or "pending",
+            "moderation_reason": product.moderation_reason or None,
+            "moderation_updated_at": product.moderation_updated_at.isoformat() if product.moderation_updated_at else None,
 
             "company_id": company.id if company else None,
             "company_name": company.name if company else None,
+            "company_email": (
+                company.admin_email
+                or company.contact_email
+                or company.email
+                or None
+            ) if company else None,
 
             "category_id": category.id if category else None,
             "category_name": category.name if category else None,
@@ -176,6 +224,12 @@ class ProductApiController(http.Controller):
         if isinstance(company_id, Response):
             return company_id
 
+        self._log_scope_debug(
+            "list_products",
+            requested_company_id=kwargs.get("company_id"),
+            resolved_company_id=company_id,
+        )
+
         domain = []
 
         if company_id:
@@ -206,6 +260,11 @@ class ProductApiController(http.Controller):
             return self._options_response()
 
         product = request.env["product.product"].sudo().browse(product_id)
+        self._log_scope_debug(
+            "get_product",
+            requested_company_id=getattr(getattr(product, "company_id", None), "id", None),
+            resolved_company_id=self._get_current_billnova_company_id(),
+        )
 
         if not product.exists():
             return self._json_response(
@@ -293,6 +352,8 @@ class ProductApiController(http.Controller):
             return self._json_response({"ok": True})
 
         payload = request.httprequest.get_json(silent=True) or {}
+        previous_moderation_status = product.moderation_status
+        previous_moderation_reason = product.moderation_reason
 
         vals = {}
 
@@ -311,6 +372,15 @@ class ProductApiController(http.Controller):
         if "description_sale" in payload:
             vals["description_sale"] = payload.get("description_sale") or ""
 
+        if "moderation_status" in payload:
+            vals["moderation_status"] = payload.get("moderation_status") or "pending"
+            vals["moderation_updated_at"] = fields.Datetime.now()
+            if vals["moderation_status"] != "rejected" and "moderation_reason" not in payload:
+                vals["moderation_reason"] = False
+
+        if "moderation_reason" in payload:
+            vals["moderation_reason"] = payload.get("moderation_reason") or False
+
         company_id = self._parse_company_id(payload)
 
         if isinstance(company_id, Response):
@@ -325,6 +395,15 @@ class ProductApiController(http.Controller):
             )
 
         product.write(vals)
+        if (
+            "moderation_status" in vals
+            and vals["moderation_status"] in ("approved", "rejected")
+            and (
+                vals["moderation_status"] != previous_moderation_status
+                or vals.get("moderation_reason", product.moderation_reason) != previous_moderation_reason
+            )
+        ):
+            product.action_send_moderation_status_email()
 
         return self._json_response({
             "ok": True,

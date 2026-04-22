@@ -193,11 +193,15 @@ export function buildProductAnalytics(
   reviewStats: Map<string, ModeratorProductReviewStats>,
   period: PeriodKey,
 ) {
-  const productsById = new Map(products.map((product) => [product.id, product]));
+  const productsById = new Map(
+    products
+      .filter((product) => product.itemType === "product")
+      .map((product) => [product.sourceId, product]),
+  );
   const orderAnalytics = aggregateOrdersByProduct(orders, productsById, period);
 
   return products.map((product) => {
-    const stats = reviewStats.get(product.id);
+    const stats = product.itemType === "product" ? reviewStats.get(product.sourceId) : undefined;
     const orderData = orderAnalytics.get(product.id);
     return {
       product,

@@ -1,177 +1,121 @@
-import { odooRequest } from "@/lib/odooApi";
 import type { ResUser, BillnovaUser } from "../types/user.types";
-
-type ResUserApi = {
-  id: number;
-  name: string;
-  login?: string;
-  email: string;
-  active?: boolean;
-};
-
-type BillnovaUserApi = {
-  id: number;
-  name: string;
-  email: string;
-  phone?: string;
-  address?: string;
-  is_mobile_user?: boolean;
-  res_user_id?: number;
-};
+import { mockResUsers, mockBillnovaUsers } from "./mockUsers";
 
 type ResUserPayload = Omit<ResUser, "id" | "createdAt">;
 type BillnovaUserPayload = Omit<BillnovaUser, "id" | "createdAt">;
 
-function mapResUser(user: ResUserApi): ResUser {
-  return {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.login || "user",
-    active: user.active ?? true,
-  };
+let resUsersStore: ResUser[] = [...mockResUsers];
+let billnovaUsersStore: BillnovaUser[] = [...mockBillnovaUsers];
+
+function nowIso() {
+  return new Date().toISOString();
 }
 
-function mapBillnovaUser(user: BillnovaUserApi): BillnovaUser {
-  return {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.is_mobile_user ? "mobile" : "web",
-    active: true,
-  };
+function cloneResUser(user: ResUser): ResUser {
+  return { ...user };
+}
+
+function cloneBillnovaUser(user: BillnovaUser): BillnovaUser {
+  return { ...user };
+}
+
+function nextId(users: Array<{ id: number }>, fallback = 1) {
+  const max = users.reduce((acc, u) => Math.max(acc, u.id), 0);
+  return Math.max(max + 1, fallback);
 }
 
 // ── Res Users ────────────────────────────────────────────────────────────────
 
 export async function apiGetResUsers(): Promise<ResUser[]> {
-  const data = await odooRequest<ResUserApi[]>("/api/users", {
-    cache: "no-store",
-  });
-  return Array.isArray(data) ? data.map(mapResUser) : [];
+  return resUsersStore.map(cloneResUser);
 }
 
 export async function apiGetResUser(id: number): Promise<ResUser> {
-  const user = await odooRequest<ResUserApi>(`/api/users/${id}`, {
-    cache: "no-store",
-  });
-  return mapResUser(user);
+  const user = resUsersStore.find((u) => u.id === id);
+  if (!user) throw new Error("Usuario no encontrado.");
+  return cloneResUser(user);
 }
 
-export async function apiCreateResUser(
-  data: ResUserPayload
-): Promise<ResUser> {
-  const created = await odooRequest<{ id: number }>("/api/users", {
-    method: "POST",
-    body: JSON.stringify({
-      name: data.name,
-      login: data.email,
-      email: data.email,
-      password: "Temp1234*",
-      active: data.active,
-    }),
-  });
-
-  return {
-    id: created.id,
+export async function apiCreateResUser(data: ResUserPayload): Promise<ResUser> {
+  const created: ResUser = {
+    id: nextId(resUsersStore, 1),
     name: data.name,
     email: data.email,
     role: data.role,
     active: data.active,
+    createdAt: nowIso(),
   };
+
+  resUsersStore = [created, ...resUsersStore];
+  return cloneResUser(created);
 }
 
 export async function apiUpdateResUser(
   id: number,
-  data: Partial<Omit<ResUser, "id">>
+  data: Partial<Omit<ResUser, "id">>,
 ): Promise<ResUser> {
-  await odooRequest(`/api/users/${id}`, {
-    method: "PUT",
-    body: JSON.stringify({
-      name: data.name,
-      login: data.email,
-      email: data.email,
-      active: data.active,
-    }),
-  });
+  const existing = resUsersStore.find((u) => u.id === id);
+  if (!existing) throw new Error("Usuario no encontrado.");
 
-  return {
-    id,
-    name: data.name ?? "",
-    email: data.email ?? "",
-    role: data.role ?? "user",
-    active: data.active ?? true,
+  const updated: ResUser = {
+    ...existing,
+    ...data,
   };
+
+  resUsersStore = resUsersStore.map((u) => (u.id === id ? updated : u));
+  return cloneResUser(updated);
 }
 
 export async function apiDeleteResUser(id: number): Promise<void> {
-  await odooRequest(`/api/users/${id}`, {
-    method: "DELETE",
-  });
+  const before = resUsersStore.length;
+  resUsersStore = resUsersStore.filter((u) => u.id !== id);
+  if (resUsersStore.length === before) throw new Error("Usuario no encontrado.");
 }
 
 // ── Billnova Users ───────────────────────────────────────────────────────────
 
 export async function apiGetBillnovaUsers(): Promise<BillnovaUser[]> {
-  const data = await odooRequest<BillnovaUserApi[]>("/api/billnova-users", {
-    cache: "no-store",
-  });
-  return Array.isArray(data) ? data.map(mapBillnovaUser) : [];
+  return billnovaUsersStore.map(cloneBillnovaUser);
 }
 
 export async function apiGetBillnovaUser(id: number): Promise<BillnovaUser> {
-  const user = await odooRequest<BillnovaUserApi>(`/api/billnova-users/${id}`, {
-    cache: "no-store",
-  });
-  return mapBillnovaUser(user);
+  const user = billnovaUsersStore.find((u) => u.id === id);
+  if (!user) throw new Error("Usuario no encontrado.");
+  return cloneBillnovaUser(user);
 }
 
-export async function apiCreateBillnovaUser(
-  data: BillnovaUserPayload
-): Promise<BillnovaUser> {
-  const created = await odooRequest<{ id: number }>("/api/billnova-users", {
-    method: "POST",
-    body: JSON.stringify({
-      name: data.name,
-      email: data.email,
-      is_mobile_user: data.role === "billing" || data.role === "support",
-    }),
-  });
-
-  return {
-    id: created.id,
+export async function apiCreateBillnovaUser(data: BillnovaUserPayload): Promise<BillnovaUser> {
+  const created: BillnovaUser = {
+    id: nextId(billnovaUsersStore, 100),
     name: data.name,
     email: data.email,
     role: data.role,
     active: data.active,
+    createdAt: nowIso(),
   };
+
+  billnovaUsersStore = [created, ...billnovaUsersStore];
+  return cloneBillnovaUser(created);
 }
 
 export async function apiUpdateBillnovaUser(
   id: number,
-  data: Partial<Omit<BillnovaUser, "id">>
+  data: Partial<Omit<BillnovaUser, "id">>,
 ): Promise<BillnovaUser> {
-  await odooRequest(`/api/billnova-users/${id}`, {
-    method: "PUT",
-    body: JSON.stringify({
-      name: data.name,
-      email: data.email,
-      is_mobile_user: data.role === "billing" || data.role === "support",
-      active: data.active,
-    }),
-  });
+  const existing = billnovaUsersStore.find((u) => u.id === id);
+  if (!existing) throw new Error("Usuario no encontrado.");
 
-  return {
-    id,
-    name: data.name ?? "",
-    email: data.email ?? "",
-    role: data.role ?? "web",
-    active: data.active ?? true,
+  const updated: BillnovaUser = {
+    ...existing,
+    ...data,
   };
+
+  billnovaUsersStore = billnovaUsersStore.map((u) => (u.id === id ? updated : u));
+  return cloneBillnovaUser(updated);
 }
 
 export async function apiDeleteBillnovaUser(id: number): Promise<void> {
-  await odooRequest(`/api/billnova-users/${id}`, {
-    method: "DELETE",
-  });
+  const before = billnovaUsersStore.length;
+  billnovaUsersStore = billnovaUsersStore.filter((u) => u.id !== id);
+  if (billnovaUsersStore.length === before) throw new Error("Usuario no encontrado.");
 }

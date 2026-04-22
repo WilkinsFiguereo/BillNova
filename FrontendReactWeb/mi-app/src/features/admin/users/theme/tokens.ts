@@ -1,74 +1,68 @@
-// ── Colors (desde dashboardTheme) ────────────────────────────────────────────
-
 export const colors = {
   bg: {
-    primary:   "#F8FAFC",
-    secondary: "#FFFFFF",
-    tertiary:  "#F1F5F9",
-    alt:       "#F1F5F9",
-    hover:     "#DBEAFE",
+    primary: "var(--bg-main)",
+    secondary: "var(--bg-card)",
+    tertiary: "var(--bg-alt)",
+    alt: "var(--bg-alt)",
+    hover: "var(--brand-100)",
   },
   text: {
-    primary:   "#1F2937",
-    secondary: "#4B5563",
-    tertiary:  "#9CA3AF",
-    disabled:  "#9CA3AF",
+    primary: "var(--text-primary)",
+    secondary: "var(--text-secondary)",
+    tertiary: "var(--text-disabled)",
+    disabled: "var(--text-disabled)",
   },
-  accent:     "#1E3A8A",
-  primary:    "#1E3A8A",
-  primaryHover: "#1A2F73",
-  primaryLight: "#3B82F6",
-  primarySoft: "#DBEAFE",
-  
-  success:    "#10B981",
-  successSoft: "#D1FAE5",
-  warning:    "#F59E0B",
-  warningSoft: "#FEF3C7",
-  error:      "#EF4444",
-  errorSoft:  "#FEE2E2",
-  
-  border:     "#E2E8F0",
-  borderLight: "#F1F5F9",
-  
-  chartSales: "#3B82F6",
-  chartCollections: "#10B981",
-  chartPending: "#F59E0B",
-  chartOverdue: "#EF4444",
+  accent: "var(--brand-600)",
+  primary: "var(--brand-600)",
+  primaryHover: "var(--brand-700)",
+  primaryLight: "var(--brand-400)",
+  primarySoft: "var(--brand-100)",
+
+  success: "var(--success-500)",
+  successSoft: "var(--success-100)",
+  warning: "var(--warning-500)",
+  warningSoft: "var(--warning-100)",
+  error: "var(--error-500)",
+  errorSoft: "var(--error-100)",
+
+  border: "var(--border)",
+  borderLight: "var(--bg-alt)",
+
+  chartSales: "var(--chart-sales)",
+  chartCollections: "var(--chart-payments)",
+  chartPending: "var(--chart-pending)",
+  chartOverdue: "var(--chart-overdue)",
 } as const;
-
-
-// ── Typography ───────────────────────────────────────────────────────────────
 
 export const font = {
   family: "'Inter', 'Segoe UI', system-ui, sans-serif",
   sizes: {
-    xs:   "11px",
-    sm:   "12px",
+    xs: "11px",
+    sm: "12px",
     base: "14px",
-    md:   "15px",
-    lg:   "17px",
-    xl:   "20px",
-    "2xl":"24px",
+    md: "15px",
+    lg: "17px",
+    xl: "20px",
+    "2xl": "24px",
   },
   weights: {
-    normal:   400,
-    medium:   500,
+    normal: 400,
+    medium: 500,
     semibold: 600,
-    bold:     700,
+    bold: 700,
   },
   lineHeight: {
-    tight:  1.25,
+    tight: 1.25,
     normal: 1.5,
-    loose:  1.75,
+    loose: 1.75,
   },
 } as const;
 
-// ── Border Radius ─────────────────────────────────────────────────────────────
-
 export const radius = {
-  sm:   "6px",
-  md:   "8px",
-  lg:   "12px",
-  xl:   "16px",
+  sm: "6px",
+  md: "8px",
+  lg: "12px",
+  xl: "16px",
   full: "9999px",
 } as const;
+

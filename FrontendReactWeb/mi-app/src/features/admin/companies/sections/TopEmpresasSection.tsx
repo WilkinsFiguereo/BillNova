@@ -3,6 +3,7 @@
 import React from 'react';
 import { TrendingUp } from 'lucide-react';
 import { colors, font, radius } from '../../users/theme/tokens';
+import { Badge } from '../ui/Badge';
 import type { Company } from '../types/company.types';
 
 interface TopEmpresasSectionProps {
@@ -97,21 +98,24 @@ export function TopEmpresasSection({ companies }: TopEmpresasSectionProps) {
               </div>
             </div>
 
-            <div
-              style={{
-                textAlign: 'right',
-                minWidth: 100,
-              }}
-            >
-              <p
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <Badge type="plan" value={company.plan} />
+              <div
                 style={{
-                  fontSize: font.sizes.sm,
-                  fontWeight: font.weights.semibold,
-                  color: colors.success,
+                  textAlign: 'right',
+                  minWidth: 100,
                 }}
               >
-                {formatCurrency(company.revenue || 0)}
-              </p>
+                <p
+                  style={{
+                    fontSize: font.sizes.sm,
+                    fontWeight: font.weights.semibold,
+                    color: colors.success,
+                  }}
+                >
+                  {formatCurrency(company.revenue || 0)}
+                </p>
+              </div>
             </div>
           </div>
         ))}

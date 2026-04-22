@@ -33,19 +33,7 @@ interface FormData {
 const EMPTY: FormData = { name: "", email: "", role: "", active: true };
 
 const RES_ROLES      = ["admin", "editor", "viewer"] as const;
-const BILLNOVA_ROLES = ["admin", "moderator", "gerente", "seller"] as const;
-
-function getRoleLabel(role: string): string {
-  const labels: Record<string, string> = {
-    admin: "Administrador",
-    moderator: "Moderador",
-    gerente: "Gerente",
-    seller: "Vendedor",
-    editor: "Editor",
-    viewer: "Visor",
-  };
-  return labels[role] || role.charAt(0).toUpperCase() + role.slice(1);
-}
+const BILLNOVA_ROLES = ["admin", "billing", "support", "viewer"] as const;
 
 // ── Styles ───────────────────────────────────────────────────────────────────
 
@@ -212,7 +200,7 @@ export function UserForm({ mode, userType, userId, onSubmit, onCancel }: UserFor
         >
           <option value="">— Seleccionar rol —</option>
           {roles.map(r => (
-            <option key={r} value={r}>{getRoleLabel(r)}</option>
+            <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>
           ))}
         </select>
       </div>

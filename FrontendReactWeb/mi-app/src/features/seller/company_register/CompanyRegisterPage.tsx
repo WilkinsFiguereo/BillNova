@@ -16,17 +16,22 @@ import { AccountSection } from './sections/AccountSection';
 import { BusinessTypeSection } from './sections/BusinessTypeSection';
 import { ServicesSection } from './sections/ServicesSection';
 import { hasCompanyForCurrentUser } from '@/features/seller/shared/companySession';
+import { useSession } from '@/features/auth/login/hooks/useSession';
 
 export default function CompanyRegisterPage() {
   const [hasCompany, setHasCompany] = useState(false);
+  const { user, isLoading: isSessionLoading } = useSession();
 
   useEffect(() => {
     try {
-      setHasCompany(hasCompanyForCurrentUser());
+      const nextHasCompany =
+        (typeof user?.companyId === "number" && user.companyId > 0) ||
+        hasCompanyForCurrentUser();
+      setHasCompany(nextHasCompany);
     } catch {
       setHasCompany(false);
     }
-  }, []);
+  }, [user?.companyId]);
 
   const {
     currentStep,
@@ -49,7 +54,7 @@ export default function CompanyRegisterPage() {
 
   const font = "'DM Sans', 'Segoe UI', sans-serif";
 
-  if (hasCompany) {
+  if (!isSessionLoading && hasCompany) {
     return (
       <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: C.bgPrimary, fontFamily: font }}>
         <style>{globalStyles(dashboardTheme)}</style>

@@ -6,6 +6,7 @@ import { Shield } from "lucide-react";
 import { NavItemData } from "../data/usersNavigation.data";
 import { colors, font } from "../theme/tokens";
 import { UserProfileSidebarSection } from "@/features/admin/dashboard/ui/UserProfileSidebarSection";
+import { SidebarSettingsSection } from "@/features/shared/sidebar/SidebarSettingsSection";
 
 interface UsersSidebarProps {
   navItems: NavItemData[];
@@ -91,6 +92,8 @@ export function UsersSidebar({ navItems }: UsersSidebarProps) {
           );
         })}
       </nav>
+
+      <SidebarSettingsSection compact />
 
       {/* User Profile Section */}
       <UserProfileSidebarSection />

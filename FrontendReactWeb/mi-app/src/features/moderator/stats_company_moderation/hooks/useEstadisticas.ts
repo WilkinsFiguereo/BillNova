@@ -53,7 +53,9 @@ export function useEstadisticas(): UseEstadisticasReturn {
         apiListModeratorProducts(),
         apiListModeratorPosOrders(),
       ]);
-      const reviewStats = await apiListProductReviewStats(products.map((product) => product.id));
+      const reviewStats = await apiListProductReviewStats(
+        products.filter((product) => product.itemType === "product").map((product) => product.sourceId),
+      );
 
       if (!mounted) return;
 

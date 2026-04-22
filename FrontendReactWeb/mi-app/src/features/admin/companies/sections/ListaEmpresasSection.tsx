@@ -9,15 +9,9 @@ interface ListaEmpresasSectionProps {
   companies: Company[];
   isLoading: boolean;
   error: string | null;
-  onViewDetails: (company: Company) => void;
 }
 
-export function ListaEmpresasSection({
-  companies,
-  isLoading,
-  error,
-  onViewDetails,
-}: ListaEmpresasSectionProps) {
+export function ListaEmpresasSection({ companies, isLoading, error }: ListaEmpresasSectionProps) {
   if (isLoading) {
     return (
       <div
@@ -131,7 +125,20 @@ export function ListaEmpresasSection({
                   borderBottom: `1px solid ${colors.border}`,
                 }}
               >
-                Tipo
+                Sector
+              </th>
+              <th
+                style={{
+                  padding: '14px',
+                  textAlign: 'left',
+                  fontSize: font.sizes.sm,
+                  fontWeight: font.weights.semibold,
+                  color: colors.text.tertiary,
+                  textTransform: 'uppercase',
+                  borderBottom: `1px solid ${colors.border}`,
+                }}
+              >
+                Plan
               </th>
               <th
                 style={{
@@ -176,7 +183,7 @@ export function ListaEmpresasSection({
           </thead>
           <tbody>
             {companies.map(company => (
-              <EmpresaCard key={company.id} company={company} onViewDetails={onViewDetails} />
+              <EmpresaCard key={company.id} company={company} />
             ))}
           </tbody>
         </table>

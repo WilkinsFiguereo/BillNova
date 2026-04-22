@@ -14,6 +14,8 @@ export function UserProfileSidebarSection() {
     .join('')
     .toUpperCase() || 'AD';
 
+  const hasAvatar = user?.avatar;
+
   return (
     <Link href="/navigation/admin/profile/page" style={{ textDecoration: 'none' }}>
       <div
@@ -40,17 +42,21 @@ export function UserProfileSidebarSection() {
             width: 32,
             height: 32,
             borderRadius: '50%',
-            background: `linear-gradient(135deg, ${colors.accent}, #818cf8)`,
+            background: hasAvatar 
+              ? `url(${user.avatar})`
+              : `linear-gradient(135deg, ${colors.accent}, #818cf8)`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: 13,
-            color: 'white',
+            color: hasAvatar ? 'transparent' : 'white',
             fontWeight: 700,
             flexShrink: 0,
           }}
         >
-          {initials}
+          {!hasAvatar && initials}
         </div>
         <div>
           <div style={{ fontSize: 12, fontWeight: 600, color: colors.text.primary }}>

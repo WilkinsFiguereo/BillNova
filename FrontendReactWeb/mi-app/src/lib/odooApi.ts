@@ -6,6 +6,22 @@ const RAW_ODOO_URL =
 export const ODOO_URL = RAW_ODOO_URL.replace(/\/+$/, "");
 const AUTH_API_BASE = "/api/auth";
 
+function getStoredSessionToken(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+
+  try {
+    const localValue = window.localStorage.getItem("billnova.auth.user");
+    const sessionValue = window.sessionStorage.getItem("billnova.auth.user");
+    const rawValue = localValue ?? sessionValue;
+    if (!rawValue) return undefined;
+
+    const parsed = JSON.parse(rawValue) as { user?: { sessionToken?: string } };
+    return parsed?.user?.sessionToken;
+  } catch {
+    return undefined;
+  }
+}
+
 export function getOdooUrl(): string {
   if (!ODOO_URL) {
     throw new Error("Odoo URL is not configured. Check your environment variables.");
@@ -145,10 +161,12 @@ export async function odooRequest<TRes>(
   path: string,
   init?: RequestInit,
 ): Promise<TRes> {
+  const sessionToken = getStoredSessionToken();
   const res = await fetch(`${ODOO_URL}${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
+      ...(sessionToken ? { "X-Auth-Session": sessionToken } : {}),
       ...(init?.headers ?? {}),
     },
     credentials: "include",

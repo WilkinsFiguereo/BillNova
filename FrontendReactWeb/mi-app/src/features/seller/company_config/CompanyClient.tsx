@@ -50,10 +50,14 @@ export default function CompanyClient() {
     showToast("Empresa actualizada correctamente");
   }, [updateCompany, showToast]);
 
-  const handleSaveEmployee = useCallback((emp: Employee) => {
+  const handleSaveEmployee = useCallback(async (emp: Employee) => {
     if (employeeModal === null) {
-      addEmployee(emp);
-      showToast("Empleado agregado");
+      const res = await addEmployee(emp);
+      if (res?.ok) {
+        showToast(res.warning || "Trabajador agregado");
+      } else {
+        showToast(res?.error || "No se pudo agregar empleado", "error");
+      }
     } else {
       updateEmployee(emp);
       showToast("Empleado actualizado");

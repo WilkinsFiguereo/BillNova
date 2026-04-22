@@ -8,26 +8,29 @@ const STORAGE_KEY = "billnova.color_mode";
 
 function applyMode(mode: ColorMode) {
   document.documentElement.classList.toggle("dark", mode === "dark");
+  document.documentElement.style.colorScheme = mode;
+  document.body.style.backgroundColor = mode === "dark" ? "#0f172a" : "#f8fafc";
+}
+
+function getInitialMode(): ColorMode {
+  if (typeof window === "undefined") return "light";
+
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored === "dark" || stored === "light") return stored;
+  } catch {
+    // ignore
+  }
+
+  return window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ? "dark" : "light";
 }
 
 export function useColorMode() {
-  const [mode, setMode] = useState<ColorMode>("light");
+  const [mode, setMode] = useState<ColorMode>(getInitialMode);
 
   useEffect(() => {
-    try {
-      const stored = (localStorage.getItem(STORAGE_KEY) as ColorMode | null) ?? null;
-      const initial: ColorMode =
-        stored === "dark" || stored === "light"
-          ? stored
-          : window.matchMedia?.("(prefers-color-scheme: dark)")?.matches
-            ? "dark"
-            : "light";
-      setMode(initial);
-      applyMode(initial);
-    } catch {
-      // ignore
-    }
-  }, []);
+    applyMode(mode);
+  }, [mode]);
 
   const setColorMode = useCallback((next: ColorMode) => {
     setMode(next);
@@ -36,7 +39,6 @@ export function useColorMode() {
     } catch {
       // ignore
     }
-    applyMode(next);
   }, []);
 
   const toggle = useCallback(() => {

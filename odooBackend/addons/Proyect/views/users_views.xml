@@ -11,9 +11,26 @@
                 <field name="address"/>
                 <field name="role"/>
                 <field name="company_id"/>
+                <field name="active"/>
                 <field name="is_mobile_user"/>
                 <field name="res_user_id"/>
             </list>
+        </field>
+    </record>
+
+    <record id="view_billnova_user_search" model="ir.ui.view">
+        <field name="name">billnova.user.search</field>
+        <field name="model">billnova.user</field>
+        <field name="arch" type="xml">
+            <search string="Buscar usuarios">
+                <field name="name"/>
+                <field name="email"/>
+                <field name="role"/>
+                <field name="company_id"/>
+                <filter string="Activos" name="filter_active" domain="[('active', '=', True)]"/>
+                <filter string="Inactivos" name="filter_inactive" domain="[('active', '=', False)]"/>
+                <filter string="Trabajadores" name="filter_workers" domain="[('role', '=', 'worker')]"/>
+            </search>
         </field>
     </record>
 
@@ -30,6 +47,7 @@
                         <field name="address"/>
                         <field name="role"/>
                         <field name="company_id"/>
+                        <field name="active"/>
                         <field name="is_mobile_user"/>
                         <field name="res_user_id"/>
                     </group>
@@ -42,6 +60,8 @@
         <field name="name">Usuarios</field>
         <field name="res_model">billnova.user</field>
         <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_billnova_user_search"/>
+        <field name="context">{'active_test': False}</field>
     </record>
 
     <menuitem id="menu_proyect_root" name="BillNova" sequence="10"/>
