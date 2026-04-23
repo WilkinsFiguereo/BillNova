@@ -8,7 +8,10 @@ import {
   apiDeleteResUser,
   apiDeleteBillnovaUser,
 } from "../data/userApi";
+import { mockResUsers, mockBillnovaUsers } from "../data/mockUsers";
 import type { ResUser, BillnovaUser } from "../types/user.types";
+
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
 export function useUsers() {
   const [resUsers,      setResUsers]      = useState<ResUser[]>([]);
@@ -21,9 +24,17 @@ export function useUsers() {
     setLoading(true);
     setError(null);
     try {
-      const [res, bill] = await Promise.all([apiGetResUsers(), apiGetBillnovaUsers()]);
-      setResUsers(res);
-      setBillnovaUsers(bill);
+      if (USE_MOCK) {
+        setResUsers(mockResUsers);
+        setBillnovaUsers(mockBillnovaUsers);
+      } else {
+        const [res, bill] = await Promise.all([
+          apiGetResUsers(),
+          apiGetBillnovaUsers(),
+        ]);
+        setResUsers(res);
+        setBillnovaUsers(bill);
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error al cargar usuarios.");
     } finally {

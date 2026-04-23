@@ -57,6 +57,6 @@ export const ADMIN_NAV_ITEMS: AdminNavItemData[] = [
     id: "configuracion",
     Icon: Settings,
     label: "Configuracion",
-    href: "/navigation/admin/configuracion/page",
+    href: "/navigation/config?role=admin",
   },
 ];

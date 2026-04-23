@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -6,7 +6,6 @@ import { Shield } from "lucide-react";
 import { NavItemData } from "../data/usersNavigation.data";
 import { colors, font } from "../theme/tokens";
 import { UserProfileSidebarSection } from "@/features/admin/dashboard/ui/UserProfileSidebarSection";
-import { SidebarSettingsSection } from "@/features/shared/sidebar/SidebarSettingsSection";
 
 interface UsersSidebarProps {
   navItems: NavItemData[];
@@ -54,10 +53,10 @@ export function UsersSidebar({ navItems }: UsersSidebarProps) {
             </div>
             <div>
               <div style={{ fontSize: 14, fontWeight: 700, color: colors.text.primary }}>
-                BillNova
+                BizAdmin
               </div>
               <div style={{ fontSize: 10, color: colors.text.tertiary, letterSpacing: "0.05em" }}>
-                BUSINESS
+                ENTERPRISE
               </div>
             </div>
           </div>
@@ -92,8 +91,6 @@ export function UsersSidebar({ navItems }: UsersSidebarProps) {
           );
         })}
       </nav>
-
-      <SidebarSettingsSection compact />
 
       {/* User Profile Section */}
       <UserProfileSidebarSection />

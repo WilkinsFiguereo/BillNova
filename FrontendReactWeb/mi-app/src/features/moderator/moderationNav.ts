@@ -1,4 +1,4 @@
-import { BarChart2, Building2, LineChart, LayoutDashboard, Package, Settings } from "lucide-react";
+import { LayoutDashboard, Package, Settings } from "lucide-react";
 import type { NavItemData } from "../seller/dashboard/data/chart.data";
 
 export const MODERATOR_NAV_ITEMS: NavItemData[] = [
@@ -8,7 +8,7 @@ export const MODERATOR_NAV_ITEMS: NavItemData[] = [
     label: "Dashboard",
     href: "/navigation/moderation/dashboard/page",
   },
-{
+  {
     id: "products",
     Icon: Package,
     label: "Productos",
@@ -17,7 +17,7 @@ export const MODERATOR_NAV_ITEMS: NavItemData[] = [
   {
     id: "config",
     Icon: Settings,
-    label: "Configuración",
-    href: "/navigation/config/page",
+    label: "Configuracion",
+    href: "/navigation/config?role=moderator",
   },
 ];

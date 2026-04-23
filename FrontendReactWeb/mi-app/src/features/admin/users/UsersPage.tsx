@@ -7,9 +7,9 @@ import { UsersStats }      from "./sections/usersStats";
 import { UsersTable }      from "./sections/usersTable";
 import { UserForm }        from "./sections/userForm";
 import { Modal }           from "./ui/Modal";
+import { UsersSidebar }    from "./ui/UsersSidebar";
 import { colors, font, radius } from "./theme/tokens";
-import { AdminSidebar } from "@/features/admin/dashboard/ui/AdminSidebar";
-import { ADMIN_NAV_ITEMS } from "@/features/admin/dashboard/data/adminNavigation.data";
+import { USERS_NAV_ITEMS } from "./data/usersNavigation.data";
 
 interface ModalState {
   open: boolean;
@@ -56,7 +56,7 @@ export function UsersPage() {
       }}
     >
       {/* ── Sidebar ── */}
-      <AdminSidebar navItems={ADMIN_NAV_ITEMS} />
+      <UsersSidebar navItems={USERS_NAV_ITEMS} />
 
       {/* ── Main Content ── */}
       <main

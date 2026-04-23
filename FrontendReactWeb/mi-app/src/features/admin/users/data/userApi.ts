@@ -1,121 +1,221 @@
+import { ODOO_URL } from "@/lib/odooApi";
 import type { ResUser, BillnovaUser } from "../types/user.types";
-import { mockResUsers, mockBillnovaUsers } from "./mockUsers";
+
+type ApiEnvelope<T> = {
+  data?: T;
+  error?: string;
+  message?: string;
+  id?: number;
+};
+
+type ResUserApi = {
+  id: number;
+  name: string;
+  login?: string;
+  email: string;
+  active?: boolean;
+};
+
+type BillnovaUserApi = {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string;
+  address?: string;
+  is_mobile_user?: boolean;
+  res_user_id?: number;
+};
 
 type ResUserPayload = Omit<ResUser, "id" | "createdAt">;
 type BillnovaUserPayload = Omit<BillnovaUser, "id" | "createdAt">;
 
-let resUsersStore: ResUser[] = [...mockResUsers];
-let billnovaUsersStore: BillnovaUser[] = [...mockBillnovaUsers];
+async function parseJson<T>(res: Response): Promise<T | null> {
+  const text = await res.text();
 
-function nowIso() {
-  return new Date().toISOString();
+  if (!text) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(text);
+  }
 }
 
-function cloneResUser(user: ResUser): ResUser {
-  return { ...user };
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${ODOO_URL}${path}`, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...(init?.headers ?? {}),
+    },
+    credentials: "include",
+  });
+
+  const payload = await parseJson<ApiEnvelope<T>>(res);
+
+  if (!res.ok) {
+    throw new Error(payload?.error || payload?.message || `HTTP ${res.status}`);
+  }
+
+  return (payload?.data ?? payload) as T;
 }
 
-function cloneBillnovaUser(user: BillnovaUser): BillnovaUser {
-  return { ...user };
+function mapResUser(user: ResUserApi): ResUser {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.login || "user",
+    active: user.active ?? true,
+  };
 }
 
-function nextId(users: Array<{ id: number }>, fallback = 1) {
-  const max = users.reduce((acc, u) => Math.max(acc, u.id), 0);
-  return Math.max(max + 1, fallback);
+function mapBillnovaUser(user: BillnovaUserApi): BillnovaUser {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.is_mobile_user ? "mobile" : "web",
+    active: true,
+  };
 }
 
 // ── Res Users ────────────────────────────────────────────────────────────────
 
 export async function apiGetResUsers(): Promise<ResUser[]> {
-  return resUsersStore.map(cloneResUser);
+  const data = await request<ResUserApi[]>("/api/users", {
+    cache: "no-store",
+  });
+
+  return data.map(mapResUser);
 }
 
 export async function apiGetResUser(id: number): Promise<ResUser> {
-  const user = resUsersStore.find((u) => u.id === id);
-  if (!user) throw new Error("Usuario no encontrado.");
-  return cloneResUser(user);
+  const user = await request<ResUserApi>(`/api/users/${id}`, {
+    cache: "no-store",
+  });
+
+  return mapResUser(user);
 }
 
-export async function apiCreateResUser(data: ResUserPayload): Promise<ResUser> {
-  const created: ResUser = {
-    id: nextId(resUsersStore, 1),
+export async function apiCreateResUser(
+  data: ResUserPayload
+): Promise<ResUser> {
+  const created = await request<{ id: number }>("/api/users", {
+    method: "POST",
+    body: JSON.stringify({
+      name: data.name,
+      login: data.email,
+      email: data.email,
+      password: "Temp1234*",
+      active: data.active,
+    }),
+  });
+
+  return {
+    id: created.id,
     name: data.name,
     email: data.email,
     role: data.role,
     active: data.active,
-    createdAt: nowIso(),
   };
-
-  resUsersStore = [created, ...resUsersStore];
-  return cloneResUser(created);
 }
 
 export async function apiUpdateResUser(
   id: number,
-  data: Partial<Omit<ResUser, "id">>,
+  data: Partial<Omit<ResUser, "id">>
 ): Promise<ResUser> {
-  const existing = resUsersStore.find((u) => u.id === id);
-  if (!existing) throw new Error("Usuario no encontrado.");
+  await request(`/api/users/${id}`, {
+    method: "PUT",
+    body: JSON.stringify({
+      name: data.name,
+      login: data.email,
+      email: data.email,
+      active: data.active,
+    }),
+  });
 
-  const updated: ResUser = {
-    ...existing,
-    ...data,
+  return {
+    id,
+    name: data.name ?? "",
+    email: data.email ?? "",
+    role: data.role ?? "user",
+    active: data.active ?? true,
   };
-
-  resUsersStore = resUsersStore.map((u) => (u.id === id ? updated : u));
-  return cloneResUser(updated);
 }
 
 export async function apiDeleteResUser(id: number): Promise<void> {
-  const before = resUsersStore.length;
-  resUsersStore = resUsersStore.filter((u) => u.id !== id);
-  if (resUsersStore.length === before) throw new Error("Usuario no encontrado.");
+  await request(`/api/users/${id}`, {
+    method: "DELETE",
+  });
 }
 
 // ── Billnova Users ───────────────────────────────────────────────────────────
 
 export async function apiGetBillnovaUsers(): Promise<BillnovaUser[]> {
-  return billnovaUsersStore.map(cloneBillnovaUser);
+  const data = await request<BillnovaUserApi[]>("/api/billnova-users", {
+    cache: "no-store",
+  });
+
+  return data.map(mapBillnovaUser);
 }
 
 export async function apiGetBillnovaUser(id: number): Promise<BillnovaUser> {
-  const user = billnovaUsersStore.find((u) => u.id === id);
-  if (!user) throw new Error("Usuario no encontrado.");
-  return cloneBillnovaUser(user);
+  const user = await request<BillnovaUserApi>(`/api/billnova-users/${id}`, {
+    cache: "no-store",
+  });
+
+  return mapBillnovaUser(user);
 }
 
-export async function apiCreateBillnovaUser(data: BillnovaUserPayload): Promise<BillnovaUser> {
-  const created: BillnovaUser = {
-    id: nextId(billnovaUsersStore, 100),
+export async function apiCreateBillnovaUser(
+  data: BillnovaUserPayload
+): Promise<BillnovaUser> {
+  const created = await request<{ id: number }>("/api/billnova-users", {
+    method: "POST",
+    body: JSON.stringify({
+      name: data.name,
+      email: data.email,
+      is_mobile_user: data.role === "billing" || data.role === "support",
+    }),
+  });
+
+  return {
+    id: created.id,
     name: data.name,
     email: data.email,
     role: data.role,
     active: data.active,
-    createdAt: nowIso(),
   };
-
-  billnovaUsersStore = [created, ...billnovaUsersStore];
-  return cloneBillnovaUser(created);
 }
 
 export async function apiUpdateBillnovaUser(
   id: number,
-  data: Partial<Omit<BillnovaUser, "id">>,
+  data: Partial<Omit<BillnovaUser, "id">>
 ): Promise<BillnovaUser> {
-  const existing = billnovaUsersStore.find((u) => u.id === id);
-  if (!existing) throw new Error("Usuario no encontrado.");
+  await request(`/api/billnova-users/${id}`, {
+    method: "PUT",
+    body: JSON.stringify({
+      name: data.name,
+      email: data.email,
+      is_mobile_user: data.role === "billing" || data.role === "support",
+      active: data.active,
+    }),
+  });
 
-  const updated: BillnovaUser = {
-    ...existing,
-    ...data,
+  return {
+    id,
+    name: data.name ?? "",
+    email: data.email ?? "",
+    role: data.role ?? "web",
+    active: data.active ?? true,
   };
-
-  billnovaUsersStore = billnovaUsersStore.map((u) => (u.id === id ? updated : u));
-  return cloneBillnovaUser(updated);
 }
 
 export async function apiDeleteBillnovaUser(id: number): Promise<void> {
-  const before = billnovaUsersStore.length;
-  billnovaUsersStore = billnovaUsersStore.filter((u) => u.id !== id);
-  if (billnovaUsersStore.length === before) throw new Error("Usuario no encontrado.");
+  await request(`/api/billnova-users/${id}`, {
+    method: "DELETE",
+  });
 }
