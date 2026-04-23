@@ -2,88 +2,35 @@
 
 Repositorio oficial: `https://github.com/WilkinsFiguereo/BillNova`
 
-## Nombre del Proyecto
+## Descripcion
 
-`BillNova`
+BillNova es un sistema ERP con:
 
-## Descripción del Proyecto
+- frontend web en `Next.js`
+- app mobile en `Expo / React Native`
+- backend en `Odoo 19`
+- base de datos en `PostgreSQL 15`
 
-BillNova es un sistema ERP orientado a la gestión comercial y operativa de empresas instaladoras. El proyecto integra:
+El backend Odoo de este proyecto esta configurado para trabajar solamente con la base de datos `wilkins`.
 
-- un frontend web administrativo en `Next.js`
-- una app mobile en `Expo / React Native`
-- un backend ERP en `Odoo`
-- base de datos `PostgreSQL`
+## Estructura del proyecto
 
-El sistema permite autenticación tradicional y con Google, gestión de usuarios, productos, servicios, categorías, empresas, facturación, reportes, moderación y paneles por rol.
-
-## Repositorio del Proyecto
-
-- GitHub: `https://github.com/WilkinsFiguereo/BillNova`
-
-### Clonar repositorio de GitHub
-
-```bash
-git clone https://github.com/WilkinsFiguereo/BillNova.git
-cd BillNova
+```text
+ProyectRijo/
+|-- FrontendReactWeb/
+|   `-- mi-app/
+|-- FrontendReactApp/
+|   `-- App-Mobile/
+|-- odooBackend/
+|   |-- addons/
+|   |   `-- Proyect/
+|   |-- config/
+|   |   `-- odoo.conf
+|   `-- docker-compose.yml
+`-- README.md
 ```
 
-## Tecnologías Utilizadas
-
-### Frontend Web
-
-- `Next.js 16`
-- `React 19`
-- `TypeScript`
-- `React Hook Form`
-- `Lucide React`
-- `jsPDF`
-- `xlsx`
-
-### App Mobile
-
-- `Expo SDK 54`
-- `React Native 0.81`
-- `Expo Router`
-- `Expo Secure Store`
-- `Expo Sharing`
-- `React Navigation`
-- `Zustand`
-
-### Backend
-
-- `Odoo 19`
-- `Python`
-- `PostgreSQL 15`
-- `Docker / Docker Compose`
-
-### Integraciones
-
-- `Google OAuth`
-- API REST personalizada sobre Odoo
-
-## Características del Sistema
-
-- Inicio de sesión con usuario/contraseña
-- Inicio de sesión con Google OAuth
-- Persistencia de sesión en web y mobile
-- Registro de usuarios y empresas
-- Gestión de productos
-- Gestión de servicios
-- Gestión de categorías
-- Gestión de empresas
-- Gestión de facturas
-- Exportación de facturas a PDF y Excel
-- Compartir facturas por correo
-- Dashboard para admin
-- Dashboard para seller
-- Dashboard y herramientas de moderación
-- Control de acceso por roles
-- Configuración por tipo de usuario
-
-## Requisitos del Sistema
-
-### Requisitos generales
+## Requisitos
 
 - `Node.js 20+`
 - `npm 10+`
@@ -91,67 +38,235 @@ cd BillNova
 - `Docker Compose`
 - `Git`
 
-### Requisitos recomendados
+## Configuracion importante del backend
 
-- Navegador moderno
-- Android Studio o Expo Go para pruebas mobile
-- Acceso a Google Cloud Console si se usará OAuth de Google
+La configuracion actual de Odoo ya fija la base de datos del proyecto:
 
-## Estructura del Proyecto
+- [odooBackend/config/odoo.conf](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/odooBackend/config/odoo.conf:7)
 
-```text
-BillNova/
-|-- FrontendReactWeb/
-|   `-- mi-app/                  # Aplicación web en Next.js
-|-- FrontendReactApp/
-|   `-- App-Mobile/              # Aplicación móvil en Expo
-|-- odooBackend/
-|   |-- addons/
-|   |   `-- Proyect/             # Módulo custom principal de Odoo
-|   |-- config/                  # Configuración de Odoo
-|   `-- docker-compose.yml       # Infraestructura local de backend
-`-- README.md
+Valores clave:
+
+```ini
+db_name = wilkins
+dbfilter = ^wilkins$
+db_user = odoo
+db_password = odoo
 ```
 
-## Configuración
+Eso significa:
 
-## Configuración del frontend web
+- Odoo trabajara con la base `wilkins`
+- el proyecto no debe quedarse usando otra base como `billnova`
+- si en algun momento creaste otra base para pruebas, la base final a usar en este proyecto debe ser `wilkins`
 
-Archivo sugerido: `FrontendReactWeb/mi-app/.env.local`
+## Paso a paso para levantar el proyecto
 
-```env
-NEXT_PUBLIC_ODOO_URL=http://localhost:8079
+## 1. Clonar el repositorio
+
+```bash
+git clone https://github.com/WilkinsFiguereo/BillNova.git
+cd BillNova
 ```
 
-## Configuración del frontend mobile
+Si ya tienes este proyecto abierto localmente, puedes continuar directamente.
 
-Archivo sugerido: `FrontendReactApp/App-Mobile/.env`
+## 2. Instalar dependencias del frontend web
 
-```env
-EXPO_PUBLIC_ODOO_URL=http://localhost:8079
+```bash
+cd FrontendReactWeb/mi-app
+npm install
 ```
 
-Si se prueba en dispositivo físico, usa una URL accesible desde el teléfono, por ejemplo una IP local o túnel público.
+## 3. Instalar dependencias del frontend mobile
 
-## Configuración de Odoo
+```bash
+cd FrontendReactApp/App-Mobile
+npm install
+```
 
-Levanta Odoo con Docker usando el archivo:
+## 4. Correr Docker Compose para Odoo y PostgreSQL
+
+Archivo usado:
 
 - [odooBackend/docker-compose.yml](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/odooBackend/docker-compose.yml)
 
-Credenciales por defecto de PostgreSQL dentro de Docker:
+Desde la carpeta `odooBackend` ejecuta:
+
+```bash
+docker compose up -d
+```
+
+Si tu Docker aun usa el comando anterior, tambien funciona:
+
+```bash
+docker-compose up -d
+```
+
+Credenciales de PostgreSQL dentro de Docker:
 
 - `POSTGRES_DB=postgres`
 - `POSTGRES_USER=odoo`
 - `POSTGRES_PASSWORD=odoo`
 
-Odoo queda expuesto localmente en:
+Contenedores esperados:
+
+- `odoo-db`
+- `odoo-web`
+
+URL local de Odoo:
 
 - `http://localhost:8079`
 
-### Parámetros del sistema en Odoo
+## 5. Crear la base de datos en Odoo
 
-En `Settings -> Technical -> Parameters -> System Parameters`, configurar al menos:
+Si es la primera vez que levantas el proyecto:
+
+1. abre `http://localhost:8079`
+2. entra a la pantalla de creacion de base de datos
+3. crea la base con el nombre `billnova` si necesitas completar la instalacion inicial de Odoo
+4. despues ajusta el entorno para que el proyecto quede usando solo la base `wilkins`
+
+Importante:
+
+- la configuracion del proyecto en [odooBackend/config/odoo.conf](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/odooBackend/config/odoo.conf:7) deja fijo `db_name = wilkins`
+- por lo tanto, para el uso normal del proyecto la base que debe existir y quedar operativa es `wilkins`
+- si todavia no existe `wilkins`, creala y usala como base definitiva del proyecto
+
+En resumen: para este proyecto deja Odoo trabajando solamente con la base `wilkins`.
+
+## 6. Instalar el modulo custom en Odoo
+
+Modulo:
+
+- [odooBackend/addons/Proyect](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/odooBackend/addons/Proyect)
+
+Manifest:
+
+- [odooBackend/addons/Proyect/__manifest__.py](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/odooBackend/addons/Proyect/__manifest__.py)
+
+Paso a paso:
+
+1. entra a Odoo con la base `wilkins`
+2. activa el modo desarrollador
+3. ve a `Apps`
+4. pulsa `Update Apps List`
+5. busca el modulo `BillNova` o `Proyect`
+6. instala el modulo
+
+Si el modulo ya estaba instalado y cambiaste codigo:
+
+1. reinicia Odoo:
+
+```bash
+docker restart odoo-web
+```
+
+2. vuelve a Odoo
+3. actualiza la lista de apps si hace falta
+4. actualiza el modulo `BillNova / Proyect`
+
+## 7. Configurar el correo en Odoo
+
+El proyecto envia correos de:
+
+- verificacion de cuenta
+- recuperacion de contrasena
+- invitaciones a empleados
+
+Eso se usa desde el modelo:
+
+- [odooBackend/addons/Proyect/models/users.py](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/odooBackend/addons/Proyect/models/users.py:116)
+
+### 7.1. Configurar servidor saliente SMTP
+
+En Odoo:
+
+1. entra con un usuario administrador
+2. ve a `Settings`
+3. activa modo desarrollador si aun no esta activo
+4. entra a `Technical -> Email -> Outgoing Mail Servers`
+5. crea o edita un servidor SMTP
+
+Campos recomendados:
+
+- `Description`: nombre libre, por ejemplo `SMTP BillNova`
+- `SMTP Server`: host de tu proveedor de correo
+- `SMTP Port`: el puerto de tu proveedor
+- `Connection Security`: `TLS/STARTTLS` o `SSL/TLS`
+- `Username`: tu correo SMTP
+- `Password`: tu clave o app password
+- `From Filtering`: opcional
+
+Luego:
+
+1. guarda
+2. pulsa `Test Connection`
+3. confirma que el test responda correctamente
+
+### 7.2. Configurar correo remitente por defecto
+
+En Odoo entra a:
+
+- `Settings -> Technical -> Parameters -> System Parameters`
+
+Crea o revisa este parametro:
+
+```text
+mail.default.from=tu-correo@tudominio.com
+```
+
+El modulo usa ese valor como remitente. Si no existe, intenta usar el correo de la compania en Odoo y, como ultimo fallback, usa `no-reply@billnova.local`.
+
+### 7.3. Probar verificacion y recuperacion
+
+Endpoints relacionados:
+
+- `POST /api/auth/forgot-password`
+- `POST /api/auth/verify-email`
+- `POST /api/auth/resend-code`
+- `POST /api/auth/reset-password`
+
+Controlador:
+
+- [odooBackend/addons/Proyect/controllers/auth_controller.py](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/odooBackend/addons/Proyect/controllers/auth_controller.py:1211)
+
+## 8. Configurar auth en Odoo
+
+El proyecto maneja dos tipos de autenticacion:
+
+- login normal con correo y contrasena
+- Google OAuth
+
+Controlador principal:
+
+- [odooBackend/addons/Proyect/controllers/auth_controller.py](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/odooBackend/addons/Proyect/controllers/auth_controller.py:1)
+
+## 8.1. Auth normal
+
+No requiere una configuracion externa especial aparte de:
+
+- tener la base `wilkins`
+- tener el modulo `BillNova / Proyect` instalado
+- tener usuarios creados en `billnova.user` y `res.users`
+- tener el correo configurado si quieres verificacion y reset de contrasena
+
+Endpoints principales:
+
+- `POST /api/auth/login`
+- `POST /api/auth/register`
+- `GET /api/auth/session`
+- `POST /api/auth/logout`
+
+## 8.2. Configurar Google OAuth
+
+El modulo depende de `auth_oauth`, segun el manifest del modulo.
+
+Primero debes crear tus credenciales en Google Cloud.
+
+Despues, en Odoo:
+
+1. entra a `Settings -> Technical -> Parameters -> System Parameters`
+2. crea o revisa estos parametros:
 
 ```text
 web.base.url=http://localhost:8079
@@ -159,280 +274,104 @@ billnova.google_oauth_client_id=TU_CLIENT_ID
 billnova.google_oauth_client_secret=TU_CLIENT_SECRET
 ```
 
-## Instalación del Proyecto
+Opcionales:
 
-## 1. Instalar dependencias del frontend web
+```text
+billnova.google_oauth_token_endpoint=https://oauth2.googleapis.com/token
+billnova.google_oauth_userinfo_endpoint=https://openidconnect.googleapis.com/v1/userinfo
+```
+
+Ademas, revisa que el proveedor OAuth de Google exista en Odoo si lo vas a manejar por interfaz:
+
+1. `Settings -> Technical -> Authentication -> OAuth Providers`
+2. crea o valida un proveedor de Google
+3. verifica que tenga `client_id`, `client_secret` y endpoint de autorizacion
+
+El backend tambien puede tomar la configuracion desde esos parametros del sistema aunque no dependas solo del registro visual del proveedor.
+
+### Callback usado por el backend
+
+El callback que construye el proyecto es:
+
+```text
+http://localhost:8079/api/auth/google/mobile/callback
+```
+
+Si publicas Odoo en otra URL, cambia `web.base.url` para que el callback generado sea correcto.
+
+### Endpoints Google OAuth
+
+- `GET /api/auth/google/mobile/authorize-url`
+- `GET /api/auth/google/mobile/callback`
+
+## 9. Configurar frontend web
+
+Archivo recomendado:
+
+- `FrontendReactWeb/mi-app/.env.local`
+
+Contenido:
+
+```env
+NEXT_PUBLIC_ODOO_URL=http://localhost:8079
+```
+
+Luego ejecuta:
 
 ```bash
 cd FrontendReactWeb/mi-app
-npm install
-```
-
-## 2. Instalar dependencias del frontend mobile
-
-```bash
-cd FrontendReactApp/App-Mobile
-npm install
-```
-
-## 3. Levantar backend Odoo + PostgreSQL
-
-```bash
-cd odooBackend
-docker-compose up -d
-```
-
-## 4. Instalar o actualizar el módulo custom
-
-Una vez que Odoo esté corriendo:
-
-1. entra al panel de Odoo
-2. activa modo desarrollador
-3. actualiza la lista de aplicaciones
-4. instala o actualiza el módulo `BillNova / Proyect`
-
-Si cambias código Python o controladores, reinicia el contenedor de Odoo:
-
-```bash
-docker restart odoo-web
-```
-
-## Paso de ejecución del proyecto paso a paso
-
-## Backend Odoo
-
-1. Abre una terminal en `odooBackend`
-2. Ejecuta:
-
-```bash
-docker-compose up -d
-```
-
-3. Verifica que el backend esté arriba en `http://localhost:8079`
-4. Si es la primera vez, crea o selecciona una base de datos en Odoo
-5. Instala el módulo custom `Proyect`
-
-## Frontend web
-
-1. Abre otra terminal
-2. Entra a:
-
-```bash
-cd FrontendReactWeb/mi-app
-```
-
-3. Ejecuta:
-
-```bash
 npm run dev
 ```
 
-4. Abre:
+Abre:
 
 ```text
 http://localhost:3000
 ```
 
-## App mobile
+## 10. Configurar frontend mobile
 
-1. Abre otra terminal
-2. Entra a:
+Archivo recomendado:
+
+- `FrontendReactApp/App-Mobile/.env`
+
+Contenido:
+
+```env
+EXPO_PUBLIC_ODOO_URL=http://localhost:8079
+```
+
+Luego ejecuta:
 
 ```bash
 cd FrontendReactApp/App-Mobile
-```
-
-3. Ejecuta:
-
-```bash
 npx expo start
 ```
 
-4. Elige una opción:
+Si pruebas desde un telefono fisico, no uses `localhost`; usa una IP local accesible o un tunel.
 
-- `a` para Android
-- `i` para iOS
-- `w` para web
-- o escanea QR con Expo Go
+## Resumen rapido del flujo correcto
 
-## Uso del Sistema
+1. instalar dependencias web y mobile
+2. correr `docker compose up -d` en `odooBackend`
+3. entrar a Odoo en `http://localhost:8079`
+4. dejar operativa la base `wilkins`
+5. instalar el modulo `BillNova / Proyect`
+6. configurar SMTP en Odoo
+7. configurar `mail.default.from`
+8. configurar `web.base.url`
+9. configurar Google OAuth si se usara login con Google
+10. correr frontend web y/o mobile
 
-## Flujo básico
-
-1. Inicia el backend Odoo
-2. Inicia el frontend web o mobile
-3. Accede con un usuario existente o crea uno nuevo
-4. Según el rol, el sistema redirige a:
-
-- `admin`
-- `moderator`
-- `seller`
-- `gerente`
-- `worker`
-
-## Roles principales
-
-### Admin
-
-- Dashboard administrativo
-- Usuarios
-- Empresas
-- Productos
-- Categorías
-- Reportes
-- Configuración
-
-### Moderator
-
-- Dashboard de moderación
-- Moderación de productos y empresas
-- Reportes
-- Configuración
-
-### Seller
-
-- Dashboard comercial
-- Productos
-- Servicios
-- Facturas
-- Pedidos POS
-- Impuestos
-- Configuración de empresa
-
-## Credenciales relevantes
-
-## Relevantes para desarrollo local
-
-### PostgreSQL Docker
-
-- Usuario: `odoo`
-- Contraseña: `odoo`
-- Base inicial: `postgres`
-
-### Odoo local
-
-- URL: `http://localhost:8079`
-- La credencial de administrador funcional depende de la base creada en tu entorno
-
-### Variables necesarias
-
-- `NEXT_PUBLIC_ODOO_URL`
-- `EXPO_PUBLIC_ODOO_URL`
-- `web.base.url`
-- `billnova.google_oauth_client_id`
-- `billnova.google_oauth_client_secret`
-
-Nota: no se incluyen credenciales privadas del sistema en este documento. Deben configurarse en cada entorno.
-
-## API utilizada y su implementación paso a paso
-
-BillNova usa una API REST personalizada construida sobre controladores de Odoo dentro de:
-
-- [odooBackend/addons/Proyect/controllers](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/odooBackend/addons/Proyect/controllers)
-
-## Endpoints importantes
-
-### Autenticación
-
-- `POST /api/auth/login`
-- `POST /api/auth/register`
-- `GET /api/auth/session`
-- `POST /api/auth/logout`
-- `POST /api/auth/forgot-password`
-- `POST /api/auth/reset-password`
-- `POST /api/auth/verify-email`
-- `POST /api/auth/resend-code`
-
-### Google OAuth
-
-- `GET /api/auth/google/mobile/authorize-url`
-- `GET /api/auth/google/mobile/callback`
-
-### Funcionales
-
-- `GET /api/products`
-- `GET /api/mobile/products`
-- `GET /api/services`
-- `GET /api/categories`
-- `GET /api/pos/orders`
-- `GET /api/companies`
-- `GET /api/admin/dashboard/financial`
-
-## Implementación paso a paso de la API en el sistema
-
-### 1. Backend Odoo expone endpoints HTTP
-
-Los endpoints se implementan en controladores como:
-
-- `auth_controller.py`
-- `product_controller.py`
-- `service_controller.py`
-- `pos_controller.py`
-- `company_controller.py`
-
-### 2. El frontend consume esos endpoints
-
-En web:
-
-- usando `fetch`
-- usando helpers como `odooGet`, `odooPost`, `odooPut`, `odooDelete`
-
-Archivo base:
-
-- [FrontendReactWeb/mi-app/src/lib/odooApi.ts](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/FrontendReactWeb/mi-app/src/lib/odooApi.ts)
-
-En mobile:
-
-- usando un cliente HTTP central que adjunta `X-Auth-Session`
-
-### 3. La sesión se mantiene con token de Odoo
-
-- Odoo genera `session_token`
-- web lo guarda en `localStorage` o `sessionStorage`
-- mobile lo guarda en `SecureStore`
-- las requests autenticadas envían `X-Auth-Session`
-
-### 4. Google OAuth
-
-Flujo resumido:
-
-1. frontend pide `authorize-url`
-2. backend arma la URL de Google
-3. el usuario autoriza
-4. Google vuelve al callback de Odoo
-5. Odoo valida el acceso
-6. Odoo devuelve sesión y datos del usuario
-7. frontend persiste sesión y redirige según el rol
-
-## Características técnicas relevantes de la API
-
-- CORS manejado desde controladores Odoo
-- sesión por token
-- endpoints especializados para web y mobile cuando aplica
-- control de alcance por rol y empresa
-- integración con reportes, POS y facturación de Odoo
-
-## Archivos clave del sistema
+## Archivos clave
 
 - [README.md](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/README.md)
-- [FrontendReactWeb/mi-app/package.json](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/FrontendReactWeb/mi-app/package.json)
-- [FrontendReactApp/App-Mobile/package.json](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/FrontendReactApp/App-Mobile/package.json)
-- [odooBackend/addons/Proyect/__manifest__.py](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/odooBackend/addons/Proyect/__manifest__.py)
 - [odooBackend/docker-compose.yml](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/odooBackend/docker-compose.yml)
+- [odooBackend/config/odoo.conf](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/odooBackend/config/odoo.conf)
+- [odooBackend/addons/Proyect/__manifest__.py](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/odooBackend/addons/Proyect/__manifest__.py)
+- [odooBackend/addons/Proyect/controllers/auth_controller.py](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/odooBackend/addons/Proyect/controllers/auth_controller.py)
+- [odooBackend/addons/Proyect/models/users.py](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/odooBackend/addons/Proyect/models/users.py)
 
-## Autores del Desarrollo
+## Nota final sobre la base de datos
 
-- `Wilkins Figuereo`
-- `Yeraldo Novas`
-- `Daury Contreras`
-
-## Autor de administración del proyecto
-
-- `Rijo`
-
-## Notas finales
-
-- Si cambias controladores o modelos de Odoo, reinicia `odoo-web`
-- Si cambias el módulo custom, actualízalo desde Odoo
-- Si usas Google OAuth, asegúrate de registrar correctamente el callback
-- Si pruebas en móvil físico, no uses `localhost`; usa IP local o túnel público
+Aunque durante una instalacion inicial puedas llegar a crear una base `billnova`, la configuracion final del proyecto debe quedar usando solamente la base de Odoo `wilkins`.
