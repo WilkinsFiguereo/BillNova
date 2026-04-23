@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 from odoo import fields, http
 from odoo.http import Response, request
 import json
@@ -9,6 +11,66 @@ _logger = logging.getLogger(__name__)
 
 
 class CompanyApiController(http.Controller):
+    _MONTH_LABELS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+
+    def _add_months(self, current_date, delta_months):
+        month_index = current_date.month - 1 + delta_months
+        year = current_date.year + month_index // 12
+        month = month_index % 12 + 1
+        return current_date.replace(year=year, month=month, day=1)
+
+    def _build_financial_buckets(self, period):
+        today = fields.Date.context_today(request.env.user)
+        if isinstance(today, str):
+            today = fields.Date.from_string(today)
+        today = today or date.today()
+
+        if period == "week":
+            start_day = today - timedelta(days=6)
+            return [
+                {
+                    "label": day.strftime("%d/%m"),
+                    "start": day,
+                    "end": day,
+                    "sales": 0.0,
+                    "collections": 0.0,
+                    "pending": 0.0,
+                }
+                for day in (start_day + timedelta(days=offset) for offset in range(7))
+            ]
+
+        month_count = 12 if period == "year" else 7
+        current_month = today.replace(day=1)
+        start_month = self._add_months(current_month, -(month_count - 1))
+        buckets = []
+        for offset in range(month_count):
+            bucket_start = self._add_months(start_month, offset)
+            if offset + 1 < month_count:
+                next_month = self._add_months(bucket_start, 1)
+                bucket_end = next_month - timedelta(days=1)
+            else:
+                next_month = self._add_months(bucket_start, 1)
+                bucket_end = next_month - timedelta(days=1)
+            buckets.append(
+                {
+                    "label": self._MONTH_LABELS[bucket_start.month - 1],
+                    "start": bucket_start,
+                    "end": bucket_end,
+                    "sales": 0.0,
+                    "collections": 0.0,
+                    "pending": 0.0,
+                }
+            )
+        return buckets
+
+    def _accumulate_financial_metric(self, buckets, target_date, metric, amount):
+        if not target_date or amount == 0:
+            return
+        for bucket in buckets:
+            if bucket["start"] <= target_date <= bucket["end"]:
+                bucket[metric] += amount
+                return
+
     def _get_current_res_user(self):
         AuthApiController()._ensure_session_from_request()
         session_uid = getattr(request.session, "uid", None)
@@ -230,6 +292,12 @@ class CompanyApiController(http.Controller):
             403,
         )
 
+    def _forbidden_admin_response(self):
+        return self._json_response(
+            {"ok": False, "error": "No tienes permisos para acceder al dashboard administrativo."},
+            403,
+        )
+
     def _user_owns_company(self, company_id):
         if not company_id:
             return False
@@ -251,6 +319,62 @@ class CompanyApiController(http.Controller):
             return current_user.company_id.sudo()
 
         return request.env["res.company"].browse()
+
+    @http.route("/api/admin/dashboard/financial", type="http", auth="public", methods=["GET", "OPTIONS"], csrf=False)
+    def admin_dashboard_financial(self, **kwargs):
+        if request.httprequest.method == "OPTIONS":
+            return self._options_response()
+
+        role = self._current_billnova_role()
+        if role not in ("admin", "moderator", "moderation"):
+            return self._forbidden_admin_response()
+
+        period = (request.httprequest.args.get("period") or "month").strip().lower()
+        if period not in ("week", "month", "year"):
+            period = "month"
+
+        try:
+            buckets = self._build_financial_buckets(period)
+            oldest_date = buckets[0]["start"] if buckets else None
+            invoice_domain = [
+                ("move_type", "in", ["out_invoice", "out_refund"]),
+                ("state", "=", "posted"),
+            ]
+            if oldest_date:
+                invoice_domain.append("|")
+                invoice_domain.append(("invoice_date", ">=", oldest_date))
+                invoice_domain.append(("invoice_date_due", ">=", oldest_date))
+
+            invoices = request.env["account.move"].sudo().search(invoice_domain, order="invoice_date asc, id asc")
+
+            for invoice in invoices:
+                signed_total = float(invoice.amount_total_signed or invoice.amount_total or 0.0)
+                residual = abs(float(invoice.amount_residual_signed or invoice.amount_residual or 0.0))
+                invoice_date = invoice.invoice_date
+                due_date = invoice.invoice_date_due or invoice_date
+
+                self._accumulate_financial_metric(buckets, invoice_date, "sales", signed_total)
+
+                if invoice.payment_state == "paid":
+                    self._accumulate_financial_metric(buckets, due_date, "collections", abs(signed_total))
+
+                if invoice.payment_state in ("not_paid", "partial", "in_payment") and residual > 0:
+                    self._accumulate_financial_metric(buckets, due_date, "pending", residual)
+
+            data = [
+                {
+                    "label": bucket["label"],
+                    "sales": round(bucket["sales"], 2),
+                    "collections": round(bucket["collections"], 2),
+                    "pending": round(bucket["pending"], 2),
+                }
+                for bucket in buckets
+            ]
+
+            return self._json_response({"ok": True, "period": period, "data": data})
+        except Exception as error:
+            _logger.exception("Error building admin financial dashboard data")
+            return self._json_response({"ok": False, "error": str(error)}, 500)
 
     def _company_to_api(self, company):
         country_name = getattr(company, "country_name", None) or (company.country_id.name if getattr(company, "country_id", None) else "")

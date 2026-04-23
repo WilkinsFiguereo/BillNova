@@ -88,7 +88,7 @@ export function useProducts() {
     console.log('[mobile][home] loading catalog', { silent });
 
     const [productsResponse, servicesResponse] = await Promise.all([
-      odooClient.get<ProductsResponse>('/api/products', { requiresAuth: true }),
+      odooClient.get<ProductsResponse>('/api/mobile/products'),
       odooClient.get<ServicesResponse>('/api/services'),
     ]);
 

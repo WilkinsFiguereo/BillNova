@@ -179,7 +179,7 @@ export default function DashboardPage() {
           {data && (
             <main className="dash-main" style={{ maxWidth: 1200, margin: '0 auto', padding: '28px 24px', display: 'flex', flexDirection: 'column', gap: 28 }}>
               <StatsSection stats={data.stats} />
-              <ChartsSection data={data.chartData} />
+              <ChartsSection data={data.chartData} period={selectedPeriod} />
 
               {/* Two-column: users + activity */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>

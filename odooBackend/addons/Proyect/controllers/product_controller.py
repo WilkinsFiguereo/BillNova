@@ -278,6 +278,27 @@ class ProductApiController(http.Controller):
             "updated_at": category.write_date.isoformat() if category.write_date else None,
         }
 
+    def _get_mobile_catalog_products(self):
+        products = request.env["product.product"].sudo().search([])
+        approved_products = [
+            product for product in products if self._get_product_moderation_status(product) == "approved"
+        ]
+        _logger.info(
+            "[mobile][products] catalog total=%s approved=%s sample=%s",
+            len(products),
+            len(approved_products),
+            [
+                {
+                    "id": product.id,
+                    "name": product.name,
+                    "company_id": product.company_id.id if product.company_id else None,
+                    "status": self._get_product_moderation_status(product),
+                }
+                for product in approved_products[:10]
+            ],
+        )
+        return approved_products
+
     # ──────────────────────────────────────────────
     # LIST PRODUCTS
     # ──────────────────────────────────────────────
@@ -357,6 +378,34 @@ class ProductApiController(http.Controller):
         return self._json_response({
             "ok": True,
             "data": serialized_products,
+        })
+
+    @http.route("/api/mobile/products", type="http", auth="none", methods=["GET", "OPTIONS"], csrf=False)
+    def list_mobile_products(self):
+        if request.httprequest.method == "OPTIONS":
+            return self._options_response()
+
+        approved_products = self._get_mobile_catalog_products()
+        return self._json_response({
+            "ok": True,
+            "data": [self._serialize(product) for product in approved_products],
+        })
+
+    @http.route("/api/mobile/products/<int:product_id>", type="http", auth="none", methods=["GET", "OPTIONS"], csrf=False)
+    def get_mobile_product(self, product_id):
+        if request.httprequest.method == "OPTIONS":
+            return self._options_response()
+
+        product = request.env["product.product"].sudo().browse(product_id)
+        if not product.exists():
+            return self._json_response({"ok": False, "error": "Product not found"}, 404)
+
+        if self._get_product_moderation_status(product) != "approved":
+            return self._json_response({"ok": False, "error": "Product not available in mobile catalog"}, 404)
+
+        return self._json_response({
+            "ok": True,
+            "data": self._serialize(product),
         })
 
     @http.route("/api/categories", type="http", auth="public", methods=["GET", "POST", "OPTIONS"], csrf=False)

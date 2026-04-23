@@ -72,7 +72,7 @@ export function RegisterFormSection({
         {googleLoading ? "Abriendo Google..." : "Continuar con Google"}
       </button>
 
-      <p className="terms">
+      <p className="terms" style={{ marginTop: "1rem", paddingTop: "0.35rem" }}>
         Ya tienes cuenta? <a href="/navigation/auth/login">Inicia sesion</a>
       </p>
     </form>

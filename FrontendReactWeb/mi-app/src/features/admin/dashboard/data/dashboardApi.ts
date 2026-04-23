@@ -1,28 +1,37 @@
 import { ODOO_URL } from "@/lib/odooApi";
 import type {
+  ChartDataPoint,
   DashboardData,
   Period,
-  StatCard,
-  RecentUser,
   RecentActivity,
-  ChartDataPoint,
+  RecentUser,
+  StatCard,
 } from "../types/dashboard.types";
 import { mockDashboardData } from "./dashboardData";
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
-/**
- * Obtiene datos agregados del dashboard
- */
+function normalizeChartData(rawData: unknown): ChartDataPoint[] {
+  if (!Array.isArray(rawData)) return [];
+
+  return rawData.map((point) => {
+    const safePoint = (point ?? {}) as Record<string, unknown>;
+    return {
+      label: String(safePoint.label ?? ""),
+      sales: Number(safePoint.sales ?? 0),
+      collections: Number(safePoint.collections ?? 0),
+      pending: Number(safePoint.pending ?? 0),
+    };
+  });
+}
+
 export async function fetchDashboardData(period: Period): Promise<DashboardData> {
   try {
-    // Si estamos usando datos mock, retornar de inmediato
     if (USE_MOCK) {
       console.log("[Dashboard] Using mock data (NEXT_PUBLIC_USE_MOCK=true)");
       return mockDashboardData;
     }
 
-    // Obtener datos de usuarios y empresas
     const fetchOptions: RequestInit = {
       method: "GET",
       headers: {
@@ -32,13 +41,33 @@ export async function fetchDashboardData(period: Period): Promise<DashboardData>
     };
 
     const usersUrl = `${ODOO_URL}/api/billnova-users`;
+    const financialUrl = `${ODOO_URL}/api/admin/dashboard/financial?period=${encodeURIComponent(period)}`;
 
     console.log("[Dashboard] Fetching dashboard data from:", usersUrl);
+    console.log("[Dashboard] Fetching financial chart from:", financialUrl);
 
     let usersRes: Response;
+    let financialRes: Response | null = null;
+
     try {
-      usersRes = await fetch(usersUrl, fetchOptions);
+      const responses = await Promise.allSettled([
+        fetch(usersUrl, fetchOptions),
+        fetch(financialUrl, fetchOptions),
+      ]);
+
+      if (responses[0].status !== "fulfilled") {
+        throw responses[0].reason;
+      }
+
+      usersRes = responses[0].value;
       console.log("[Dashboard] User API response status:", usersRes.status);
+
+      if (responses[1].status === "fulfilled") {
+        financialRes = responses[1].value;
+        console.log("[Dashboard] Financial API response status:", financialRes.status);
+      } else {
+        console.warn("[Dashboard] Failed to fetch financial chart:", responses[1].reason);
+      }
     } catch (error) {
       console.warn("[Dashboard] Failed to fetch users:", error);
       console.warn("[Dashboard] Using mock data as fallback");
@@ -48,13 +77,11 @@ export async function fetchDashboardData(period: Period): Promise<DashboardData>
     const usersData = usersRes.ok ? await usersRes.json() : { data: [] };
     const users = usersData.data || [];
 
-    // Si no hay usuarios, usar mock data
     if (!users.length) {
       console.warn("[Dashboard] No users data received, using mock data");
       return mockDashboardData;
     }
 
-    // Procesar usuarios recientes
     const recentUsers: RecentUser[] = users.slice(0, 5).map((user: any) => ({
       id: user.id,
       name: user.name,
@@ -64,7 +91,6 @@ export async function fetchDashboardData(period: Period): Promise<DashboardData>
       joinedAt: new Date().toISOString().split("T")[0],
     }));
 
-    // Calcular estadísticas basado en usuarios
     const activeUsers = Math.ceil(users.length * 0.85);
     const totalCompanies = Math.ceil(users.length * 0.3);
     const monthlyRevenue = totalCompanies * 1250;
@@ -122,7 +148,6 @@ export async function fetchDashboardData(period: Period): Promise<DashboardData>
       },
     ];
 
-    // Actividades recientes
     const recentActivity: RecentActivity[] = [
       {
         id: "activity-1",
@@ -161,51 +186,15 @@ export async function fetchDashboardData(period: Period): Promise<DashboardData>
       },
     ];
 
-    // Datos de gráfica
-    const chartData: ChartDataPoint[] = [
-      {
-        label: "Enero",
-        sales: Math.floor(Math.random() * 1000) + 500,
-        collections: Math.floor(Math.random() * 800) + 300,
-        pending: Math.floor(Math.random() * 200) + 100,
-      },
-      {
-        label: "Febrero",
-        sales: Math.floor(Math.random() * 1200) + 600,
-        collections: Math.floor(Math.random() * 900) + 400,
-        pending: Math.floor(Math.random() * 250) + 100,
-      },
-      {
-        label: "Marzo",
-        sales: Math.floor(Math.random() * 1100) + 550,
-        collections: Math.floor(Math.random() * 850) + 350,
-        pending: Math.floor(Math.random() * 200) + 80,
-      },
-      {
-        label: "Abril",
-        sales: Math.floor(Math.random() * 1300) + 700,
-        collections: Math.floor(Math.random() * 1000) + 500,
-        pending: Math.floor(Math.random() * 180) + 90,
-      },
-      {
-        label: "Mayo",
-        sales: Math.floor(Math.random() * 1250) + 650,
-        collections: Math.floor(Math.random() * 950) + 450,
-        pending: Math.floor(Math.random() * 220) + 100,
-      },
-      {
-        label: "Junio",
-        sales: Math.floor(Math.random() * 1400) + 750,
-        collections: Math.floor(Math.random() * 1050) + 550,
-        pending: Math.floor(Math.random() * 200) + 95,
-      },
-      {
-        label: "Julio",
-        sales: Math.floor(Math.random() * 1350) + 700,
-        collections: Math.floor(Math.random() * 1000) + 520,
-        pending: Math.floor(Math.random() * 190) + 85,
-      },
-    ];
+    let chartData: ChartDataPoint[] = [];
+    if (financialRes?.ok) {
+      const financialPayload = await financialRes.json();
+      chartData = normalizeChartData(financialPayload?.data);
+    }
+
+    if (!chartData.length) {
+      console.warn("[Dashboard] No financial chart data received, using empty series");
+    }
 
     return {
       stats,
@@ -219,7 +208,6 @@ export async function fetchDashboardData(period: Period): Promise<DashboardData>
   } catch (error) {
     console.error("Error fetching dashboard data:", error);
     console.warn("Using mock data as fallback");
-    // Fallback a datos mock si falla la API
     return mockDashboardData;
   }
 }

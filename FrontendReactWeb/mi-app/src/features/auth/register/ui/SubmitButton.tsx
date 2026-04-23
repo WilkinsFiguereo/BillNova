@@ -15,7 +15,7 @@ export function SubmitButton({ isLoading }: SubmitButtonProps) {
         w-full relative overflow-hidden group
         bg-[#4f8ef7] hover:bg-[#6ba3ff]
         text-[#080b12] text-sm font-bold tracking-[0.15em] uppercase
-        py-3.5 rounded-[2px]
+        py-4 px-8 rounded-[2px]
         transition-all duration-200
         disabled:opacity-40 disabled:cursor-not-allowed
         active:scale-[0.99]

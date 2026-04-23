@@ -38,9 +38,9 @@ export const registerTheme = {
 
 /** Clases Tailwind base para inputs */
 export const inputBase =
-  "w-full bg-transparent text-[#e4ebf5] placeholder:text-[#3d5166] " +
-  "text-sm border border-[#1e2d42] rounded-[2px] " +
-  "h-12 pl-11 pr-4 outline-none transition-all duration-200 " +
+  "w-full bg-[#ffffff] text-[#101828] placeholder:text-[#98a2b3] " +
+  "text-sm border border-[#d0d5dd] rounded-[2px] " +
+  "h-12 px-4 outline-none transition-all duration-200 " +
   "focus:border-[#4f8ef7] focus:ring-1 focus:ring-[#4f8ef7]/20 resize-none";
 
 export const labelBase =

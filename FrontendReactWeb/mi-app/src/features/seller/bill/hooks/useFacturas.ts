@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { Factura, OrdenCampo, OrdenDir, VistaMode } from "../types/facturas.types";
+import { OrdenCampo, OrdenDir, VistaMode } from "../types/facturas.types";
 import { STATUS_MAP } from "../data/facturas.data";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 
 // ─── Config ────────────────────────────────────────────────────────────
 const ODOO_BASE_URL = process.env.NEXT_PUBLIC_ODOO_URL || "http://localhost:8079";
@@ -70,7 +73,9 @@ interface UseFacturasOdooReturn {
   // Invoice actions
   changeInvoiceState: (invoiceId: string, newState: "posted" | "cancel" | "draft") => Promise<void>;
   sendInvoiceEmail: (invoiceId: string, email?: string) => Promise<void>;
-  downloadInvoicePDF: (orderId: string, invoiceName?: string) => void;
+  downloadInvoicePDF: (params: { orderId?: string; invoiceId?: string; invoiceName?: string }) => Promise<void>;
+  exportFacturasPDF: () => void;
+  exportFacturasExcel: () => void;
 }
 
 // ─── Hook ──────────────────────────────────────────────────────────────
@@ -216,7 +221,13 @@ export function useFacturasOdoo(companyId?: number): UseFacturasOdooReturn {
         credentials: "include",
         body: JSON.stringify(body),
       });
-      const json = await res.json();
+      const raw = await res.text();
+      let json: any = {};
+      try {
+        json = raw ? JSON.parse(raw) : {};
+      } catch {
+        throw new Error(raw || "Error enviando email");
+      }
       if (!json.ok) throw new Error(json.error || "Error enviando email");
 
       showToast(`Factura enviada a ${json.sent_to}`, "success");
@@ -226,17 +237,144 @@ export function useFacturasOdoo(companyId?: number): UseFacturasOdooReturn {
   }, [showToast]);
 
   // ── Descargar PDF ────────────────────────────────────────────────
-  const downloadInvoicePDF = useCallback((orderId: string, invoiceName?: string) => {
-    const url = `${ODOO_BASE_URL}/api/pos/order/${orderId}/invoice`;
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = invoiceName ? `factura-${invoiceName}.pdf` : `factura-${orderId}.pdf`;
-    link.target = "_blank";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast("Descargando PDF...", "info");
+  const downloadInvoicePDF = useCallback(async ({
+    orderId,
+    invoiceId,
+    invoiceName,
+  }: {
+    orderId?: string;
+    invoiceId?: string;
+    invoiceName?: string;
+  }) => {
+    try {
+      const url = invoiceId
+        ? `${ODOO_BASE_URL}/api/pos/invoice/${invoiceId}/pdf`
+        : orderId
+          ? `${ODOO_BASE_URL}/api/pos/order/${orderId}/invoice`
+          : null;
+
+      if (!url) {
+        throw new Error("No se encontro la factura para descargar");
+      }
+
+      const res = await fetch(url, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const raw = await res.text();
+        try {
+          const json = raw ? JSON.parse(raw) : null;
+          throw new Error(json?.error || `HTTP ${res.status}`);
+        } catch {
+          throw new Error(raw || `HTTP ${res.status}`);
+        }
+      }
+
+      const blob = await res.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = invoiceName
+        ? `factura-${invoiceName}.pdf`
+        : `factura-${invoiceId || orderId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+      showToast("Descargando PDF...", "info");
+    } catch (err: any) {
+      showToast(err?.message || "No se pudo descargar la factura", "error");
+    }
   }, [showToast]);
+
+  const exportFacturasPDF = useCallback(() => {
+    if (!facturas.length) {
+      showToast("No hay facturas para exportar en PDF", "info");
+      return;
+    }
+
+    const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+    const generatedAt = new Date().toLocaleString("es-BO");
+
+    doc.setFontSize(18);
+    doc.text("Reporte de facturas", 40, 40);
+    doc.setFontSize(10);
+    doc.text(`Generado: ${generatedAt}`, 40, 58);
+    doc.text(`Total de registros: ${facturas.length}`, 40, 72);
+
+    autoTable(doc, {
+      startY: 90,
+      head: [[
+        "Factura",
+        "Cliente",
+        "Email",
+        "Fecha",
+        "Vencimiento",
+        "Estado",
+        "Subtotal",
+        "Impuesto",
+        "Total",
+      ]],
+      body: facturas.map((factura) => [
+        factura.numero,
+        factura.cliente || "—",
+        factura.clienteEmail || "—",
+        factura.fecha || "—",
+        factura.fechaVencimiento || "—",
+        factura.status,
+        factura.subtotal.toFixed(2),
+        factura.impuesto.toFixed(2),
+        factura.total.toFixed(2),
+      ]),
+      styles: {
+        fontSize: 9,
+        cellPadding: 6,
+      },
+      headStyles: {
+        fillColor: [30, 58, 138],
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252],
+      },
+      margin: { left: 40, right: 40 },
+    });
+
+    doc.save(`facturas-${new Date().toISOString().slice(0, 10)}.pdf`);
+    showToast("Exportando facturas a PDF...", "success");
+  }, [facturas, showToast]);
+
+  const exportFacturasExcel = useCallback(() => {
+    if (!facturas.length) {
+      showToast("No hay facturas para exportar en Excel", "info");
+      return;
+    }
+
+    const rows = facturas.map((factura) => ({
+      Factura: factura.numero,
+      Cliente: factura.cliente || "",
+      Email: factura.clienteEmail || "",
+      Telefono: factura.phone || "",
+      Direccion: factura.address || "",
+      Fecha: factura.fecha || "",
+      Vencimiento: factura.fechaVencimiento || "",
+      Estado: factura.status,
+      Subtotal: factura.subtotal,
+      Impuesto: factura.impuesto,
+      Total: factura.total,
+      Items: factura.items,
+      ReferenciaOdoo: factura.invoice?.reference || "",
+      EstadoOdoo: factura.invoice?.state || "",
+      EstadoPagoOdoo: factura.invoice?.payment_state || "",
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Facturas");
+    XLSX.writeFile(workbook, `facturas-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    showToast("Exportando facturas a Excel...", "success");
+  }, [facturas, showToast]);
 
   return {
     facturas,
@@ -261,5 +399,7 @@ export function useFacturasOdoo(companyId?: number): UseFacturasOdooReturn {
     changeInvoiceState,
     sendInvoiceEmail,
     downloadInvoicePDF,
+    exportFacturasPDF,
+    exportFacturasExcel,
   };
 }

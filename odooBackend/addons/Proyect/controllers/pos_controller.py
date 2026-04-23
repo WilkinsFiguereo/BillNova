@@ -1,5 +1,6 @@
 import os
 import logging
+import base64
 
 from odoo import http
 from odoo.http import request, Response
@@ -9,6 +10,10 @@ _logger = logging.getLogger(__name__)
 
 
 class PosApiController(http.Controller):
+    def _render_invoice_pdf_content(self, invoice):
+        report_service = request.env['ir.actions.report'].sudo()
+        pdf_content, _ = report_service._render_qweb_pdf('account.account_invoices', [invoice.id])
+        return pdf_content
 
     def _cors_headers(self):
         origin = request.httprequest.headers.get('Origin')
@@ -268,6 +273,7 @@ class PosApiController(http.Controller):
     def send_invoice_email(self, invoice_id):
         if request.httprequest.method == 'OPTIONS':
             return self._options_response()
+        _logger.info("[invoice-email] request invoice_id=%s user=%s", invoice_id, getattr(request.env.user, 'login', None))
 
         payload = request.httprequest.get_json(silent=True) or {}
         override_email = payload.get('email', '').strip()
@@ -279,52 +285,39 @@ class PosApiController(http.Controller):
         if invoice.state != 'posted':
             return self._json_response({'ok': False, 'error': 'Solo se pueden enviar facturas confirmadas'}, 400)
 
-        # Determinar email destino
         email_to = override_email
         if not email_to and invoice.partner_id:
-            email_to = invoice.partner_id.email or ''
+            email_to = (invoice.partner_id.email or '').strip()
 
         if not email_to:
             return self._json_response({'ok': False, 'error': 'No hay email de destino'}, 400)
 
         try:
-            # Usar el template estándar de Odoo para facturas
-            template = request.env.ref('account.email_template_edi_invoice', raise_if_not_found=False)
+            pdf_content = self._render_invoice_pdf_content(invoice)
+            attachment = request.env['ir.attachment'].sudo().create({
+                'name': f'Factura-{invoice.name or invoice.id}.pdf',
+                'type': 'binary',
+                'datas': base64.b64encode(pdf_content).decode('ascii'),
+                'res_model': 'account.move',
+                'res_id': invoice.id,
+                'mimetype': 'application/pdf',
+            })
 
-            if template:
-                # Si hay override de email, clonamos el template con el email modificado
-                mail_values = template.sudo().generate_email(
-                    invoice.id,
-                    fields=['subject', 'body_html', 'email_to', 'email_from', 'attachment_ids']
-                )
-                if override_email:
-                    mail_values['email_to'] = override_email
-
-                mail = request.env['mail.mail'].sudo().create(mail_values)
-                mail.send()
-            else:
-                # Fallback: generar PDF y enviar manualmente
-                report = request.env.ref('account.account_invoices').sudo()
-                pdf_content, _ = report._render_qweb_pdf([invoice.id])
-
-                attachment = request.env['ir.attachment'].sudo().create({
-                    'name': f'Factura-{invoice.name}.pdf',
-                    'type': 'binary',
-                    'datas': pdf_content,
-                    'res_model': 'account.move',
-                    'res_id': invoice.id,
-                    'mimetype': 'application/pdf',
-                })
-
-                mail_values = {
-                    'subject': f'Factura {invoice.name}',
-                    'body_html': f'<p>Estimado cliente,</p><p>Adjunto encontrará la factura <strong>{invoice.name}</strong>.</p>',
-                    'email_to': email_to,
-                    'attachment_ids': [(4, attachment.id)],
-                }
-                mail = request.env['mail.mail'].sudo().create(mail_values)
-                mail.send()
-
+            company_email = invoice.company_id.email or request.env.user.email or False
+            mail_values = {
+                'subject': f'Factura {invoice.name or invoice.id}',
+                'body_html': (
+                    f'<p>Estimado cliente,</p>'
+                    f'<p>Adjunto encontrara la factura <strong>{invoice.name or invoice.id}</strong>.</p>'
+                ),
+                'email_to': email_to,
+                'email_from': company_email,
+                'attachment_ids': [(4, attachment.id)],
+                'model': 'account.move',
+                'res_id': invoice.id,
+            }
+            mail = request.env['mail.mail'].sudo().create(mail_values)
+            mail.send()
         except Exception as e:
             _logger.exception("Error enviando email de factura %s", invoice_id)
             return self._json_response({'ok': False, 'error': str(e)}, 500)
@@ -334,7 +327,6 @@ class PosApiController(http.Controller):
             'invoice_id': invoice.id,
             'sent_to': email_to,
         })
-
     # =============================================================
     # LIST ORDERS (filtrado por company_id, con estado de factura)
     # GET /api/pos/orders?company_id=<id>
@@ -532,6 +524,7 @@ class PosApiController(http.Controller):
     def download_invoice(self, order_id):
         if request.httprequest.method == 'OPTIONS':
             return self._options_response()
+        _logger.info("[invoice-pdf] request by order_id=%s user=%s", order_id, getattr(request.env.user, 'login', None))
 
         order = request.env['pos.order'].sudo().browse(order_id)
         invoice = request.env['account.move'].sudo().search([('invoice_origin', '=', order.name)], limit=1)
@@ -540,8 +533,7 @@ class PosApiController(http.Controller):
             return self._json_response({'ok': False, 'error': 'Factura no encontrada'}, 404)
 
         try:
-            report = request.env.ref('account.account_invoices').sudo()
-            pdf, _ = report._render_qweb_pdf([invoice.id])
+            pdf = self._render_invoice_pdf_content(invoice)
         except Exception as e:
             _logger.exception("Error generando PDF de factura %s", invoice.id)
             return self._json_response({'ok': False, 'error': str(e)}, 500)
@@ -563,14 +555,14 @@ class PosApiController(http.Controller):
     def download_invoice_by_id(self, invoice_id):
         if request.httprequest.method == 'OPTIONS':
             return self._options_response()
+        _logger.info("[invoice-pdf] request by invoice_id=%s user=%s", invoice_id, getattr(request.env.user, 'login', None))
 
         invoice = request.env['account.move'].sudo().browse(invoice_id)
         if not invoice.exists():
             return self._json_response({'ok': False, 'error': 'Factura no encontrada'}, 404)
 
         try:
-            report = request.env.ref('account.account_invoices').sudo()
-            pdf, _ = report._render_qweb_pdf([invoice.id])
+            pdf = self._render_invoice_pdf_content(invoice)
         except Exception as e:
             _logger.exception("Error generando PDF de factura %s", invoice_id)
             return self._json_response({'ok': False, 'error': str(e)}, 500)
@@ -583,3 +575,4 @@ class PosApiController(http.Controller):
         })
 
         return Response(pdf, status=200, headers=headers)
+

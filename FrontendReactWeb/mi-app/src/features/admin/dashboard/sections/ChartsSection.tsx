@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { TrendingUp } from 'lucide-react';
-import type { ChartDataPoint } from '../types/dashboard.types';
+import type { ChartDataPoint, Period } from '../types/dashboard.types';
 import { theme } from '../theme/dashboardTheme';
 
 const CHART_H = 160;
@@ -22,7 +22,13 @@ function fmtK(v: number) {
   return v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`;
 }
 
-export function ChartsSection({ data }: { data: ChartDataPoint[] }) {
+function getSubtitle(period: Period) {
+  if (period === 'week') return 'Ultimos 7 dias';
+  if (period === 'year') return 'Ultimos 12 meses';
+  return 'Ultimos 7 meses';
+}
+
+export function ChartsSection({ data, period }: { data: ChartDataPoint[]; period: Period }) {
   const [tooltip, setTooltip] = useState<{ label: string; key: string; value: number; x: number; y: number } | null>(null);
 
   if (!data || data.length === 0) {
@@ -51,7 +57,7 @@ export function ChartsSection({ data }: { data: ChartDataPoint[] }) {
             <TrendingUp size={16} color="var(--color-primary)" strokeWidth={2} />
             <h2 style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-text-primary)', margin: 0 }}>Rendimiento Financiero</h2>
           </div>
-          <p style={{ fontSize: 12, color: 'var(--color-text-disabled)', margin: 0 }}>Últimos 7 meses</p>
+          <p style={{ fontSize: 12, color: 'var(--color-text-disabled)', margin: 0 }}>{getSubtitle(period)}</p>
         </div>
         {/* Legend */}
         <div style={{ display: 'flex', gap: 16 }}>

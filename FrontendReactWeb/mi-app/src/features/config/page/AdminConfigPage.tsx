@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronRight, FileText, LogOut, Moon, Shield, Sun, User } from "lucide-react";
 import { AdminSidebar } from "@/features/admin/dashboard/ui/AdminSidebar";
 import { ADMIN_NAV_ITEMS } from "@/features/admin/dashboard/data/adminNavigation.data";
@@ -48,7 +48,6 @@ export default function AdminConfigPage() {
   const { mode, toggle } = useColorMode();
   const { user } = useSession();
   const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
   const storedUser = getStoredAuthState();
   const roleHint = searchParams.get("role");

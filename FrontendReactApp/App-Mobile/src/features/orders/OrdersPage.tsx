@@ -9,6 +9,8 @@ import {
   Linking,
   Platform,
 } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useAuth } from '../auth/hooks/useAuth';
 import { useOrders } from './hooks/useOrders';
 import { ordersTheme as t } from './theme/orders.theme';
 import { OrdersHeaderSection } from './sections/OrdersHeaderSection';
@@ -44,6 +46,8 @@ export function OrdersPage({
   cartCount = 0,
   userInitials = 'U',
 }: Props) {
+  const router = useRouter();
+  const { logout } = useAuth();
   const {
     orders,
     totalOrders,
@@ -64,6 +68,45 @@ export function OrdersPage({
     closeAll,
   } = useNavDrawer();
 
+  const handleNavigate = (id: string) => {
+    switch (id) {
+      case 'home':
+        router.push('/');
+        break;
+      case 'products':
+        router.push('/products');
+        break;
+      case 'cart':
+        router.push('/cart');
+        break;
+      case 'orders':
+        router.push('/orders');
+        break;
+      case 'wishlist':
+        router.push('/products');
+        break;
+      case 'profile':
+        router.push('/profile');
+        break;
+      case 'cat-tech':
+        router.push({ pathname: '/products', params: { category: 'tech' } });
+        break;
+      case 'cat-clothing':
+        router.push({ pathname: '/products', params: { category: 'clothing' } });
+        break;
+      case 'cat-services':
+        router.push({ pathname: '/products', params: { category: 'services' } });
+        break;
+      default:
+        break;
+    }
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    router.replace('/auth');
+  };
+
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
@@ -74,9 +117,8 @@ export function OrdersPage({
   }, [openLeft, onMenuPress]);
 
   const handleCartPress = useCallback(() => {
-    openRight();
-    onCartPress();
-  }, [openRight, onCartPress]);
+    router.push('/cart');
+  }, [router]);
 
   const handleOrderPress = useCallback((order: Order) => {
     setSelectedOrder(order);
@@ -210,8 +252,8 @@ export function OrdersPage({
       </ScrollView>
 
       <DrawerOverlay visible={leftOpen || rightOpen} onPress={closeAll} />
-      <LeftDrawer open={leftOpen} onClose={closeAll} />
-      <RightDrawer open={rightOpen} onClose={closeAll} />
+      <LeftDrawer open={leftOpen} onClose={closeAll} onNavigate={handleNavigate} onLogout={handleLogout} />
+      <RightDrawer open={rightOpen} onClose={closeAll} onNavigate={handleNavigate} onLogout={handleLogout} />
 
       <OrderDetailModal
         visible={isModalVisible}

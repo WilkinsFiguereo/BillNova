@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useGoogleOAuth, useLogin } from "@/features/auth/login";
@@ -9,6 +9,7 @@ import { getUserRoleRoute } from "@/features/auth/login/hooks/useRoleGuard";
 
 export default function LoginPage() {
   const router = useRouter();
+  const [showPassword, setShowPassword] = useState(false);
   const { values, errors, isLoading, serverError, errorCode, verificationEmail, onFieldChange, onSubmit } = useLogin();
   const { googleLoading, googleError, startGoogleOAuth } = useGoogleOAuth({
     rememberMe: values.rememberMe,
@@ -101,16 +102,35 @@ export default function LoginPage() {
 
                 <div className="field">
                   <label className="field-label" htmlFor="password">Contrasena</label>
-                  <div className="field-wrap">
+                  <div className="field-wrap" style={{ position: "relative" }}>
                     <input
                       id="password"
                       name="password"
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       value={values.password}
                       onChange={onFieldChange}
                       placeholder="Tu contrasena"
                       className={`input${errors.password ? " err" : values.password ? " ok" : ""}`}
+                      style={{ paddingRight: 72 }}
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((current) => !current)}
+                      style={{
+                        position: "absolute",
+                        right: 14,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        border: "none",
+                        background: "transparent",
+                        color: "#7a8fa8",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {showPassword ? "Ocultar" : "Ver"}
+                    </button>
                   </div>
                   <p className={`field-err${errors.password ? " show" : ""}`}>{errors.password}</p>
                 </div>

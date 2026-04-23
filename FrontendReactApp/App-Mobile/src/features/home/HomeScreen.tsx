@@ -3,6 +3,7 @@ import {
   View, ScrollView, StyleSheet, RefreshControl,
   ActivityIndicator, Text, TouchableOpacity,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../auth/hooks/useAuth';
 import { useCart } from '../cart/hooks/useCart';
 import { useProducts, useProductSearch } from './hooks/useHome';
@@ -33,7 +34,8 @@ export function HomeScreen({
   onSeeAllProducts,
   onAddToCart,
 }: HomeScreenProps) {
-  const { user } = useAuth();
+  const router = useRouter();
+  const { user, logout } = useAuth();
   const { totalItems } = useCart();
   const { products, featured, isLoading, error, refreshing, refresh, toggleFavorite } = useProducts();
   const { query, setQuery, activeCategory, setActive, filtered } = useProductSearch(products);
@@ -51,6 +53,54 @@ export function HomeScreen({
     activeTab,
     setActiveTab,
   } = useBottomTabs();
+
+  const handleNavigate = (id: string) => {
+    switch (id) {
+      case 'home':
+        router.push('/');
+        break;
+      case 'products':
+        router.push('/products');
+        break;
+      case 'cart':
+        router.push('/cart');
+        break;
+      case 'orders':
+        router.push('/orders');
+        break;
+      case 'wishlist':
+        router.push('/products'); // TODO: create wishlist page
+        break;
+      case 'profile':
+        router.push('/profile');
+        break;
+      case 'help':
+        // TODO: help center
+        break;
+      case 'contact':
+        // TODO: contact page
+        break;
+      case 'config':
+        router.push('/profile');
+        break;
+      case 'cat-tech':
+        router.push({ pathname: '/products', params: { category: 'tech' } });
+        break;
+      case 'cat-clothing':
+        router.push({ pathname: '/products', params: { category: 'clothing' } });
+        break;
+      case 'cat-services':
+        router.push({ pathname: '/products', params: { category: 'services' } });
+        break;
+      default:
+        break;
+    }
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    router.replace('/auth');
+  };
   if (isLoading) {
     return (
       <View style={styles.loadingScreen}>
@@ -80,7 +130,8 @@ export function HomeScreen({
       <TopNav
         user={user}
         onMenuPress={openLeft}
-        onCartPress={openRight}
+        onCartPress={() => router.push('/cart')}
+        onAvatarPress={openRight}
         cartCount={totalItems}
       />
 
@@ -124,8 +175,8 @@ export function HomeScreen({
      
       {/* 📂 Drawers */}
       <DrawerOverlay visible={leftOpen || rightOpen} onPress={closeAll} />
-      <LeftDrawer open={leftOpen} onClose={closeAll} />
-      <RightDrawer open={rightOpen} onClose={closeAll} />
+      <LeftDrawer open={leftOpen} onClose={closeAll} onNavigate={handleNavigate} onLogout={handleLogout} />
+      <RightDrawer open={rightOpen} onClose={closeAll} onNavigate={handleNavigate} onLogout={handleLogout} />
 
       {/* 🌑 Overlay */}
       <DrawerOverlay visible={leftOpen || rightOpen} onPress={closeAll} />

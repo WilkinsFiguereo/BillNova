@@ -8,7 +8,7 @@ import {
   IconX, IconBriefcase, IconSearch, IconHome,
   IconPackage, IconShoppingBag, IconFileText,
   IconHeart, IconMonitor, IconShirt, IconSettings,
-  IconHelpCircle, IconPhone, IconLogOut,
+  IconHelpCircle, IconPhone, IconLogOut, IconUser,
 } from '../../../shared/ui/Icons';
 import { colors } from '../../../shared/theme/colors';
 import { radius } from '../../../shared/theme/spacing';
@@ -23,22 +23,14 @@ interface NavItem {
 
 const MAIN_NAV: NavItem[] = [
   { id: 'home',     label: 'Inicio',      Icon: IconHome },
-  { id: 'products', label: 'Productos',   Icon: IconPackage, badge: 142 },
-  { id: 'cart',     label: 'Mi Carrito',  Icon: IconShoppingBag, badge: 3, badgeColor: '#059669' },
+  { id: 'products', label: 'Productos',   Icon: IconPackage },
+  { id: 'cart',     label: 'Mi Carrito',  Icon: IconShoppingBag },
   { id: 'orders',   label: 'Mis Pedidos', Icon: IconFileText },
-  { id: 'wishlist', label: 'Favoritos',   Icon: IconHeart },
+  { id: 'profile',  label: 'Mi Perfil',   Icon: IconUser },
 ];
 
-const CAT_NAV: NavItem[] = [
-  { id: 'cat-tech',     label: 'Tecnología',   Icon: IconMonitor },
-  { id: 'cat-clothing', label: 'Ropa & Moda',  Icon: IconShirt },
-  { id: 'cat-services', label: 'Servicios',    Icon: IconSettings },
-];
-
-const SUPPORT_NAV: NavItem[] = [
-  { id: 'help',    label: 'Centro de ayuda', Icon: IconHelpCircle },
-  { id: 'contact', label: 'Contacto',        Icon: IconPhone },
-];
+const CAT_NAV: NavItem[] = [];
+const SUPPORT_NAV: NavItem[] = [];
 
 interface LeftDrawerProps {
   open: boolean;

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View, FlatList, StyleSheet, RefreshControl,
   Text, ActivityIndicator, TouchableOpacity,
@@ -17,9 +17,10 @@ import type { Product }         from '../home/types/home.types';
 interface ProductsScreenProps {
   onProductPress?: (p: Product) => void;
   onAddToCart?:   (p: Product) => void;
+  initialCategory?: string;
 }
 
-export function ProductsScreen({ onProductPress, onAddToCart }: ProductsScreenProps) {
+export function ProductsScreen({ onProductPress, onAddToCart, initialCategory }: ProductsScreenProps) {
   const {
     products, isLoading, error, refreshing, refresh,
   } = useHomeProducts();
@@ -35,6 +36,13 @@ export function ProductsScreen({ onProductPress, onAddToCart }: ProductsScreenPr
     clearAllFilters, removeFilter,
     toggleFavorite, isFavorite,
   } = useProductList(products);
+
+  useEffect(() => {
+    if (initialCategory) {
+      setPending(p => ({ ...p, category: initialCategory }));
+      setFilter(prev => ({ ...prev, category: initialCategory }));
+    }
+  }, [initialCategory]);
 
   // ── Render cards ──────────────────────────────────────────────
 

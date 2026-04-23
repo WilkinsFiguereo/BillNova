@@ -1,231 +1,438 @@
 # BillNova
 
-Sistema ERP con frontend web en Next.js, app movil en Expo/React Native y backend en Odoo.
+Repositorio oficial: `https://github.com/WilkinsFiguereo/BillNova`
 
-## Estructura
+## Nombre del Proyecto
+
+`BillNova`
+
+## Descripción del Proyecto
+
+BillNova es un sistema ERP orientado a la gestión comercial y operativa de empresas instaladoras. El proyecto integra:
+
+- un frontend web administrativo en `Next.js`
+- una app mobile en `Expo / React Native`
+- un backend ERP en `Odoo`
+- base de datos `PostgreSQL`
+
+El sistema permite autenticación tradicional y con Google, gestión de usuarios, productos, servicios, categorías, empresas, facturación, reportes, moderación y paneles por rol.
+
+## Repositorio del Proyecto
+
+- GitHub: `https://github.com/WilkinsFiguereo/BillNova`
+
+### Clonar repositorio de GitHub
+
+```bash
+git clone https://github.com/WilkinsFiguereo/BillNova.git
+cd BillNova
+```
+
+## Tecnologías Utilizadas
+
+### Frontend Web
+
+- `Next.js 16`
+- `React 19`
+- `TypeScript`
+- `React Hook Form`
+- `Lucide React`
+- `jsPDF`
+- `xlsx`
+
+### App Mobile
+
+- `Expo SDK 54`
+- `React Native 0.81`
+- `Expo Router`
+- `Expo Secure Store`
+- `Expo Sharing`
+- `React Navigation`
+- `Zustand`
+
+### Backend
+
+- `Odoo 19`
+- `Python`
+- `PostgreSQL 15`
+- `Docker / Docker Compose`
+
+### Integraciones
+
+- `Google OAuth`
+- API REST personalizada sobre Odoo
+
+## Características del Sistema
+
+- Inicio de sesión con usuario/contraseña
+- Inicio de sesión con Google OAuth
+- Persistencia de sesión en web y mobile
+- Registro de usuarios y empresas
+- Gestión de productos
+- Gestión de servicios
+- Gestión de categorías
+- Gestión de empresas
+- Gestión de facturas
+- Exportación de facturas a PDF y Excel
+- Compartir facturas por correo
+- Dashboard para admin
+- Dashboard para seller
+- Dashboard y herramientas de moderación
+- Control de acceso por roles
+- Configuración por tipo de usuario
+
+## Requisitos del Sistema
+
+### Requisitos generales
+
+- `Node.js 20+`
+- `npm 10+`
+- `Docker`
+- `Docker Compose`
+- `Git`
+
+### Requisitos recomendados
+
+- Navegador moderno
+- Android Studio o Expo Go para pruebas mobile
+- Acceso a Google Cloud Console si se usará OAuth de Google
+
+## Estructura del Proyecto
 
 ```text
-ProyectRijo/
+BillNova/
 |-- FrontendReactWeb/
-|   `-- mi-app/                  # Next.js web app
+|   `-- mi-app/                  # Aplicación web en Next.js
 |-- FrontendReactApp/
-|   `-- App-Mobile/              # Expo mobile app
+|   `-- App-Mobile/              # Aplicación móvil en Expo
 |-- odooBackend/
-|   |-- addons/Proyect/          # Modulo Odoo custom
-|   `-- docker-compose.yml
+|   |-- addons/
+|   |   `-- Proyect/             # Módulo custom principal de Odoo
+|   |-- config/                  # Configuración de Odoo
+|   `-- docker-compose.yml       # Infraestructura local de backend
 `-- README.md
 ```
 
-## Stack
+## Configuración
 
-| Capa | Tecnologia |
-| --- | --- |
-| Frontend web | Next.js, React 19, TypeScript |
-| Frontend movil | Expo SDK 54, React Native 0.81, Expo Router |
-| Backend | Odoo, Python |
-| Base de datos | PostgreSQL |
+## Configuración del frontend web
 
-## Ejecucion
+Archivo sugerido: `FrontendReactWeb/mi-app/.env.local`
 
-### Web
+```env
+NEXT_PUBLIC_ODOO_URL=http://localhost:8079
+```
+
+## Configuración del frontend mobile
+
+Archivo sugerido: `FrontendReactApp/App-Mobile/.env`
+
+```env
+EXPO_PUBLIC_ODOO_URL=http://localhost:8079
+```
+
+Si se prueba en dispositivo físico, usa una URL accesible desde el teléfono, por ejemplo una IP local o túnel público.
+
+## Configuración de Odoo
+
+Levanta Odoo con Docker usando el archivo:
+
+- [odooBackend/docker-compose.yml](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/odooBackend/docker-compose.yml)
+
+Credenciales por defecto de PostgreSQL dentro de Docker:
+
+- `POSTGRES_DB=postgres`
+- `POSTGRES_USER=odoo`
+- `POSTGRES_PASSWORD=odoo`
+
+Odoo queda expuesto localmente en:
+
+- `http://localhost:8079`
+
+### Parámetros del sistema en Odoo
+
+En `Settings -> Technical -> Parameters -> System Parameters`, configurar al menos:
+
+```text
+web.base.url=http://localhost:8079
+billnova.google_oauth_client_id=TU_CLIENT_ID
+billnova.google_oauth_client_secret=TU_CLIENT_SECRET
+```
+
+## Instalación del Proyecto
+
+## 1. Instalar dependencias del frontend web
 
 ```bash
 cd FrontendReactWeb/mi-app
 npm install
-npm run dev
 ```
 
-### Mobile
+## 2. Instalar dependencias del frontend mobile
 
 ```bash
 cd FrontendReactApp/App-Mobile
 npm install
-npx expo start
 ```
 
-### Odoo
+## 3. Levantar backend Odoo + PostgreSQL
 
 ```bash
 cd odooBackend
 docker-compose up -d
 ```
 
-Despues de tocar el modulo `Proyect`, reinicia Odoo y actualiza el modulo.
+## 4. Instalar o actualizar el módulo custom
 
-## Variables y parametros
+Una vez que Odoo esté corriendo:
 
-### Frontend web
+1. entra al panel de Odoo
+2. activa modo desarrollador
+3. actualiza la lista de aplicaciones
+4. instala o actualiza el módulo `BillNova / Proyect`
 
-`FrontendReactWeb/mi-app/.env.local`
+Si cambias código Python o controladores, reinicia el contenedor de Odoo:
 
-```env
-NEXT_PUBLIC_ODOO_URL=https://tu-url-publica-de-odoo
+```bash
+docker restart odoo-web
 ```
 
-### Frontend movil
+## Paso de ejecución del proyecto paso a paso
 
-`FrontendReactApp/App-Mobile/.env`
+## Backend Odoo
 
-```env
-EXPO_PUBLIC_ODOO_URL=https://tu-url-publica-de-odoo
+1. Abre una terminal en `odooBackend`
+2. Ejecuta:
+
+```bash
+docker-compose up -d
 ```
 
-### Odoo system parameters
+3. Verifica que el backend esté arriba en `http://localhost:8079`
+4. Si es la primera vez, crea o selecciona una base de datos en Odoo
+5. Instala el módulo custom `Proyect`
 
-Configura estos parametros en `Settings -> Technical -> Parameters -> System Parameters`:
+## Frontend web
+
+1. Abre otra terminal
+2. Entra a:
+
+```bash
+cd FrontendReactWeb/mi-app
+```
+
+3. Ejecuta:
+
+```bash
+npm run dev
+```
+
+4. Abre:
 
 ```text
-web.base.url=https://tu-url-publica-de-odoo
-billnova.google_oauth_client_id=TU_CLIENT_ID
-billnova.google_oauth_client_secret=TU_CLIENT_SECRET
+http://localhost:3000
 ```
 
-Tambien puede leer `client_id` desde `auth.oauth.provider`, pero el `client_secret` debe existir en el provider o en los parametros anteriores.
+## App mobile
 
-## Autenticacion
+1. Abre otra terminal
+2. Entra a:
 
-### Endpoints principales
-
-| Endpoint | Metodo | Uso |
-| --- | --- | --- |
-| `/api/auth/login` | POST | Login usuario/password |
-| `/api/auth/register` | POST | Registro |
-| `/api/auth/session` | GET | Restaurar sesion |
-| `/api/auth/logout` | POST | Cerrar sesion |
-| `/api/auth/verify-email` | POST | Verificar correo |
-| `/api/auth/resend-code` | POST | Reenviar verificacion |
-| `/api/auth/google/mobile/authorize-url` | GET | Construye URL OAuth para web y mobile |
-| `/api/auth/google/mobile/callback` | GET | Callback OAuth de Google |
-
-### Sesion
-
-- Web y mobile usan `session_token` de Odoo.
-- Las peticiones autenticadas envian `X-Auth-Session`.
-- En mobile el token se guarda con `expo-secure-store`.
-- En web el estado se persiste en `localStorage` o `sessionStorage`.
-
-## Google OAuth
-
-### Redirect URI oficial
-
-Si tu `web.base.url` es:
-
-```text
-https://jwfn4vcd-8079.use2.devtunnels.ms
+```bash
+cd FrontendReactApp/App-Mobile
 ```
 
-entonces la redirect URI autorizada en Google Cloud debe ser:
+3. Ejecuta:
 
-```text
-https://jwfn4vcd-8079.use2.devtunnels.ms/api/auth/google/mobile/callback
+```bash
+npx expo start
 ```
 
-### Configuracion en Google Cloud
+4. Elige una opción:
 
-1. Crear un OAuth Client de tipo `Web application`.
-2. En `Authorized redirect URIs`, agregar:
+- `a` para Android
+- `i` para iOS
+- `w` para web
+- o escanea QR con Expo Go
 
-```text
-https://TU_WEB_BASE_URL/api/auth/google/mobile/callback
-```
+## Uso del Sistema
 
-3. Si el consentimiento esta en `Testing`, agregar tu correo en `Test users`.
+## Flujo básico
 
-### Configuracion en Odoo
+1. Inicia el backend Odoo
+2. Inicia el frontend web o mobile
+3. Accede con un usuario existente o crea uno nuevo
+4. Según el rol, el sistema redirige a:
 
-1. Instalar `auth_oauth`.
-2. Activar el provider de Google si lo usas.
-3. Verificar que el backend encuentre:
-   - `client_id`
-   - `client_secret`
-   - `web.base.url`
+- `admin`
+- `moderator`
+- `seller`
+- `gerente`
+- `worker`
 
-### Como funciona el flujo
+## Roles principales
 
-#### Mobile
+### Admin
 
-1. La app pide a Odoo `/api/auth/google/mobile/authorize-url`.
-2. Odoo devuelve la URL final de Google.
-3. La app abre Google.
-4. Google vuelve a `/api/auth/google/mobile/callback`.
-5. Odoo valida el token y devuelve una pagina puente que reabre la app con el deep link.
-6. La app recibe `session_token`, guarda sesion y entra al home.
+- Dashboard administrativo
+- Usuarios
+- Empresas
+- Productos
+- Categorías
+- Reportes
+- Configuración
 
-#### Web
+### Moderator
 
-1. La pagina de login/register pide a Odoo `/api/auth/google/mobile/authorize-url`.
-2. El navegador va a Google.
-3. Google vuelve a `/api/auth/google/mobile/callback`.
-4. Odoo valida y redirige otra vez al login/register web con `ok`, `uid`, `session_token`, `role`, etc.
-5. El frontend web persiste la sesion y redirige al dashboard correcto.
+- Dashboard de moderación
+- Moderación de productos y empresas
+- Reportes
+- Configuración
 
-## Cambios recientes
+### Seller
 
-### Routing y auth mobile
+- Dashboard comercial
+- Productos
+- Servicios
+- Facturas
+- Pedidos POS
+- Impuestos
+- Configuración de empresa
 
-- Se corrigio el enrutado inicial de Expo Router para que entre a `auth` o `tabs` segun sesion.
-- Se corrigieron rutas inconsistentes como `/login` y `/(auth)`.
-- Se ajusto logout y retorno desde registro.
+## Credenciales relevantes
 
-### Sesion mobile
+## Relevantes para desarrollo local
 
-- `AuthProvider` ahora guarda `session_token`.
-- `odooClient` envia `X-Auth-Session` en las requests autenticadas.
-- Se agregaron mensajes de error visibles para OAuth.
-- Se separo el loading de Google del loading de login normal.
+### PostgreSQL Docker
 
-### Google OAuth backend
+- Usuario: `odoo`
+- Contraseña: `odoo`
+- Base inicial: `postgres`
 
-- Se agrego soporte a `auth_oauth` en el modulo Odoo.
-- Se implementaron:
-  - `/api/auth/google/mobile/authorize-url`
-  - `/api/auth/google/mobile/callback`
-- El backend crea o actualiza el usuario BillNova/Odoo despues del login con Google.
-- Se agregaron logs detallados del flujo OAuth.
-- Se agrego una pagina puente para devolver deep links a la app y evitar `404` al volver desde Odoo.
+### Odoo local
 
-### Google OAuth frontend web
+- URL: `http://localhost:8079`
+- La credencial de administrador funcional depende de la base creada en tu entorno
 
-- Se agrego boton `Continuar con Google` en:
-  - login web
-  - register web
-- El frontend web ya procesa el callback OAuth y persiste la sesion sin pasar manualmente por Odoo.
+### Variables necesarias
 
-## Archivos clave tocados en estos cambios
+- `NEXT_PUBLIC_ODOO_URL`
+- `EXPO_PUBLIC_ODOO_URL`
+- `web.base.url`
+- `billnova.google_oauth_client_id`
+- `billnova.google_oauth_client_secret`
 
-- [FrontendReactApp/App-Mobile/app/_layout.tsx](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/FrontendReactApp/App-Mobile/app/_layout.tsx)
-- [FrontendReactApp/App-Mobile/app/index.tsx](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/FrontendReactApp/App-Mobile/app/index.tsx)
-- [FrontendReactApp/App-Mobile/src/core/providers/AuthProvider.tsx](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/FrontendReactApp/App-Mobile/src/core/providers/AuthProvider.tsx)
-- [FrontendReactApp/App-Mobile/src/core/api/odooClient.ts](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/FrontendReactApp/App-Mobile/src/core/api/odooClient.ts)
-- [FrontendReactWeb/mi-app/app/navigation/auth/login/page/page.tsx](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/FrontendReactWeb/mi-app/app/navigation/auth/login/page/page.tsx)
-- [FrontendReactWeb/mi-app/src/features/auth/login/hooks/useGoogleOAuth.ts](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/FrontendReactWeb/mi-app/src/features/auth/login/hooks/useGoogleOAuth.ts)
-- [FrontendReactWeb/mi-app/src/features/auth/register/index.tsx](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/FrontendReactWeb/mi-app/src/features/auth/register/index.tsx)
-- [odooBackend/addons/Proyect/controllers/auth_controller.py](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/odooBackend/addons/Proyect/controllers/auth_controller.py)
+Nota: no se incluyen credenciales privadas del sistema en este documento. Deben configurarse en cada entorno.
+
+## API utilizada y su implementación paso a paso
+
+BillNova usa una API REST personalizada construida sobre controladores de Odoo dentro de:
+
+- [odooBackend/addons/Proyect/controllers](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/odooBackend/addons/Proyect/controllers)
+
+## Endpoints importantes
+
+### Autenticación
+
+- `POST /api/auth/login`
+- `POST /api/auth/register`
+- `GET /api/auth/session`
+- `POST /api/auth/logout`
+- `POST /api/auth/forgot-password`
+- `POST /api/auth/reset-password`
+- `POST /api/auth/verify-email`
+- `POST /api/auth/resend-code`
+
+### Google OAuth
+
+- `GET /api/auth/google/mobile/authorize-url`
+- `GET /api/auth/google/mobile/callback`
+
+### Funcionales
+
+- `GET /api/products`
+- `GET /api/mobile/products`
+- `GET /api/services`
+- `GET /api/categories`
+- `GET /api/pos/orders`
+- `GET /api/companies`
+- `GET /api/admin/dashboard/financial`
+
+## Implementación paso a paso de la API en el sistema
+
+### 1. Backend Odoo expone endpoints HTTP
+
+Los endpoints se implementan en controladores como:
+
+- `auth_controller.py`
+- `product_controller.py`
+- `service_controller.py`
+- `pos_controller.py`
+- `company_controller.py`
+
+### 2. El frontend consume esos endpoints
+
+En web:
+
+- usando `fetch`
+- usando helpers como `odooGet`, `odooPost`, `odooPut`, `odooDelete`
+
+Archivo base:
+
+- [FrontendReactWeb/mi-app/src/lib/odooApi.ts](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/FrontendReactWeb/mi-app/src/lib/odooApi.ts)
+
+En mobile:
+
+- usando un cliente HTTP central que adjunta `X-Auth-Session`
+
+### 3. La sesión se mantiene con token de Odoo
+
+- Odoo genera `session_token`
+- web lo guarda en `localStorage` o `sessionStorage`
+- mobile lo guarda en `SecureStore`
+- las requests autenticadas envían `X-Auth-Session`
+
+### 4. Google OAuth
+
+Flujo resumido:
+
+1. frontend pide `authorize-url`
+2. backend arma la URL de Google
+3. el usuario autoriza
+4. Google vuelve al callback de Odoo
+5. Odoo valida el acceso
+6. Odoo devuelve sesión y datos del usuario
+7. frontend persiste sesión y redirige según el rol
+
+## Características técnicas relevantes de la API
+
+- CORS manejado desde controladores Odoo
+- sesión por token
+- endpoints especializados para web y mobile cuando aplica
+- control de alcance por rol y empresa
+- integración con reportes, POS y facturación de Odoo
+
+## Archivos clave del sistema
+
+- [README.md](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/README.md)
+- [FrontendReactWeb/mi-app/package.json](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/FrontendReactWeb/mi-app/package.json)
+- [FrontendReactApp/App-Mobile/package.json](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/FrontendReactApp/App-Mobile/package.json)
 - [odooBackend/addons/Proyect/__manifest__.py](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/odooBackend/addons/Proyect/__manifest__.py)
+- [odooBackend/docker-compose.yml](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/odooBackend/docker-compose.yml)
 
-## Verificacion recomendada
+## Autores del Desarrollo
 
-### Mobile
+- `Wilkins Figuereo`
+- `Yeraldo Novas`
+- `Daury Contreras`
 
-1. Abrir app.
-2. Pulsar `Continuar con Google`.
-3. Elegir cuenta.
-4. Confirmar que vuelve al home y queda sesion activa.
+## Autor de administración del proyecto
 
-### Web
+- `Rijo`
 
-1. Ir a `/navigation/auth/login`.
-2. Pulsar `Continuar con Google`.
-3. Elegir cuenta.
-4. Confirmar redireccion al dashboard segun rol.
+## Notas finales
 
-### Backend
-
-Buscar en logs de Odoo:
-
-```text
-GOOGLE OAUTH CONFIG
-GOOGLE AUTHORIZE URL
-GOOGLE CALLBACK
-GOOGLE MOBILE redirecting via bridge page
-```
+- Si cambias controladores o modelos de Odoo, reinicia `odoo-web`
+- Si cambias el módulo custom, actualízalo desde Odoo
+- Si usas Google OAuth, asegúrate de registrar correctamente el callback
+- Si pruebas en móvil físico, no uses `localhost`; usa IP local o túnel público

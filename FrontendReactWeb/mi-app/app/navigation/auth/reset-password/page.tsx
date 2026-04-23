@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useResetPassword } from "@/features/auth/login";
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 
 function ResetPasswordForm() {
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const searchParams = useSearchParams();
   const email = searchParams.get("email") ?? "";
   const token = searchParams.get("token") ?? "";
@@ -174,15 +176,34 @@ function ResetPasswordForm() {
                     <label className="field-label" htmlFor="newPassword">
                       Nueva contrasena
                     </label>
-                    <div className="field-wrap">
+                    <div className="field-wrap" style={{ position: "relative" }}>
                       <input
                         id="newPassword"
                         name="newPassword"
-                        type="password"
+                        type={showNewPassword ? "text" : "password"}
                         value={values.newPassword}
                         onChange={onFieldChange}
                         className={`input${errors.newPassword ? " err" : values.newPassword ? " ok" : ""}`}
+                        style={{ paddingRight: 72 }}
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword((current) => !current)}
+                        style={{
+                          position: "absolute",
+                          right: 14,
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          border: "none",
+                          background: "transparent",
+                          color: "#7a8fa8",
+                          fontSize: 12,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {showNewPassword ? "Ocultar" : "Ver"}
+                      </button>
                     </div>
                     <p
                       className={`field-err${errors.newPassword ? " show" : ""}`}
@@ -195,15 +216,34 @@ function ResetPasswordForm() {
                     <label className="field-label" htmlFor="confirmPassword">
                       Confirmar contrasena
                     </label>
-                    <div className="field-wrap">
+                    <div className="field-wrap" style={{ position: "relative" }}>
                       <input
                         id="confirmPassword"
                         name="confirmPassword"
-                        type="password"
+                        type={showConfirmPassword ? "text" : "password"}
                         value={values.confirmPassword}
                         onChange={onFieldChange}
                         className={`input${errors.confirmPassword ? " err" : values.confirmPassword ? " ok" : ""}`}
+                        style={{ paddingRight: 72 }}
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword((current) => !current)}
+                        style={{
+                          position: "absolute",
+                          right: 14,
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          border: "none",
+                          background: "transparent",
+                          color: "#7a8fa8",
+                          fontSize: 12,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {showConfirmPassword ? "Ocultar" : "Ver"}
+                      </button>
                     </div>
                     <p
                       className={`field-err${errors.confirmPassword ? " show" : ""}`}

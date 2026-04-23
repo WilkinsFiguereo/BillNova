@@ -114,11 +114,12 @@ export default function FacturasPage() {
     setFiltroActivo,
     setVistaMode,
     toggleOrden,
-    showToast,
     refetch,
     changeInvoiceState,
     sendInvoiceEmail,
     downloadInvoicePDF,
+    exportFacturasPDF,
+    exportFacturasExcel,
     facturas,
   } = useFacturasOdoo(companyId);
 
@@ -139,8 +140,8 @@ export default function FacturasPage() {
       <main style={{ flex: 1, overflow: "auto", padding: "32px" }}>
         <FacturasHeaderSection
           total={facturasFiltradas.length}
-          onNuevaFactura={() => showToast("Nueva factura creada", "success")}
-          onExportar={() => showToast("Exportando facturas...", "info")}
+          onExportarPDF={exportFacturasPDF}
+          onExportarExcel={exportFacturasExcel}
         />
 
         {error && <ErrorBanner error={error} onRetry={refetch} />}

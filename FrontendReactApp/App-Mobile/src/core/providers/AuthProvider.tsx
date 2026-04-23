@@ -69,8 +69,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         tokenStorage.getToken(),
       ]);
 
+      console.log('[mobile][auth] restoring session', {
+        hasStoredUser: Boolean(user),
+        hasStoredToken: Boolean(token),
+      });
+
+      if (token && user) {
+        dispatch({ type: 'SET_SESSION', payload: { user, token } });
+      }
+
       if (token) {
-        const { data } = await authApi.session();
+        const { data, error, status } = await authApi.session();
+        console.log('[mobile][auth] session restore response', {
+          status,
+          ok: data?.ok ?? null,
+          error,
+        });
+
         if (data?.ok && data.uid) {
           const restoredUser: AuthUser = {
             uid: data.uid,
@@ -88,9 +103,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           dispatch({ type: 'SET_SESSION', payload: { user: restoredUser, token } });
           return;
         }
+
+        if (status === 401) {
+          await tokenStorage.clearAll();
+          dispatch({ type: 'CLEAR_USER' });
+          return;
+        }
+
+        if (user) {
+          dispatch({ type: 'SET_LOADING', payload: false });
+          return;
+        }
       }
 
-      await tokenStorage.clearAll();
+      if (!token && user) {
+        await tokenStorage.removeUser();
+      }
+
       dispatch({ type: 'SET_LOADING', payload: false });
     })();
   }, []);

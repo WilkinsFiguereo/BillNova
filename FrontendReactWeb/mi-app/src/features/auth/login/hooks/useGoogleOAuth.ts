@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { authApi } from "../data/api";
 import { persistAuthState } from "../data/storage";
-import type { UserRole } from "../types/auth.types";
+import type { SessionResponse, UserRole } from "../types/auth.types";
 import { getLandingRouteForRole, normalizeUserRole } from "@/features/auth/session/roleRoutes";
 import { syncCompanyIdWithCurrentUser } from "@/features/seller/shared/companySession";
 import { getOdooUrl } from "@/lib/odooApi";
@@ -88,6 +88,23 @@ function completeGoogleLogin({
   };
 }
 
+function buildGooglePayloadFromSession(session: SessionResponse): Record<string, unknown> | null {
+  if (!session.ok || !session.uid || !session.session_token || !session.email) {
+    return null;
+  }
+
+  return {
+    ok: 1,
+    uid: session.uid,
+    login: session.email,
+    name: session.name ?? session.email,
+    email: session.email,
+    role: session.role,
+    company_id: session.company_id,
+    session_token: session.session_token,
+  };
+}
+
 export function useGoogleOAuth(options: UseGoogleOAuthOptions = {}) {
   const { rememberMe = true } = options;
   const router = useRouter();
@@ -112,6 +129,23 @@ export function useGoogleOAuth(options: UseGoogleOAuthOptions = {}) {
     () => completeGoogleLogin({ rememberMe, setError, setIsLoading }),
     [rememberMe],
   );
+
+  const recoverGoogleSession = useCallback(async () => {
+    try {
+      console.log("[Google OAuth][web] attempting session recovery from backend");
+      const session = await authApi.getSession();
+      console.log("[Google OAuth][web] session recovery response", session);
+      const payload = buildGooglePayloadFromSession(session);
+      if (payload) {
+        return finishGoogleLogin(payload);
+      }
+    } catch (error) {
+      console.warn("[Google OAuth][web] session recovery failed", error);
+    }
+
+    setIsLoading(false);
+    return false;
+  }, [finishGoogleLogin]);
 
   const callbackParams = useMemo(() => {
     const ok = searchParams.get("ok");
@@ -238,14 +272,14 @@ export function useGoogleOAuth(options: UseGoogleOAuthOptions = {}) {
         if (!popup.closed) return;
         window.clearInterval(poll);
         console.log("[Google OAuth][web] popup closed before flow completed");
-        setIsLoading(false);
+        void recoverGoogleSession();
       }, 500);
     } catch (error) {
       console.error("[Google OAuth][web] start flow failed", error);
       setError("No se pudo conectar con el servidor.");
       setIsLoading(false);
     }
-  }, [pathname]);
+  }, [pathname, recoverGoogleSession]);
 
   return {
     googleLoading: isLoading,

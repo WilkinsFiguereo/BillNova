@@ -5,11 +5,9 @@
    Campo atómico reutilizable
 ───────────────────────────────────────── */
 
-import { FieldIcon } from "./FieldIcon";
+import { useState } from "react";
 import { PasswordStrengthBar } from "./PasswordStrengthBar";
 import { inputBase, labelBase } from "../theme/register.theme";
-
-import { FIELD_ICONS } from "../data/constants";
 
 interface FormFieldProps {
   name: string;
@@ -50,9 +48,10 @@ export function FormField({
   error,
   onChange,
 }: FormFieldProps) {
+  const [showPassword, setShowPassword] = useState(false);
   const isTextarea  = type === "textarea";
   const isPassword  = type === "password";
-  const iconName    = FIELD_ICONS[name] ?? "user";
+  const inputType   = isPassword && showPassword ? "text" : type;
   const borderColor = error ? "border-[#f47c7c] focus:border-[#f47c7c] focus:ring-[#f47c7c]/20" : "";
 
   return (
@@ -63,11 +62,6 @@ export function FormField({
     </label>
 
     <div className="relative">
-      {/* Icon */}
-      <span className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3d5166] transition-colors duration-200 pointer-events-none [input:focus~&]:text-[#4f8ef7]">
-        <span className="block w-full h-full"><FieldIcon name={iconName} /></span>
-      </span>
-
       {isTextarea ? (
         <textarea
           id={name}
@@ -82,14 +76,37 @@ export function FormField({
         <input
           id={name}
           name={name}
-          type={type}
+          type={inputType}
           value={value}
           onChange={onChange}
           placeholder={placeholder}
           required={required}
           autoComplete={getAutoComplete(name, type)}
           className={`${inputBase} ${borderColor}`}
+          style={isPassword ? { paddingRight: 76 } : undefined}
         />
+      )}
+
+      {isPassword && (
+        <button
+          type="button"
+          onClick={() => setShowPassword((current) => !current)}
+          style={{
+            position: "absolute",
+            right: 12,
+            top: "50%",
+            transform: "translateY(-50%)",
+            border: "none",
+            background: "transparent",
+            color: "#7a8fa8",
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: "pointer",
+            letterSpacing: "0.02em",
+          }}
+        >
+          {showPassword ? "Ocultar" : "Ver"}
+        </button>
       )}
     </div>
 

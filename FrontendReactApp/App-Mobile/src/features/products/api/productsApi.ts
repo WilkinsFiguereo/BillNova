@@ -8,10 +8,10 @@ import type {
 
 export const productsApi = {
   list: () =>
-    odooClient.get<ProductsResponse>('/api/products', { requiresAuth: true }),
+    odooClient.get<ProductsResponse>('/api/mobile/products'),
 
   getById: (id: number) =>
-    odooClient.get<ProductResponse>(`/api/products/${id}`, { requiresAuth: true }),
+    odooClient.get<ProductResponse>(`/api/mobile/products/${id}`),
 
   create: (payload: CreateProductPayload) =>
     odooClient.post<{ ok: boolean; id: number }>('/api/products', payload, { requiresAuth: true }),

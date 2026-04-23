@@ -118,7 +118,7 @@ function ChangeStateModal({
   );
 }
 
-// ─── Modal: Enviar Email ──────────────────────────────────────────────────
+// ─── Modal: Compartir por correo ───────────────────────────────────────────
 function SendEmailModal({
   factura, onClose, onSend,
 }: {
@@ -150,7 +150,7 @@ function SendEmailModal({
       }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
           <div>
-            <div style={{ fontWeight: 700, fontSize: 15, color: t.textPrimary }}>Enviar por email</div>
+            <div style={{ fontWeight: 700, fontSize: 15, color: t.textPrimary }}>Compartir por correo</div>
             <div style={{ fontSize: 11, color: t.textDisabled, marginTop: 3 }}>{factura.numero}</div>
           </div>
           <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: t.textDisabled }}>
@@ -197,7 +197,7 @@ function SendEmailModal({
             {loading
               ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} />
               : <Mail size={13} />}
-            Enviar
+            Compartir
           </button>
         </div>
       </div>
@@ -319,7 +319,7 @@ function InvoiceDetailPanel({
               { label: "Descargar PDF", Icon: Download, color: "#7C3AED", hover: "#F5F3FF", action: () => onDownloadPDF(factura) },
               ...(factura.invoice ? [
                 { label: "Cambiar estado", Icon: ChevronDown, color: "#059669", hover: "#F0FDF4", action: () => onChangeState(factura) },
-                { label: "Enviar email",   Icon: Send,        color: "#2563EB", hover: "#EFF6FF", action: () => onSendEmail(factura)   },
+                { label: "Compartir correo", Icon: Send,      color: "#2563EB", hover: "#EFF6FF", action: () => onSendEmail(factura)   },
               ] : []),
             ].map(({ label, Icon, color, hover, action }) => (
               <button key={label} onClick={action} style={{
@@ -570,7 +570,7 @@ function VistaTabla({
                       <ActionBtn title="Cambiar estado" onClick={() => onChangeState(f)} color="#059669" hoverBg="#F0FDF4">
                         <ChevronDown size={13} />
                       </ActionBtn>
-                      <ActionBtn title="Enviar email"   onClick={() => onSendEmail(f)}   color="#2563EB" hoverBg="#EFF6FF">
+                      <ActionBtn title="Compartir por correo" onClick={() => onSendEmail(f)} color="#2563EB" hoverBg="#EFF6FF">
                         <Send size={13} />
                       </ActionBtn>
                     </>
@@ -683,7 +683,7 @@ interface FacturasTableSectionProps {
   onToggleOrden: (campo: OrdenCampo) => void;
   onChangeState: (invoiceId: string, state: "posted" | "cancel" | "draft") => Promise<void>;
   onSendEmail: (invoiceId: string, email?: string) => Promise<void>;
-  onDownloadPDF: (orderId: string, invoiceName?: string) => void;
+  onDownloadPDF: (params: { orderId?: string; invoiceId?: string; invoiceName?: string }) => Promise<void>;
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────
@@ -709,7 +709,7 @@ export function FacturasTableSection({
           onClose={() => setPanelFactura(null)}
           onChangeState={openChangeState}
           onSendEmail={openSendEmail}
-          onDownloadPDF={(f) => onDownloadPDF(f.id, f.invoice?.reference)}
+          onDownloadPDF={(f) => onDownloadPDF({ orderId: f.id, invoiceId: f.invoice?.id, invoiceName: f.invoice?.reference })}
         />
       )}
 
@@ -798,13 +798,13 @@ export function FacturasTableSection({
             onView={setPanelFactura}
             onChangeState={openChangeState}
             onSendEmail={openSendEmail}
-            onDownloadPDF={(f) => onDownloadPDF(f.id, f.invoice?.reference)}
+            onDownloadPDF={(f) => onDownloadPDF({ orderId: f.id, invoiceId: f.invoice?.id, invoiceName: f.invoice?.reference })}
           />
         ) : (
           <VistaKanban
             facturas={facturas}
             onView={setPanelFactura}
-            onDownloadPDF={(f) => onDownloadPDF(f.id, f.invoice?.reference)}
+            onDownloadPDF={(f) => onDownloadPDF({ orderId: f.id, invoiceId: f.invoice?.id, invoiceName: f.invoice?.reference })}
           />
         )}
 

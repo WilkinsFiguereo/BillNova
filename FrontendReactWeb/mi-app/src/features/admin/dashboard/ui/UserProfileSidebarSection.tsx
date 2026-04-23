@@ -1,15 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { LogOut } from 'lucide-react';
 import { useCurrentUser } from '@/features/profile/hooks/useCurrentUser';
-import { clearStoredAuthState } from '@/features/auth/login/data/storage';
 import { colors } from '@/features/admin/users/theme/tokens';
 
 export function UserProfileSidebarSection() {
   const { user } = useCurrentUser();
-  const router = useRouter();
 
   const initials = user?.name
     .split(' ')
@@ -17,29 +13,6 @@ export function UserProfileSidebarSection() {
     .map(n => n[0])
     .join('')
     .toUpperCase() || 'AD';
-
-  const handleLogout = async () => {
-    try {
-      const stored = localStorage.getItem("billnova.auth.user");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed?.user?.sessionToken) {
-          await fetch(`${process.env.NEXT_PUBLIC_ODOO_URL || 'http://localhost:8079'}/api/auth/logout`, {
-            method: "POST",
-            credentials: "include",
-            headers: { "X-Auth-Session": parsed.user.sessionToken },
-          });
-        }
-      }
-    } catch {
-    } finally {
-      clearStoredAuthState();
-      document.cookie.split(";").forEach((c) => {
-        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-      });
-      router.replace("/navigation/auth/login");
-    }
-  };
 
   return (
     <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -89,30 +62,6 @@ export function UserProfileSidebarSection() {
           </div>
         </div>
       </Link>
-      <div
-        onClick={handleLogout}
-        style={{
-          padding: '10px 12px',
-          background: '#FEF2F2',
-          borderRadius: 10,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          cursor: 'pointer',
-          transition: 'all 0.2s ease',
-        }}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLDivElement).style.background = '#FEE2E2';
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLDivElement).style.background = '#FEF2F2';
-        }}
-      >
-        <LogOut size={16} color="#DC2626" />
-        <span style={{ fontSize: 12, fontWeight: 500, color: '#DC2626' }}>
-          Cerrar sesión
-        </span>
-      </div>
     </div>
   );
 }
