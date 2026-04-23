@@ -51,7 +51,7 @@ export const ADMIN_NAV_ITEMS: AdminNavItemData[] = [
     id: "reportes",
     Icon: FileText,
     label: "Reportes",
-    href: "/navigation/admin/reports/page",
+    href: "/navigation/moderator/admin",
   },
   {
     id: "configuracion",

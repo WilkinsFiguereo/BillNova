@@ -35,7 +35,10 @@ export const authApi = {
   forgotPassword: async (payload: ForgotPasswordPayload): Promise<ForgotPasswordResponse> =>
     odooPost<ForgotPasswordResponse>(
       authPath("/forgot-password"),
-      payload,
+      {
+        ...payload,
+        frontend_base_url: typeof window !== "undefined" ? window.location.origin : undefined,
+      },
       { allowedStatuses: [400, 404, 409, 429] },
     ),
 
@@ -43,7 +46,7 @@ export const authApi = {
     odooPost<{ ok: boolean; error?: string }>(
       authPath("/reset-password"),
       payload,
-      { allowedStatuses: [400, 401, 403, 404, 409, 429] },
+      { allowedStatuses: [400, 401, 403, 404, 409, 410, 429] },
     ),
 
   verifyEmail: async (payload: VerifyEmailPayload): Promise<VerifyEmailResponse> =>

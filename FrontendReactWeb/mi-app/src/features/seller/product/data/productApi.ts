@@ -44,6 +44,24 @@ function requestInit(init: RequestInit = {}): RequestInit {
   };
 }
 
+function mapProducto(product: any): Producto {
+  const stock = product.quantity_on_hand ?? product.stock ?? product.qty_available ?? 0;
+
+  return {
+    id: String(product.id),
+    nombre: product.name ?? "",
+    sku: product.default_code ?? "",
+    categoria: product.category_name ?? "Electronica",
+    stock,
+    stockStatus: stock === 0 ? "agotado" : stock < 5 ? "bajo" : "ok",
+    precio: product.list_price ?? 0,
+    costo: product.cost_price ?? product.standard_price ?? 0,
+    proveedor: product.seller_ids?.[0]?.name?.name ?? "",
+    ultimaActualizacion: product.write_date ?? new Date().toISOString().split("T")[0],
+    imageUrl: product.image_url ?? "",
+  };
+}
+
 export async function apiListProductos(): Promise<Producto[]> {
   const companyId = getCompanyId();
   const url = companyId
@@ -53,41 +71,13 @@ export async function apiListProductos(): Promise<Producto[]> {
   const res = await fetch(url, requestInit({ headers: jsonHeaders() }));
   const data = await checkResponse<any>(res);
 
-  return data.map((product: any) => {
-    const stock = product.quantity_on_hand ?? product.stock ?? 0;
-
-    return {
-      id: String(product.id),
-      nombre: product.name ?? "",
-      sku: product.default_code ?? "",
-      categoria: product.categ_id?.name ?? "Electrónica",
-      stock,
-      stockStatus: stock === 0 ? "agotado" : stock < 5 ? "bajo" : "ok",
-      precio: product.list_price ?? 0,
-      costo: product.cost_price ?? product.standard_price ?? 0,
-      proveedor: product.seller_ids?.[0]?.name?.name ?? "",
-      ultimaActualizacion: product.write_date ?? new Date().toISOString().split("T")[0],
-    };
-  });
+  return data.map(mapProducto);
 }
 
 export async function apiGetProducto(id: number): Promise<Producto> {
   const res = await fetch(`${baseUrl}/api/products/${id}`, requestInit({ headers: jsonHeaders() }));
   const product = await checkResponse<any>(res);
-  const stock = product.quantity_on_hand ?? product.stock ?? 0;
-
-  return {
-    id: String(product.id),
-    nombre: product.name ?? "",
-    sku: product.default_code ?? "",
-    categoria: (product.categ_id?.name ?? "Electrónica") as Producto["categoria"],
-    stock,
-    stockStatus: stock === 0 ? "agotado" : stock < 5 ? "bajo" : "ok",
-    precio: product.list_price ?? 0,
-    costo: product.cost_price ?? product.standard_price ?? 0,
-    proveedor: product.seller_ids?.[0]?.name?.name ?? "",
-    ultimaActualizacion: product.write_date ?? new Date().toISOString().split("T")[0],
-  };
+  return mapProducto(product);
 }
 
 export async function apiCreateProducto(payload: Partial<Producto>): Promise<{ id: number }> {
@@ -99,10 +89,11 @@ export async function apiCreateProducto(payload: Partial<Producto>): Promise<{ i
   if (payload.stock !== undefined) body.quantity = payload.stock;
   if (payload.categoria) body.category = payload.categoria;
   if (payload.proveedor) body.supplier = payload.proveedor;
+  if ("imageDataUrl" in payload) body.image_data_url = payload.imageDataUrl || null;
 
   const companyId = getCompanyId();
   if (!companyId) {
-    throw new Error("No se encontró la empresa del usuario actual. Registra o vincula una empresa primero.");
+    throw new Error("No se encontro la empresa del usuario actual. Registra o vincula una empresa primero.");
   }
   body.company_id = companyId;
 
@@ -125,6 +116,7 @@ export async function apiUpdateProducto(id: number, payload: Partial<Producto>):
   if (payload.stock !== undefined) body.quantity = payload.stock;
   if (payload.categoria) body.category = payload.categoria;
   if (payload.proveedor) body.supplier = payload.proveedor;
+  if ("imageDataUrl" in payload) body.image_data_url = payload.imageDataUrl || null;
 
   const companyId = getCompanyId();
   if (companyId) body.company_id = companyId;

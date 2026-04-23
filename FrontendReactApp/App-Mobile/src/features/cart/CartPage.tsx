@@ -54,7 +54,7 @@ export function CartPage({ navigation }: Props) {
   
   return (
     <SafeAreaView style={s.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor={t.colors.bgCard} />
+      <StatusBar hidden barStyle="dark-content" backgroundColor={t.colors.bgCard} />
 
       {/* Header */}
       <View style={s.header}>

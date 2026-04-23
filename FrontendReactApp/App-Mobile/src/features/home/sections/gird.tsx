@@ -26,7 +26,7 @@ export function ProductsGridSection({
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>Todo el catálogo</Text>
-          <Text style={styles.count}>{products.length} productos</Text>
+          <Text style={styles.count}>{products.length} elementos</Text>
         </View>
         <TouchableOpacity style={styles.filterBtn} onPress={onFilter}>
           <IconSliders size={13} color={colors.brand[500]} strokeWidth={1.8} />

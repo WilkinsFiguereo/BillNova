@@ -1,44 +1,165 @@
-import React from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Alert,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import Svg, { Path, Circle } from 'react-native-svg';
 import { useRouter } from 'expo-router';
+
+import { profileApi } from '../../src/features/profile/api/profileApi';
+import type { MobileProfile } from '../../src/features/profile/types/profile.types';
 import { useAuth, useLogout } from '../../src/features/auth/hooks/useAuth';
 import { colors } from '../../src/shared/theme/colors';
 
-function MenuItem({
-  icon, label, sublabel, onPress, danger = false,
+type FormState = {
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+  password: string;
+};
+
+function Field({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  secureTextEntry = false,
+  multiline = false,
+  editable = true,
 }: {
-  icon: React.ReactNode;
   label: string;
-  sublabel?: string;
-  onPress?: () => void;
-  danger?: boolean;
+  value: string;
+  onChangeText?: (value: string) => void;
+  placeholder?: string;
+  secureTextEntry?: boolean;
+  multiline?: boolean;
+  editable?: boolean;
 }) {
   return (
-    <TouchableOpacity style={styles.menuItem} onPress={onPress} activeOpacity={0.7}>
-      <View style={[styles.menuIcon, danger && styles.menuIconDanger]}>{icon}</View>
-      <View style={styles.menuInfo}>
-        <Text style={[styles.menuLabel, danger && styles.menuLabelDanger]}>{label}</Text>
-        {sublabel && <Text style={styles.menuSub}>{sublabel}</Text>}
-      </View>
-      {!danger && (
-        <Svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-          <Path d="M9 18l6-6-6-6" stroke={colors.text.disabled} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </Svg>
-      )}
-    </TouchableOpacity>
+    <View style={styles.fieldWrap}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={colors.text.disabled}
+        style={[styles.input, multiline && styles.inputMultiline, !editable && styles.inputDisabled]}
+        secureTextEntry={secureTextEntry}
+        multiline={multiline}
+        editable={editable}
+      />
+    </View>
   );
 }
 
-export default function ProfileTab() {
-  const { user } = useAuth();
-  const { logout } = useLogout();
-  const router = useRouter();
+function emptyForm(profile?: MobileProfile | null): FormState {
+  return {
+    name: profile?.name ?? '',
+    email: profile?.email ?? '',
+    phone: profile?.phone ?? '',
+    address: profile?.address ?? '',
+    password: '',
+  };
+}
 
-  const handleLogout = () => {
-    Alert.alert('Cerrar sesión', '¿Estás seguro que quieres salir?', [
+export default function ProfileTab() {
+  const router = useRouter();
+  const { user, updateUser } = useAuth();
+  const { logout } = useLogout();
+
+  const [profile, setProfile] = useState<MobileProfile | null>(null);
+  const [form, setForm] = useState<FormState>(emptyForm());
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadProfile = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    const { data, error: requestError } = await profileApi.getCurrent();
+    if (!data?.ok || !data.data) {
+      setError(requestError ?? data?.error ?? 'No se pudo cargar tu perfil.');
+      setLoading(false);
+      return;
+    }
+
+    setProfile(data.data);
+    setForm(emptyForm(data.data));
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    void loadProfile();
+  }, [loadProfile]);
+
+  const initials = useMemo(() => {
+    return (form.name || user?.name || user?.login || 'U')
+      .split(' ')
+      .filter(Boolean)
+      .map((word) => word[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
+  }, [form.name, user?.login, user?.name]);
+
+  const updateField = (key: keyof FormState) => (value: string) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleSave = useCallback(async () => {
+    if (!form.name.trim()) {
+      Alert.alert('Nombre requerido', 'Ingresa tu nombre para guardar los cambios.');
+      return;
+    }
+    if (!form.email.trim()) {
+      Alert.alert('Correo requerido', 'Ingresa tu correo para guardar los cambios.');
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    const payload = {
+      name: form.name.trim(),
+      email: form.email.trim().toLowerCase(),
+      phone: form.phone.trim(),
+      address: form.address.trim(),
+      password: form.password.trim() || undefined,
+    };
+
+    const { data, error: requestError } = await profileApi.updateCurrent(payload);
+    if (!data?.ok || !data.data) {
+      setSaving(false);
+      setError(requestError ?? data?.error ?? 'No se pudo guardar tu perfil.');
+      return;
+    }
+
+    setProfile(data.data);
+    setForm(emptyForm(data.data));
+    await updateUser({
+      uid: data.data.uid,
+      login: data.data.login,
+      name: data.data.name,
+      email: data.data.email,
+      phone: data.data.phone,
+      address: data.data.address,
+      role: data.data.role,
+      company_id: data.data.company_id ?? null,
+      company_name: data.data.company_name ?? null,
+    });
+    setSaving(false);
+    Alert.alert('Perfil actualizado', 'Tus datos se guardaron correctamente.');
+  }, [form, updateUser]);
+
+  const handleLogout = useCallback(() => {
+    Alert.alert('Cerrar sesion', 'Estas seguro de que quieres salir?', [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Salir',
@@ -49,211 +170,202 @@ export default function ProfileTab() {
         },
       },
     ]);
-  };
+  }, [logout, router]);
 
-  const initials = (user?.name ?? user?.login ?? 'U')
-    .split(' ')
-    .map(w => w[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
+  if (loading) {
+    return (
+      <View style={styles.centerState}>
+        <ActivityIndicator size="large" color={colors.brand[600]} />
+        <Text style={styles.stateText}>Cargando perfil...</Text>
+      </View>
+    );
+  }
+
+  if (error && !profile) {
+    return (
+      <View style={styles.centerState}>
+        <Text style={styles.stateTitle}>No se pudo cargar tu cuenta</Text>
+        <Text style={styles.stateText}>{error}</Text>
+        <TouchableOpacity style={styles.primaryButton} onPress={() => void loadProfile()}>
+          <Text style={styles.primaryButtonText}>Reintentar</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
-    <View style={styles.root}>
-
-      {/* Header with avatar */}
-      <View style={styles.header}>
+    <ScrollView style={styles.root} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <View style={styles.hero}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{initials}</Text>
         </View>
-        <Text style={styles.name}>{user?.name ?? user?.login}</Text>
-        <Text style={styles.loginTag}>@{user?.login}</Text>
-      </View>
+        <Text style={styles.heroTitle}>{form.name || user?.name || 'Mi perfil'}</Text>
+        <Text style={styles.heroSubtitle}>Administra tu cuenta y tu informacion personal</Text>
 
-      {/* Menu sections */}
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>Cuenta</Text>
-
-        <View style={styles.menuGroup}>
-          <MenuItem
-            icon={
-              <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <Circle cx="12" cy="8" r="4" stroke={colors.brand[500]} strokeWidth="1.8" />
-                <Path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke={colors.brand[500]} strokeWidth="1.8" strokeLinecap="round" />
-              </Svg>
-            }
-            label="Mi perfil"
-            sublabel="Edita tu información personal"
-          />
-          <View style={styles.menuDivider} />
-          <MenuItem
-            icon={
-              <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <Path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"
-                  stroke={colors.brand[500]} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              </Svg>
-            }
-            label="Notificaciones"
-            sublabel="Configura tus alertas"
-          />
-          <View style={styles.menuDivider} />
-          <MenuItem
-            icon={
-              <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <Path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
-                  stroke={colors.brand[500]} strokeWidth="1.8" strokeLinejoin="round" />
-              </Svg>
-            }
-            label="Seguridad"
-            sublabel="Contraseña y autenticación"
-          />
+        <View style={styles.metaRow}>
+          <View style={styles.metaChip}>
+            <Text style={styles.metaLabel}>{profile?.company_name ?? 'Sin empresa'}</Text>
+          </View>
         </View>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>App</Text>
-        <View style={styles.menuGroup}>
-          <MenuItem
-            icon={
-              <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <Circle cx="12" cy="12" r="3" stroke={colors.brand[500]} strokeWidth="1.8" />
-                <Path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"
-                  stroke={colors.brand[500]} strokeWidth="1.8" />
-              </Svg>
-            }
-            label="Configuración"
-            sublabel="Preferencias de la app"
-          />
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Datos de la cuenta</Text>
+        <Field label="Usuario" value={profile?.login ?? user?.login ?? ''} editable={false} />
+        <Field label="Nombre completo" value={form.name} onChangeText={updateField('name')} placeholder="Tu nombre" />
+        <Field label="Correo" value={form.email} onChangeText={updateField('email')} placeholder="correo@empresa.com" />
+        <Field label="Telefono" value={form.phone} onChangeText={updateField('phone')} placeholder="Tu telefono" />
+        <Field
+          label="Direccion"
+          value={form.address}
+          onChangeText={updateField('address')}
+          placeholder="Tu direccion"
+          multiline
+        />
+
+        <Text style={styles.sectionTitle}>Seguridad</Text>
+        <Field
+          label="Nueva contrasena"
+          value={form.password}
+          onChangeText={updateField('password')}
+          placeholder="Deja vacio para mantener la actual"
+          secureTextEntry
+        />
+
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+        <TouchableOpacity style={[styles.primaryButton, saving && styles.buttonDisabled]} onPress={() => void handleSave()} disabled={saving}>
+          <Text style={styles.primaryButtonText}>{saving ? 'Guardando...' : 'Guardar cambios'}</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Resumen</Text>
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>Empresa</Text>
+          <Text style={styles.summaryValue}>{profile?.company_name ?? 'No asignada'}</Text>
+        </View>
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>Correo de acceso</Text>
+          <Text style={styles.summaryValue}>{profile?.email ?? user?.email ?? 'Sin correo'}</Text>
         </View>
       </View>
 
-      {/* Logout */}
-      <View style={[styles.section, { marginTop: 'auto' }]}>
-        <View style={styles.menuGroup}>
-          <MenuItem
-            icon={
-              <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <Path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"
-                  stroke={colors.error.default} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              </Svg>
-            }
-            label="Cerrar sesión"
-            onPress={handleLogout}
-            danger
-          />
-        </View>
-      </View>
-
-      <Text style={styles.version}>OdooApp v2.0 · Odoo ERP</Text>
-    </View>
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <Text style={styles.logoutText}>Cerrar sesion</Text>
+      </TouchableOpacity>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background.primary },
-
-  // Header
-  header: {
-    backgroundColor: '#fff',
+  content: { padding: 20, gap: 16, paddingBottom: 36 },
+  hero: {
+    backgroundColor: '#0F1F4D',
+    borderRadius: 24,
+    padding: 24,
     alignItems: 'center',
-    paddingTop: 60,
-    paddingBottom: 24,
+  },
+  avatar: {
+    width: 82,
+    height: 82,
+    borderRadius: 41,
+    backgroundColor: '#2563EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  avatarText: { color: '#fff', fontSize: 30, fontWeight: '800' },
+  heroTitle: { color: '#fff', fontSize: 22, fontWeight: '800', marginBottom: 4 },
+  heroSubtitle: {
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: 14,
+  },
+  metaRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', justifyContent: 'center' },
+  metaChip: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  metaLabel: { color: '#fff', fontSize: 11.5, fontWeight: '600' },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: colors.border.light,
+  },
+  sectionTitle: {
+    color: colors.text.primary,
+    fontSize: 15,
+    fontWeight: '800',
+    marginBottom: 14,
+  },
+  fieldWrap: { marginBottom: 14 },
+  fieldLabel: {
+    color: colors.text.secondary,
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 7,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.border.light,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: colors.text.primary,
+    backgroundColor: '#fff',
+  },
+  inputMultiline: { minHeight: 90, textAlignVertical: 'top' },
+  inputDisabled: { backgroundColor: colors.background.primary, color: colors.text.disabled },
+  errorText: {
+    color: colors.error.default,
+    fontSize: 12.5,
+    marginBottom: 12,
+  },
+  primaryButton: {
+    backgroundColor: colors.brand[600],
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryButtonText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  buttonDisabled: { opacity: 0.7 },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: colors.border.light,
   },
-  avatar: {
-    width: 72, height: 72,
-    borderRadius: 36,
-    backgroundColor: colors.brand[600],
+  summaryLabel: { color: colors.text.secondary, fontSize: 12.5, fontWeight: '600' },
+  summaryValue: { color: colors.text.primary, fontSize: 13, fontWeight: '700', maxWidth: '58%', textAlign: 'right' },
+  logoutButton: {
+    borderRadius: 14,
+    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
-    shadowColor: colors.brand[700],
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  avatarText: {
-    color: '#fff',
-    fontSize: 26,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  name: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text.primary,
-    marginBottom: 3,
-  },
-  loginTag: {
-    fontSize: 13,
-    color: colors.text.disabled,
-    fontWeight: '400',
-  },
-
-  // Sections
-  section: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-  },
-  sectionLabel: {
-    fontSize: 10.5,
-    fontWeight: '700',
-    color: colors.text.disabled,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 10,
-    marginLeft: 4,
-  },
-  menuGroup: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.border.light,
-    overflow: 'hidden',
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    gap: 12,
-  },
-  menuDivider: {
-    height: 1,
-    backgroundColor: colors.border.light,
-    marginLeft: 58,
-  },
-  menuIcon: {
-    width: 38, height: 38,
-    borderRadius: 10,
-    backgroundColor: colors.brand[50],
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  menuIconDanger: {
     backgroundColor: colors.error.soft,
+    borderWidth: 1,
+    borderColor: 'rgba(220, 38, 38, 0.18)',
   },
-  menuInfo: { flex: 1 },
-  menuLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text.primary,
+  logoutText: { color: colors.error.default, fontSize: 14, fontWeight: '700' },
+  centerState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background.primary,
+    padding: 24,
+    gap: 10,
   },
-  menuLabelDanger: {
-    color: colors.error.default,
-  },
-  menuSub: {
-    fontSize: 11.5,
-    color: colors.text.disabled,
-    marginTop: 1,
-  },
-
-  version: {
-    textAlign: 'center',
-    fontSize: 11,
-    color: colors.text.disabled,
-    paddingVertical: 24,
-  },
+  stateTitle: { color: colors.text.primary, fontSize: 17, fontWeight: '800', textAlign: 'center' },
+  stateText: { color: colors.text.tertiary, fontSize: 13.5, textAlign: 'center' },
 });

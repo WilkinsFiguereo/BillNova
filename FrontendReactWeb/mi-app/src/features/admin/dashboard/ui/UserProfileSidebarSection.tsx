@@ -17,7 +17,7 @@ export function UserProfileSidebarSection() {
   const hasAvatar = user?.avatar;
 
   return (
-    <Link href="/navigation/admin/profile/page" style={{ textDecoration: 'none' }}>
+    <Link href="/navigation/profile" style={{ textDecoration: 'none' }}>
       <div
         style={{
           marginTop: 'auto',

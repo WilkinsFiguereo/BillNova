@@ -82,8 +82,16 @@ export function ProductGridCard({
 
         <View style={styles.catRow}>
           <CategoryIcon cat={product.category} />
-          <Text style={styles.catText}>{product.category ?? 'General'}</Text>
+          <Text style={styles.catText}>
+            {product.catalog_type === 'service'
+              ? product.payment_frequency_label ?? 'Servicio'
+              : product.category ?? 'General'}
+          </Text>
         </View>
+
+        {product.catalog_type === 'service' && (
+          <Text style={styles.serviceTag}>{product.kind_label ?? 'Servicio'}</Text>
+        )}
 
         {product.rating != null && (
           <View style={styles.starsRow}>
@@ -149,6 +157,7 @@ const styles = StyleSheet.create({
 
   catRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginBottom: 5 },
   catText: { fontSize: 10, color: colors.text.disabled },
+  serviceTag: { fontSize: 9.5, color: colors.brand[600], fontWeight: '700', marginBottom: 6 },
 
   starsRow:   { flexDirection: 'row', alignItems: 'center', gap: 3, marginBottom: 7 },
   reviewText: { fontSize: 9.5, color: colors.text.disabled },

@@ -1,170 +1,147 @@
-// src/features/seller/category/data/categoriasService.ts
+import { odooDelete, odooGet, odooPost, odooPut } from "@/lib/odooApi";
+import { getStoredAuthState } from "@/features/auth/login/data/storage";
+import type { Category, CategoryStats, CreateCategoryDTO, UpdateCategoryDTO } from "../types";
 
-import { Category, CreateCategoryDTO, UpdateCategoryDTO } from '../types';
+type CategoryApiRecord = {
+  id: number;
+  name: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  is_active?: boolean;
+  product_count?: number;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
 
-let categories: Category[] = [
-  {
-    id: 'cat-001',
-    name: 'Electrónicos',
-    description: 'Dispositivos electrónicos, celulares, computadoras y accesorios',
-    color: '#1E3A8A',
-    icon: 'Laptop',
-    isActive: true,
-    productCount: 124,
-    createdAt: '2025-01-15T10:30:00Z',
-    updatedAt: '2026-04-10T14:20:00Z',
-  },
-  {
-    id: 'cat-002',
-    name: 'Ropa y Moda',
-    description: 'Prendas de vestir, calzado y accesorios de moda',
-    color: '#3B82F6',
-    icon: 'Shirt',
-    isActive: true,
-    productCount: 87,
-    createdAt: '2025-02-03T09:15:00Z',
-    updatedAt: '2026-04-18T11:45:00Z',
-  },
-  {
-    id: 'cat-003',
-    name: 'Hogar y Cocina',
-    description: 'Muebles, utensilios y artículos para el hogar',
-    color: '#10B981',
-    icon: 'Home',
-    isActive: true,
-    productCount: 56,
-    createdAt: '2025-03-20T16:40:00Z',
-    updatedAt: '2026-04-05T08:30:00Z',
-  },
-  {
-    id: 'cat-004',
-    name: 'Belleza y Cuidado Personal',
-    description: 'Productos de cosmética, skincare y cuidado personal',
-    color: '#F59E0B',
-    icon: 'Sparkles',
-    isActive: false,
-    productCount: 34,
-    createdAt: '2025-06-12T12:00:00Z',
-    updatedAt: '2026-03-28T10:15:00Z',
-  },
-  {
-    id: 'cat-005',
-    name: 'Deportes y Fitness',
-    description: 'Equipos deportivos, ropa deportiva y suplementos',
-    color: '#EF4444',
-    icon: 'Dumbbell',
-    isActive: true,
-    productCount: 42,
-    createdAt: '2025-08-05T14:25:00Z',
-    updatedAt: '2026-04-15T09:50:00Z',
-  },
-];
+type CategoryEnvelope = {
+  ok: boolean;
+  data?: CategoryApiRecord[];
+  error?: string;
+};
 
-// Simula delay de red (para desarrollo realista)
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+type SingleCategoryEnvelope = {
+  ok: boolean;
+  data?: CategoryApiRecord;
+  error?: string;
+};
+
+function sessionToken() {
+  return getStoredAuthState()?.sessionToken;
+}
+
+function mapCategory(record: CategoryApiRecord): Category {
+  return {
+    id: String(record.id),
+    name: record.name ?? "",
+    description: record.description ?? "",
+    color: record.color ?? "#1E3A8A",
+    icon: record.icon ?? "Package",
+    isActive: record.is_active !== false,
+    productCount: record.product_count ?? 0,
+    createdAt: record.created_at ?? new Date().toISOString(),
+    updatedAt: record.updated_at ?? new Date().toISOString(),
+  };
+}
+
+async function getAllInternal(): Promise<Category[]> {
+  const response = await odooGet<CategoryEnvelope>("/api/categories", {
+    sessionToken: sessionToken(),
+    allowedStatuses: [401, 403, 404, 409],
+  });
+  if (!response.ok) {
+    throw new Error(response.error ?? "No se pudieron cargar las categorias");
+  }
+  return (response.data ?? []).map(mapCategory);
+}
 
 export const categoriasService = {
-  // ==================== GET ALL ====================
   async getAll(): Promise<Category[]> {
-    await delay(400);
-    return [...categories].sort((a, b) => 
-      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-    );
+    const categories = await getAllInternal();
+    return categories.sort((a, b) => a.name.localeCompare(b.name));
   },
 
-  // ==================== GET BY ID ====================
   async getById(id: string): Promise<Category | null> {
-    await delay(200);
-    return categories.find(cat => cat.id === id) || null;
+    const categories = await getAllInternal();
+    return categories.find((category) => category.id === id) ?? null;
   },
 
-  // ==================== CREATE ====================
   async create(data: CreateCategoryDTO): Promise<Category> {
-    await delay(500);
-
-    const newCategory: Category = {
-      id: `cat-${Date.now()}`,
-      name: data.name.trim(),
-      description: data.description?.trim(),
-      color: data.color,
-      icon: data.icon,
-      isActive: data.isActive ?? true,
-      productCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    categories.unshift(newCategory); // Agregar al inicio
-    return newCategory;
+    const response = await odooPost<SingleCategoryEnvelope>(
+      "/api/categories",
+      {
+        name: data.name,
+        description: data.description,
+        color: data.color,
+        icon: data.icon,
+        is_active: data.isActive ?? true,
+      },
+      {
+        sessionToken: sessionToken(),
+        allowedStatuses: [400, 401, 403, 404, 409],
+      },
+    );
+    if (!response.ok || !response.data) {
+      throw new Error(response.error ?? "No se pudo crear la categoria");
+    }
+    return mapCategory(response.data);
   },
 
-  // ==================== UPDATE ====================
   async update(data: UpdateCategoryDTO): Promise<Category> {
-    await delay(500);
-
-    const index = categories.findIndex(cat => cat.id === data.id);
-    if (index === -1) {
-      throw new Error('Categoría no encontrada');
+    const response = await odooPut<SingleCategoryEnvelope>(
+      `/api/categories/${encodeURIComponent(data.id)}`,
+      {
+        name: data.name,
+        description: data.description,
+        color: data.color,
+        icon: data.icon,
+        is_active: data.isActive,
+      },
+      {
+        sessionToken: sessionToken(),
+        allowedStatuses: [400, 401, 403, 404, 409],
+      },
+    );
+    if (!response.ok || !response.data) {
+      throw new Error(response.error ?? "No se pudo actualizar la categoria");
     }
-
-    const updatedCategory: Category = {
-      ...categories[index],
-      ...data,
-      name: data.name?.trim() ?? categories[index].name,
-      description: data.description?.trim(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    categories[index] = updatedCategory;
-    return updatedCategory;
+    return mapCategory(response.data);
   },
 
-  // ==================== DELETE ====================
   async delete(id: string): Promise<void> {
-    await delay(400);
-
-    const index = categories.findIndex(cat => cat.id === id);
-    if (index === -1) {
-      throw new Error('Categoría no encontrada');
+    const response = await odooDelete<{ ok: boolean; error?: string }>(
+      `/api/categories/${encodeURIComponent(id)}`,
+      {
+        sessionToken: sessionToken(),
+        allowedStatuses: [400, 401, 403, 404, 409],
+      },
+    );
+    if (!response.ok) {
+      throw new Error(response.error ?? "No se pudo eliminar la categoria");
     }
-
-    // Validación: No permitir eliminar si tiene productos
-    if (categories[index].productCount > 0) {
-      throw new Error('No se puede eliminar una categoría que tiene productos asociados');
-    }
-
-    categories.splice(index, 1);
   },
 
-  // ==================== TOGGLE ACTIVE ====================
   async toggleActive(id: string): Promise<Category> {
-    await delay(300);
-
-    const index = categories.findIndex(cat => cat.id === id);
-    if (index === -1) {
-      throw new Error('Categoría no encontrada');
+    const existing = await this.getById(id);
+    if (!existing) {
+      throw new Error("Categoria no encontrada");
     }
-
-    categories[index].isActive = !categories[index].isActive;
-    categories[index].updatedAt = new Date().toISOString();
-
-    return categories[index];
+    return this.update({
+      id,
+      isActive: !existing.isActive,
+      name: existing.name,
+      description: existing.description,
+      color: existing.color,
+      icon: existing.icon,
+    });
   },
 
-  // ==================== GET STATS ====================
-  async getStats() {
-    await delay(200);
-
+  async getStats(): Promise<CategoryStats> {
+    const categories = await getAllInternal();
     const total = categories.length;
-    const active = categories.filter(c => c.isActive).length;
+    const active = categories.filter((category) => category.isActive).length;
     const inactive = total - active;
-    const totalProducts = categories.reduce((sum, cat) => sum + cat.productCount, 0);
-
-    return {
-      total,
-      active,
-      inactive,
-      totalProducts,
-    };
+    const totalProducts = categories.reduce((sum, category) => sum + category.productCount, 0);
+    return { total, active, inactive, totalProducts };
   },
 };

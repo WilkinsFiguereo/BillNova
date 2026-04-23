@@ -1,1 +1,1 @@
-from . import users, company, product, service, bitacora
+from . import users, company, product, service, bitacora, category

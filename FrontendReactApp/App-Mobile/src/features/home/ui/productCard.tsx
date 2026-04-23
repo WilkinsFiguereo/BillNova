@@ -2,14 +2,18 @@ import React from 'react';
 import {
   View, Text, Image, TouchableOpacity, StyleSheet,
 } from 'react-native';
-import { IconHeart, IconPlus } from '../../../shared/ui/Icons';
+import {
+  IconGrid,
+  IconHeart,
+  IconMonitor,
+  IconPlus,
+  IconShirt,
+  IconSmartphone,
+} from '../../../shared/ui/Icons';
 import { StarRating } from './starRating';
 import { colors } from '../../../shared/theme/colors';
 import { radius } from '../../../shared/theme/spacing';
 import type { Product } from '../types/home.types';
-
-// Dynamic category icon labels
-import { IconMonitor, IconSmartphone, IconShirt, IconGrid } from '../../../shared/ui/Icons';
 
 function CategoryIcon({ category }: { category?: string }) {
   const c = colors.text.disabled;
@@ -60,8 +64,15 @@ export function ProductCard({ product, onPress, onAddToCart, onToggleFav }: Prod
         <Text style={styles.name} numberOfLines={1}>{product.name}</Text>
         <View style={styles.catRow}>
           <CategoryIcon category={product.category} />
-          <Text style={styles.catText}>{product.category ?? 'General'}</Text>
+          <Text style={styles.catText}>
+            {product.catalog_type === 'service'
+              ? product.payment_frequency_label ?? 'Servicio'
+              : product.category ?? 'General'}
+          </Text>
         </View>
+        {product.catalog_type === 'service' && (
+          <Text style={styles.serviceText}>{product.kind_label ?? 'Servicio'}</Text>
+        )}
         {product.rating && (
           <View style={styles.starsRow}>
             <StarRating rating={product.rating} size={11} />
@@ -115,6 +126,7 @@ const styles = StyleSheet.create({
   },
   catRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginBottom: 6 },
   catText: { fontSize: 10, color: colors.text.disabled },
+  serviceText: { fontSize: 10, color: colors.brand[600], fontWeight: '700', marginBottom: 7 },
   starsRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 7 },
   reviewCount: { fontSize: 10, color: colors.text.disabled },
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

@@ -20,27 +20,27 @@ const SETTINGS_COPY_BY_ROLE: Record<UserRole, { title: string; subtitle: string;
   admin: {
     title: "Configuracion",
     subtitle: "Ajustes de administrador",
-    profileHref: "/navigation/admin/profile/page",
+    profileHref: "/navigation/profile",
   },
   moderator: {
     title: "Configuracion",
     subtitle: "Ajustes de moderacion",
-    profileHref: "/navigation/moderation/dashboard/page",
+    profileHref: "/navigation/profile",
   },
   seller: {
     title: "Configuracion",
     subtitle: "Ajustes de vendedor",
-    profileHref: "/navigation/seller/dashboard/page",
+    profileHref: "/navigation/profile",
   },
   gerente: {
     title: "Configuracion",
     subtitle: "Ajustes de gerencia",
-    profileHref: "/navigation/seller/dashboard/page",
+    profileHref: "/navigation/profile",
   },
   worker: {
     title: "Configuracion",
     subtitle: "Ajustes de trabajo",
-    profileHref: "/navigation/seller/dashboard/page",
+    profileHref: "/navigation/profile",
   },
 };
 

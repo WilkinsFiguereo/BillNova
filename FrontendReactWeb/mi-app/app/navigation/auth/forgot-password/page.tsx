@@ -149,16 +149,6 @@ export default function ForgotPasswordPage() {
                 >
                   <div>
                     <p className="info-box-text">{response.message}</p>
-                    {response.dev_otp && (
-                      <p className="info-box-text">
-                        OTP de desarrollo: {response.dev_otp}
-                      </p>
-                    )}
-                    {response.dev_token && (
-                      <p className="info-box-text">
-                        Token de desarrollo: {response.dev_token}
-                      </p>
-                    )}
                     <p className="fh-sub" style={{ marginTop: "0.25rem" }}>
                       <Link href="/navigation/auth/reset-password">
                         Ir a restablecer contrasena

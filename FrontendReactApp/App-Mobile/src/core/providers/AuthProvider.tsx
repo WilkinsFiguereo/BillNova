@@ -10,6 +10,7 @@ import type { AuthState, AuthUser, LoginPayload, RegisterPayload } from '../../f
 type Action =
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_SESSION'; payload: { user: AuthUser; token: string | null } }
+  | { type: 'UPDATE_USER'; payload: Partial<AuthUser> }
   | { type: 'CLEAR_USER' };
 
 const initialState: AuthState = {
@@ -31,6 +32,11 @@ function authReducer(state: AuthState, action: Action): AuthState {
         isAuthenticated: true,
         isLoading: false,
       };
+    case 'UPDATE_USER':
+      return {
+        ...state,
+        user: state.user ? { ...state.user, ...action.payload } : state.user,
+      };
     case 'CLEAR_USER':
       return { ...initialState, isLoading: false };
     default:
@@ -41,9 +47,10 @@ function authReducer(state: AuthState, action: Action): AuthState {
 // ─── Context ─────────────────────────────────────────────────────────────────
 
 interface AuthContextValue extends AuthState {
-  login: (payload: LoginPayload) => Promise<{ ok: boolean; error?: string }>;
+  login: (payload: LoginPayload) => Promise<{ ok: boolean; error?: string; code?: string; email?: string }>;
   loginWithGoogle: (mode?: 'login' | 'register') => Promise<{ ok: boolean; error?: string }>;
-  register: (payload: RegisterPayload) => Promise<{ ok: boolean; error?: string }>;
+  register: (payload: RegisterPayload) => Promise<{ ok: boolean; error?: string; email?: string; requiresVerification?: boolean; message?: string }>;
+  updateUser: (user: AuthUser) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -61,12 +68,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         tokenStorage.getUser<AuthUser>(),
         tokenStorage.getToken(),
       ]);
+
       if (user && token) {
         dispatch({ type: 'SET_SESSION', payload: { user, token } });
-      } else {
-        await tokenStorage.clearAll();
-        dispatch({ type: 'SET_LOADING', payload: false });
+        return;
       }
+
+      if (token) {
+        const { data } = await authApi.session();
+        if (data?.ok && data.uid) {
+          const restoredUser: AuthUser = {
+            uid: data.uid,
+            login: data.email ?? user?.login ?? '',
+            name: data.name ?? user?.name ?? data.email ?? '',
+            email: data.email,
+            phone: user?.phone,
+            address: user?.address,
+            role: data.role ?? user?.role,
+            company_id: data.company_id ?? user?.company_id ?? null,
+            company_name: user?.company_name,
+          };
+
+          await tokenStorage.saveUser(restoredUser);
+          dispatch({ type: 'SET_SESSION', payload: { user: restoredUser, token } });
+          return;
+        }
+      }
+
+      await tokenStorage.clearAll();
+      dispatch({ type: 'SET_LOADING', payload: false });
     })();
   }, []);
 
@@ -76,7 +106,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (!data?.ok || error) {
       dispatch({ type: 'SET_LOADING', payload: false });
-      return { ok: false, error: data?.error ?? error ?? 'Login failed' };
+      return {
+        ok: false,
+        error: data?.error ?? error ?? 'Login failed',
+        code: data?.code,
+        email: data?.email,
+      };
     }
 
     const user: AuthUser = {
@@ -221,11 +256,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (!data?.ok || error) {
       dispatch({ type: 'SET_LOADING', payload: false });
-      return { ok: false, error: data?.error ?? error ?? 'Registration failed' };
+      return {
+        ok: false,
+        error: data?.error ?? error ?? 'Registration failed',
+        email: data?.email,
+        requiresVerification: data?.requires_verification,
+      };
     }
 
     dispatch({ type: 'SET_LOADING', payload: false });
-    return { ok: true };
+    return {
+      ok: true,
+      email: data.email,
+      requiresVerification: data.requires_verification,
+      message: data.message,
+    };
+  }, []);
+
+  const updateUser = useCallback(async (user: AuthUser) => {
+    await tokenStorage.saveUser(user);
+    dispatch({ type: 'UPDATE_USER', payload: user });
   }, []);
 
   const logout = useCallback(async () => {
@@ -235,7 +285,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ ...state, login, loginWithGoogle, register, logout }}>
+    <AuthContext.Provider value={{ ...state, login, loginWithGoogle, register, updateUser, logout }}>
       {children}
     </AuthContext.Provider>
   );

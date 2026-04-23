@@ -180,7 +180,7 @@ export function OrdersPage({
 
   return (
     <SafeAreaView style={s.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor={t.colors.bgCard} />
+      <StatusBar hidden barStyle="dark-content" backgroundColor={t.colors.bgCard} />
 
       <TopNav
         cartCount={cartCount}

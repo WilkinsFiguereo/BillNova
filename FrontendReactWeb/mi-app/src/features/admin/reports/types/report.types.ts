@@ -2,7 +2,7 @@ export interface Report {
   id: string;
   title: string;
   description: string;
-  category: 'bug' | 'feature' | 'ui' | 'performance' | 'security' | 'other' | 'damaged' | 'not-received' | 'late' | 'wrong-item' | 'quality-issue';
+  category: 'bug' | 'feature' | 'ui' | 'performance' | 'security' | 'other';
   severity: 'low' | 'medium' | 'high' | 'critical';
   status: 'open' | 'in-progress' | 'resolved' | 'closed';
   reporter: {

@@ -1,35 +1,65 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { AppState, Platform } from 'react-native';
+import { useCallback, useEffect } from 'react';
+import * as NavigationBar from 'expo-navigation-bar';
 import 'react-native-reanimated';
 
-import { CartProvider } from '../src/features/cart/context/CartContext';
-import { AuthProvider } from '../src/core/providers/AuthProvider';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useEffect } from 'react';
-import * as NavigationBar from 'expo-navigation-bar';
+import { AuthProvider } from '../src/core/providers/AuthProvider';
+import { CartProvider } from '../src/features/cart/context/CartContext';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const pathname = usePathname();
+
+  const applyImmersiveMode = useCallback(async () => {
+    if (Platform.OS !== 'android') return;
+
+    await Promise.allSettled([
+      NavigationBar.setBehaviorAsync('overlay-swipe'),
+      NavigationBar.setVisibilityAsync('hidden'),
+      NavigationBar.setPositionAsync('absolute'),
+      NavigationBar.setBackgroundColorAsync('#00000000'),
+    ]);
+  }, []);
 
   useEffect(() => {
-    // 🔥 Modo inmersivo Android
-    NavigationBar.setVisibilityAsync('hidden');
-    NavigationBar.setBehaviorAsync('overlay-swipe');
-  }, []);
+    void applyImmersiveMode();
+
+    const timers = [
+      setTimeout(() => void applyImmersiveMode(), 150),
+      setTimeout(() => void applyImmersiveMode(), 600),
+    ];
+
+    return () => {
+      timers.forEach(clearTimeout);
+    };
+  }, [applyImmersiveMode, pathname]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') return;
+
+      void applyImmersiveMode();
+      setTimeout(() => void applyImmersiveMode(), 250);
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [applyImmersiveMode]);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AuthProvider>
         <CartProvider>
           <Stack screenOptions={{ headerShown: false }}>
-            {/* Grupo de autenticación */}
             <Stack.Screen name="auth" />
-
-            {/* Tabs principales */}
             <Stack.Screen name="(tabs)" />
-
-            {/* Modal de registro */}
             <Stack.Screen
               name="modal"
               options={{
@@ -42,7 +72,7 @@ export default function RootLayout() {
         </CartProvider>
       </AuthProvider>
 
-      <StatusBar style="auto" />
+      <StatusBar hidden style="light" translucent />
     </ThemeProvider>
   );
 }

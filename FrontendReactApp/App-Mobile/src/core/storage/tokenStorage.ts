@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 
 const TOKEN_KEY = 'odoo_session_token';
@@ -14,20 +15,38 @@ function canUseSecureStore(): boolean {
 }
 
 async function setItem(key: string, value: string): Promise<void> {
+  const writes: Promise<void>[] = [];
+
   if (canUseSecureStore()) {
-    await SecureStore.setItemAsync(key, value);
+    writes.push(SecureStore.setItemAsync(key, value));
+  }
+
+  if (Platform.OS === 'web') {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(key, value);
+    }
     return;
   }
 
-  if (typeof localStorage !== 'undefined') {
-    localStorage.setItem(key, value);
-  }
+  writes.push(AsyncStorage.setItem(key, value));
+  await Promise.all(writes);
 }
 
 async function getItem(key: string): Promise<string | null> {
   if (canUseSecureStore()) {
-    return SecureStore.getItemAsync(key);
+    const secureValue = await SecureStore.getItemAsync(key);
+    if (secureValue) return secureValue;
   }
+
+  if (Platform.OS === 'web') {
+    if (typeof localStorage !== 'undefined') {
+      return localStorage.getItem(key);
+    }
+    return null;
+  }
+
+  const asyncValue = await AsyncStorage.getItem(key);
+  if (asyncValue) return asyncValue;
 
   if (typeof localStorage !== 'undefined') {
     return localStorage.getItem(key);
@@ -37,10 +56,21 @@ async function getItem(key: string): Promise<string | null> {
 }
 
 async function removeItem(key: string): Promise<void> {
+  const removals: Promise<void>[] = [];
+
   if (canUseSecureStore()) {
-    await SecureStore.deleteItemAsync(key);
+    removals.push(SecureStore.deleteItemAsync(key));
+  }
+
+  if (Platform.OS === 'web') {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(key);
+    }
     return;
   }
+
+  removals.push(AsyncStorage.removeItem(key));
+  await Promise.all(removals);
 
   if (typeof localStorage !== 'undefined') {
     localStorage.removeItem(key);

@@ -41,6 +41,11 @@ export function FeaturedCard({ product, onPress, onAddToCart }: FeaturedCardProp
         {product.default_code && (
           <Text style={styles.code}>#{product.default_code}</Text>
         )}
+        {product.catalog_type === 'service' && (
+          <Text style={styles.serviceText}>
+            {product.payment_frequency_label ?? 'Servicio'}
+          </Text>
+        )}
         <View style={styles.footer}>
           <Text style={styles.price}>{formatPrice(product.list_price)}</Text>
           <TouchableOpacity style={styles.addBtn} onPress={() => onAddToCart?.(product)}>
@@ -86,6 +91,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   code:  { fontSize: 10, color: colors.text.disabled, marginBottom: 8 },
+  serviceText: { fontSize: 10.5, color: colors.brand[500], fontWeight: '700', marginBottom: 8 },
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   price: { fontSize: 13.5, fontWeight: '700', color: colors.brand[600] },
   addBtn: {

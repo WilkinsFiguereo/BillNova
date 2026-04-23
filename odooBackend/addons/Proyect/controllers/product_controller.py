@@ -3,6 +3,7 @@ from odoo import fields, http
 from odoo.http import Response, request
 import json as json_lib
 import logging
+import base64
 from .auth_controller import AuthApiController
 
 _logger = logging.getLogger(__name__)
@@ -155,6 +156,9 @@ class ProductApiController(http.Controller):
     def _serialize(self, product):
         company = product.company_id
         category = product.categ_id
+        image_base64 = None
+        if product.image_1920:
+            image_base64 = product.image_1920.decode() if isinstance(product.image_1920, bytes) else product.image_1920
 
         return {
             "id": product.id,
@@ -180,9 +184,33 @@ class ProductApiController(http.Controller):
             "category_name": category.name if category else None,
 
             "description_sale": product.description_sale or "",
+            "image_url": f"data:image/png;base64,{image_base64}" if image_base64 else None,
             "create_date": product.create_date.isoformat() if product.create_date else None,
             "write_date": product.write_date.isoformat() if product.write_date else None,
         }
+
+    def _decode_image_data_url(self, image_data_url):
+        if image_data_url in (None, "", False):
+            return False
+        if not isinstance(image_data_url, str):
+            return False
+
+        raw_value = image_data_url.strip()
+        if not raw_value:
+            return False
+
+        if raw_value.startswith("data:"):
+            parts = raw_value.split(",", 1)
+            if len(parts) != 2:
+                return False
+            raw_value = parts[1]
+
+        try:
+            base64.b64decode(raw_value, validate=True)
+        except Exception:
+            return False
+
+        return raw_value
 
     def _parse_company_id(self, payload):
         company_id_int = self._resolve_company_id_for_request(
@@ -202,6 +230,19 @@ class ProductApiController(http.Controller):
             )
 
         return company_id_int
+
+    def _serialize_category(self, category):
+        return {
+            "id": category.id,
+            "name": category.name,
+            "description": category.billnova_description or "",
+            "color": category.billnova_color or "#1E3A8A",
+            "icon": category.billnova_icon or "Package",
+            "is_active": bool(category.active),
+            "product_count": category.product_count or 0,
+            "created_at": category.create_date.isoformat() if category.create_date else None,
+            "updated_at": category.write_date.isoformat() if category.write_date else None,
+        }
 
     # ──────────────────────────────────────────────
     # LIST PRODUCTS
@@ -247,6 +288,77 @@ class ProductApiController(http.Controller):
             "ok": True,
             "data": [self._serialize(p) for p in products],
         })
+
+    @http.route("/api/categories", type="http", auth="public", methods=["GET", "POST", "OPTIONS"], csrf=False)
+    def categories(self, **kwargs):
+        if request.httprequest.method == "OPTIONS":
+            return self._options_response()
+
+        if request.httprequest.method == "POST":
+            payload = request.httprequest.get_json(silent=True) or {}
+            name = (payload.get("name") or "").strip()
+            if not name:
+                return self._json_response({"ok": False, "error": "name is required"}, 400)
+
+            existing = request.env["product.category"].sudo().search([("name", "=", name)], limit=1)
+            if existing:
+                return self._json_response({"ok": False, "error": "Ya existe una categoria con ese nombre."}, 409)
+
+            category = request.env["product.category"].sudo().create({
+                "name": name,
+                "active": payload.get("is_active", True),
+                "billnova_description": payload.get("description") or "",
+                "billnova_color": payload.get("color") or "#1E3A8A",
+                "billnova_icon": payload.get("icon") or "Package",
+            })
+            return self._json_response({"ok": True, "data": self._serialize_category(category)}, 201)
+
+        categories = request.env["product.category"].sudo().search([], order="name asc")
+        return self._json_response({
+            "ok": True,
+            "data": [self._serialize_category(category) for category in categories],
+        })
+
+    @http.route("/api/categories/<int:category_id>", type="http", auth="public", methods=["PUT", "DELETE", "OPTIONS"], csrf=False)
+    def update_delete_category(self, category_id):
+        if request.httprequest.method == "OPTIONS":
+            return self._options_response()
+
+        category = request.env["product.category"].sudo().browse(category_id)
+        if not category.exists():
+            return self._json_response({"ok": False, "error": "Category not found"}, 404)
+
+        if request.httprequest.method == "DELETE":
+            if category.product_count:
+                return self._json_response(
+                    {"ok": False, "error": "No se puede eliminar una categoria con productos asociados."},
+                    409,
+                )
+            category.unlink()
+            return self._json_response({"ok": True})
+
+        payload = request.httprequest.get_json(silent=True) or {}
+        vals = {}
+
+        if "name" in payload:
+            name = (payload.get("name") or "").strip()
+            if not name:
+                return self._json_response({"ok": False, "error": "name is required"}, 400)
+            vals["name"] = name
+        if "description" in payload:
+            vals["billnova_description"] = payload.get("description") or ""
+        if "color" in payload:
+            vals["billnova_color"] = payload.get("color") or "#1E3A8A"
+        if "icon" in payload:
+            vals["billnova_icon"] = payload.get("icon") or "Package"
+        if "is_active" in payload:
+            vals["active"] = bool(payload.get("is_active"))
+
+        if not vals:
+            return self._json_response({"ok": False, "error": "No fields to update"}, 400)
+
+        category.write(vals)
+        return self._json_response({"ok": True, "data": self._serialize_category(category)})
 
     # ──────────────────────────────────────────────
     # GET ONE
@@ -313,9 +425,10 @@ class ProductApiController(http.Controller):
             "name": name,
             "default_code": payload.get("default_code"),
             "list_price": payload.get("list_price", 0.0),
-            "standard_price": payload.get("standard_price", 0.0),
+            "standard_price": payload.get("standard_price", payload.get("cost_price", 0.0)),
             "description_sale": payload.get("description_sale") or "",
             "company_id": company_id,
+            "image_1920": self._decode_image_data_url(payload.get("image_data_url")),
         })
 
         return self._json_response({
@@ -368,9 +481,14 @@ class ProductApiController(http.Controller):
 
         if "standard_price" in payload:
             vals["standard_price"] = payload.get("standard_price", 0.0)
+        elif "cost_price" in payload:
+            vals["standard_price"] = payload.get("cost_price", 0.0)
 
         if "description_sale" in payload:
             vals["description_sale"] = payload.get("description_sale") or ""
+
+        if "image_data_url" in payload:
+            vals["image_1920"] = self._decode_image_data_url(payload.get("image_data_url"))
 
         if "moderation_status" in payload:
             vals["moderation_status"] = payload.get("moderation_status") or "pending"

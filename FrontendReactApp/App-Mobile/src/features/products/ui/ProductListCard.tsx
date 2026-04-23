@@ -74,6 +74,11 @@ export function ProductListCard({
             <Text style={styles.code}>#{product.default_code}</Text>
           )}
           <CategoryPill cat={product.category} />
+          {product.catalog_type === 'service' && (
+            <Text style={styles.serviceText}>
+              {product.payment_frequency_label ?? 'Servicio'}
+            </Text>
+          )}
           {product.rating != null && (
             <View style={styles.starsRow}>
               <StarRating rating={product.rating} size={10} />
@@ -155,6 +160,7 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   catText: { fontSize: 10, fontWeight: '600', color: colors.brand[600] },
+  serviceText: { fontSize: 10.5, color: colors.brand[600], fontWeight: '700', marginBottom: 2 },
 
   starsRow:   { flexDirection: 'row', alignItems: 'center', gap: 3 },
   reviewText: { fontSize: 9.5, color: colors.text.disabled, marginLeft: 2 },

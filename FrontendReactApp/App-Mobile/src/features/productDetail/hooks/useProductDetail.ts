@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { productsApi } from '../../home/data/productsApi';
+import { odooClient } from '../../../core/api/odooClient';
 import { mockProduct } from '../data/mockProduct.data';
 import type { ApiProductRecord, CartItem, Product } from '../types/productDetail.types';
 
@@ -8,12 +9,14 @@ function mapApiProductToDetail(product: ApiProductRecord): Product {
   const base = Number(product.list_price || 0);
   const original = Number((base * 1.2).toFixed(2));
   const discount = base > 0 ? Math.round((1 - base / original) * 100) : undefined;
+  const primaryImage = product.image_url || `https://picsum.photos/seed/prod-${product.id}-1/900/900`;
 
   return {
     id: String(product.id),
     name: product.name || 'Producto',
     brand: product.default_code || 'Marca',
-    description: `Producto ${product.name || ''} disponible en catalogo. Contacta para mas detalles tecnicos y disponibilidad inmediata.`,
+    detailType: 'product',
+    description: product.description_sale || `Producto ${product.name || ''} disponible en catalogo. Contacta para mas detalles tecnicos y disponibilidad inmediata.`,
     price: base,
     originalPrice: original > base ? original : undefined,
     discount,
@@ -23,9 +26,9 @@ function mapApiProductToDetail(product: ApiProductRecord): Product {
     category: 'General',
     tags: ['catalogo', 'destacado', 'api'],
     images: [
-      { id: `img-${product.id}-1`, uri: `https://picsum.photos/seed/prod-${product.id}-1/900/900` },
-      { id: `img-${product.id}-2`, uri: `https://picsum.photos/seed/prod-${product.id}-2/900/900` },
-      { id: `img-${product.id}-3`, uri: `https://picsum.photos/seed/prod-${product.id}-3/900/900` },
+      { id: `img-${product.id}-1`, uri: primaryImage },
+      { id: `img-${product.id}-2`, uri: primaryImage },
+      { id: `img-${product.id}-3`, uri: primaryImage },
     ],
     colors: ['#111827', '#1D4ED8', '#DC2626', '#F8FAFC'],
     sizes: ['S', 'M', 'L', 'XL'],
@@ -45,6 +48,51 @@ function mapApiProductToDetail(product: ApiProductRecord): Product {
         date: '2026-01-28',
       },
     ],
+  };
+}
+
+type ApiServiceRecord = {
+  id: number;
+  name: string;
+  description?: string;
+  details?: string;
+  price?: number;
+  payment_frequency?: string;
+  image_url?: string | null;
+};
+
+function mapApiServiceToDetail(service: ApiServiceRecord): Product {
+  const base = Number(service.price || 0);
+  const primaryImage = service.image_url || `https://picsum.photos/seed/service-${service.id}-1/900/900`;
+  const paymentMap: Record<string, string> = {
+    unico: 'Pago unico',
+    diario: 'Pago diario',
+    semanal: 'Pago semanal',
+    quincenal: 'Pago quincenal',
+    mensual: 'Pago mensual',
+    anual: 'Pago anual',
+  };
+
+  return {
+    id: String(service.id * -1),
+    name: service.name || 'Servicio',
+    brand: 'Servicio',
+    detailType: 'service',
+    paymentFrequencyLabel: paymentMap[service.payment_frequency || 'unico'] || 'Pago unico',
+    description: service.details || service.description || 'Servicio disponible en catalogo.',
+    price: base,
+    rating: Number((4.4 + (service.id % 5) / 10).toFixed(1)),
+    reviewCount: 12 + (service.id % 15),
+    inStock: true,
+    category: 'Servicios',
+    tags: ['servicio', service.payment_frequency || 'unico'],
+    images: [
+      { id: `srv-${service.id}-1`, uri: primaryImage },
+      { id: `srv-${service.id}-2`, uri: primaryImage },
+    ],
+    colors: ['#1D4ED8'],
+    sizes: ['Plan'],
+    reviews: [],
   };
 }
 
@@ -72,6 +120,26 @@ export function useProductDetail(productId: number | null) {
         setProduct(mockProduct);
         setLoading(false);
         setError('ID de producto invalido');
+        return;
+      }
+
+      if (productId < 0) {
+        const response = await odooClient.get<{ ok: boolean; data?: ApiServiceRecord; error?: string }>(
+          `/api/services/${Math.abs(productId)}`,
+          { requiresAuth: true },
+        );
+
+        if (!mounted) return;
+
+        if (response.error || !response.data?.ok || !response.data.data) {
+          setProduct(mockProduct);
+          setError(response.error || response.data?.error || 'No se pudo cargar el servicio');
+          setLoading(false);
+          return;
+        }
+
+        setProduct(mapApiServiceToDetail(response.data.data));
+        setLoading(false);
         return;
       }
 
@@ -128,9 +196,11 @@ export function useProductDetail(productId: number | null) {
   }, [product, quantity, selectedColor, selectedSize]);
 
   const discountedPrice = useMemo(() => product.price, [product.price]);
+  const isService = product.detailType === 'service';
 
   return {
     product,
+    isService,
     loading,
     error,
     selectedImage,

@@ -12,13 +12,15 @@ export interface Producto {
   id: string;
   nombre: string;
   sku: string;
-  categoria: ProductCategory;
+  categoria: ProductCategory | string;
   stock: number;
   stockStatus: StockStatus;
   precio: number;
   costo: number;
   proveedor: string;
   ultimaActualizacion: string;
+  imageUrl?: string;
+  imageDataUrl?: string;
 }
 
 export interface ProductoStatCard {

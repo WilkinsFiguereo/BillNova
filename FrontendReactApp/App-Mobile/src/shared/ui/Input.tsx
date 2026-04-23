@@ -1,7 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, Animated, TextInputProps, ViewStyle,
+  StyleSheet, TextInputProps, ViewStyle,
 } from 'react-native';
 import { IconEye, IconEyeOff, IconWarning } from './Icons';
 import { colors } from '../theme/colors';
@@ -19,16 +19,9 @@ export function Input({
 }: InputProps) {
   const [focused, setFocused] = useState(false);
   const [showPass, setShowPass] = useState(false);
-  const anim = useRef(new Animated.Value(1)).current;
 
-  const onFocus = () => {
-    setFocused(true);
-    Animated.spring(anim, { toValue: 1.005, useNativeDriver: true, tension: 400 }).start();
-  };
-  const onBlur = () => {
-    setFocused(false);
-    Animated.spring(anim, { toValue: 1, useNativeDriver: true, tension: 400 }).start();
-  };
+  const onFocus = () => setFocused(true);
+  const onBlur = () => setFocused(false);
 
   const iconColor = error ? colors.error.default : focused ? colors.brand[500] : '#8896B0';
   const borderColor = error ? colors.error.default : focused ? colors.brand[500] : colors.border.light;
@@ -39,30 +32,28 @@ export function Input({
   return (
     <View style={[styles.wrap, containerStyle]}>
       <Text style={styles.label}>{label}</Text>
-      <Animated.View style={{ transform: [{ scale: anim }] }}>
-        <View style={[styles.row, { borderColor }, shadow]}>
-          {LeftIcon && (
-            <View style={styles.leftIcon}>
-              <LeftIcon color={iconColor} size={16} />
-            </View>
-          )}
-          <TextInput
-            style={[styles.input, !LeftIcon && styles.inputNoPad]}
-            placeholderTextColor="#C5CFDF"
-            onFocus={onFocus}
-            onBlur={onBlur}
-            secureTextEntry={isPassword && !showPass}
-            {...rest}
-          />
-          {isPassword && (
-            <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPass(v => !v)}>
-              {showPass
-                ? <IconEyeOff size={16} />
-                : <IconEye size={16} />}
-            </TouchableOpacity>
-          )}
-        </View>
-      </Animated.View>
+      <View style={[styles.row, { borderColor }, shadow]}>
+        {LeftIcon && (
+          <View style={styles.leftIcon}>
+            <LeftIcon color={iconColor} size={16} />
+          </View>
+        )}
+        <TextInput
+          style={[styles.input, !LeftIcon && styles.inputNoPad]}
+          placeholderTextColor="#C5CFDF"
+          onFocus={onFocus}
+          onBlur={onBlur}
+          secureTextEntry={isPassword && !showPass}
+          {...rest}
+        />
+        {isPassword && (
+          <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPass(v => !v)}>
+            {showPass
+              ? <IconEyeOff size={16} />
+              : <IconEye size={16} />}
+          </TouchableOpacity>
+        )}
+      </View>
       {error && (
         <View style={styles.errRow}>
           <IconWarning size={11} />

@@ -2,6 +2,7 @@ from odoo import http
 from odoo.http import request, Response
 import json as json_lib
 import logging
+from .auth_controller import AuthApiController
 
 _logger = logging.getLogger(__name__)
 
@@ -30,6 +31,55 @@ class UserApiController(http.Controller):
 
     def _options_response(self):
         return Response(status=200, headers=self._cors_headers())
+
+    def _get_current_res_user(self):
+        AuthApiController()._ensure_session_from_request()
+        session_uid = getattr(request.session, 'uid', None)
+        if session_uid:
+            user = request.env['res.users'].sudo().with_context(active_test=False).browse(session_uid)
+            if user.exists():
+                return user
+
+        user = request.env.user
+        if user and getattr(user, 'id', False):
+            try:
+                if user._is_public():
+                    return request.env['res.users']
+            except Exception:
+                return request.env['res.users']
+            return user.sudo().with_context(active_test=False)
+
+        return request.env['res.users']
+
+    def _get_current_billnova_user(self):
+        user = self._get_current_res_user()
+        if not user or not user.exists():
+            return request.env['billnova.user']
+        return request.env['billnova.user'].sudo().search([('res_user_id', '=', user.id)], limit=1)
+
+    def _serialize_mobile_profile(self, billnova_user, res_user):
+        company = billnova_user.company_id if billnova_user and billnova_user.exists() else res_user.company_id
+        role = billnova_user.role if billnova_user and billnova_user.exists() else getattr(res_user, 'billnova_role', None)
+        return {
+            'uid': res_user.id if res_user and res_user.exists() else None,
+            'billnova_user_id': billnova_user.id if billnova_user and billnova_user.exists() else None,
+            'name': (
+                billnova_user.name
+                if billnova_user and billnova_user.exists() and billnova_user.name
+                else (res_user.name if res_user and res_user.exists() else '')
+            ),
+            'login': res_user.login if res_user and res_user.exists() else '',
+            'email': (
+                billnova_user.email
+                if billnova_user and billnova_user.exists() and billnova_user.email
+                else (res_user.email if res_user and res_user.exists() else '')
+            ),
+            'phone': billnova_user.phone if billnova_user and billnova_user.exists() else '',
+            'address': billnova_user.address if billnova_user and billnova_user.exists() else '',
+            'role': role or 'seller',
+            'company_id': company.id if company else None,
+            'company_name': company.name if company else None,
+        }
 
     # =========================
     # Normalizadores
@@ -446,3 +496,96 @@ class UserApiController(http.Controller):
         except Exception as e:
             _logger.exception("Error delete billnova")
             return self._json_response({'error': str(e)}, 400)
+
+    @http.route('/api/mobile/profile', type='http', auth='public', methods=['GET', 'OPTIONS'], csrf=False)
+    def get_mobile_profile(self):
+        if request.httprequest.method == 'OPTIONS':
+            return self._options_response()
+
+        res_user = self._get_current_res_user()
+        if not res_user or not res_user.exists():
+            return self._json_response({'ok': False, 'error': 'No hay sesion activa'}, 401)
+
+        billnova_user = self._get_current_billnova_user()
+        return self._json_response({
+            'ok': True,
+            'data': self._serialize_mobile_profile(billnova_user, res_user),
+        })
+
+    @http.route('/api/mobile/profile', type='http', auth='public', methods=['PUT', 'OPTIONS'], csrf=False)
+    def update_mobile_profile(self):
+        if request.httprequest.method == 'OPTIONS':
+            return self._options_response()
+
+        res_user = self._get_current_res_user()
+        if not res_user or not res_user.exists():
+            return self._json_response({'ok': False, 'error': 'No hay sesion activa'}, 401)
+
+        billnova_user = self._get_current_billnova_user()
+
+        try:
+            body = json_lib.loads(request.httprequest.data or b'{}')
+        except Exception:
+            return self._json_response({'ok': False, 'error': 'JSON invalido'}, 400)
+
+        name = (body.get('name') or res_user.name or '').strip()
+        email = self._normalize_email(body.get('email') or res_user.email or res_user.login)
+        phone = (body.get('phone') or '').strip()
+        address = (body.get('address') or '').strip()
+        password = (body.get('password') or '').strip()
+
+        if not name:
+            return self._json_response({'ok': False, 'error': 'El nombre es obligatorio'}, 400)
+        if not email:
+            return self._json_response({'ok': False, 'error': 'El email es obligatorio'}, 400)
+
+        duplicate_res_user = request.env['res.users'].sudo().with_context(active_test=False).search([
+            ('id', '!=', res_user.id),
+            '|',
+            ('login', '=', email),
+            ('email', '=', email),
+        ], limit=1)
+        if duplicate_res_user:
+            return self._json_response({'ok': False, 'error': 'Ese correo ya esta en uso'}, 409)
+
+        if billnova_user and billnova_user.exists():
+            duplicate_billnova_user = request.env['billnova.user'].sudo().search([
+                ('id', '!=', billnova_user.id),
+                ('email', '=', email),
+            ], limit=1)
+            if duplicate_billnova_user:
+                return self._json_response({'ok': False, 'error': 'Ese correo ya esta en uso'}, 409)
+
+        res_user_vals = {
+            'name': name,
+            'login': email,
+            'email': email,
+        }
+        if password:
+            res_user_vals['password'] = password
+        res_user.sudo().write(res_user_vals)
+
+        if billnova_user and billnova_user.exists():
+            billnova_user.sudo().write({
+                'name': name,
+                'email': email,
+                'phone': phone,
+                'address': address,
+            })
+        else:
+            billnova_user = request.env['billnova.user'].sudo().create({
+                'name': name,
+                'email': email,
+                'phone': phone,
+                'address': address,
+                'role': getattr(res_user, 'billnova_role', None) or 'seller',
+                'active': True,
+                'is_mobile_user': True,
+                'res_user_id': res_user.id,
+                'company_id': res_user.company_id.id if res_user.company_id else False,
+            })
+
+        return self._json_response({
+            'ok': True,
+            'data': self._serialize_mobile_profile(billnova_user, res_user),
+        })

@@ -32,6 +32,7 @@ export function ProductDetailPage({ productId = null, navigation }: Props) {
 
   const {
     product,
+    isService,
     loading,
     error,
     selectedImage,   setSelectedImage,
@@ -68,7 +69,7 @@ export function ProductDetailPage({ productId = null, navigation }: Props) {
 
   return (
     <SafeAreaView style={s.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor={t.colors.bgCard} />
+      <StatusBar hidden barStyle="dark-content" backgroundColor={t.colors.bgCard} />
 
       <View style={s.header}>
         <TouchableOpacity
@@ -81,7 +82,9 @@ export function ProductDetailPage({ productId = null, navigation }: Props) {
           </View>
         </TouchableOpacity>
 
-        <Text style={s.headerTitle} numberOfLines={1}>Product</Text>
+        <Text style={s.headerTitle} numberOfLines={1}>
+          {isService ? 'Servicio' : 'Producto'}
+        </Text>
 
         {/* ✅ Ahora navega al carrito correctamente */}
         <TouchableOpacity
@@ -113,17 +116,20 @@ export function ProductDetailPage({ productId = null, navigation }: Props) {
           liveReviewCount={stats.total}    // 👈
         />
         <View style={s.divider} />
-        <ColorSizeSelector
-          colors={product.colors}
-          sizes={product.sizes}
-          selectedColor={selectedColor}
-          selectedSize={selectedSize}
-          onColorSelect={setSelectedColor}
-          onSizeSelect={setSelectedSize}
-        />
-        <View style={s.divider} />
-        
-        <ReviewsSection productId={productId} />
+        {!isService ? (
+          <>
+            <ColorSizeSelector
+              colors={product.colors}
+              sizes={product.sizes}
+              selectedColor={selectedColor}
+              selectedSize={selectedSize}
+              onColorSelect={setSelectedColor}
+              onSizeSelect={setSelectedSize}
+            />
+            <View style={s.divider} />
+            <ReviewsSection productId={productId} />
+          </>
+        ) : null}
       </ScrollView>
 
       <AddToCartBar

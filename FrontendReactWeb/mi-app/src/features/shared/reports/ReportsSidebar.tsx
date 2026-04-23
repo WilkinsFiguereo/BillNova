@@ -2,22 +2,27 @@
 
 import Link from "next/link";
 
-export function ReportsSidebar({
-  backHref,
-  backLabel,
-}: {
+interface ReportsSidebarProps {
   backHref: string;
   backLabel: string;
-}) {
-  return (
-    <div style={{ padding: 16, color: "rgba(255,255,255,0.9)" }}>
-      <Link href={backHref} style={{ color: "rgba(255,255,255,0.85)", textDecoration: "none" }}>
-        ← {backLabel}
-      </Link>
-      <div style={{ marginTop: 16, fontSize: 12, color: "rgba(255,255,255,0.55)" }}>
-        Reportes (beta)
-      </div>
-    </div>
-  );
 }
 
+export function ReportsSidebar({ backHref, backLabel }: ReportsSidebarProps) {
+  return (
+    <aside
+      style={{
+        width: 260,
+        minHeight: "100vh",
+        padding: 24,
+        background: "#0d1628",
+        color: "#eef4ff",
+        borderRight: "1px solid #1c2a44",
+      }}
+    >
+      <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 24 }}>BillNova</div>
+      <Link href={backHref} style={{ color: "#8fc0ff", textDecoration: "none" }}>
+        {backLabel}
+      </Link>
+    </aside>
+  );
+}

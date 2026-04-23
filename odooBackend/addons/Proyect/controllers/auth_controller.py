@@ -798,6 +798,7 @@ class AuthApiController(http.Controller):
             email = payload.get('email')
             phone = payload.get('phone')
             address = payload.get('address')
+            frontend_base_url = payload.get('frontend_base_url')
 
             if not name or not login or not password or not email:
                 return self._json_response(
@@ -814,7 +815,7 @@ class AuthApiController(http.Controller):
                 address=address,
                 role='seller',
                 is_mobile_user=True,
-                frontend_base_url=self._get_frontend_base_url(),
+                frontend_base_url=frontend_base_url or self._get_frontend_base_url(),
             )
             if not result.get('ok'):
                 return self._json_response({'ok': False, 'error': result.get('error')}, status=result.get('status', 400))
@@ -1181,6 +1182,124 @@ class AuthApiController(http.Controller):
             session_token=session_token,
         )
 
+    def _find_password_reset_user(self, email):
+        normalized_email = (email or '').strip().lower()
+        if not normalized_email:
+            return request.env['billnova.user']
+
+        mobile_user = request.env['billnova.user'].sudo().with_context(active_test=False).search(
+            [('email', '=', normalized_email)],
+            limit=1,
+        )
+        if mobile_user:
+            return mobile_user
+
+        res_user = request.env['res.users'].sudo().with_context(active_test=False).search(
+            ['|', ('login', '=', normalized_email), ('email', '=', normalized_email)],
+            limit=1,
+        )
+        if not res_user:
+            return request.env['billnova.user']
+
+        return request.env['billnova.user'].sudo().with_context(active_test=False).search(
+            [('res_user_id', '=', res_user.id)],
+            limit=1,
+        )
+
+    @http.route('/api/auth/forgot-password', type='http', auth='public', methods=['POST', 'OPTIONS'], csrf=False)
+    def forgot_password(self):
+        if request.httprequest.method == 'OPTIONS':
+            return self._options_response()
+
+        payload = request.httprequest.get_json(silent=True) or {}
+        email = (payload.get('email') or '').strip().lower()
+        method = payload.get('method') or 'link'
+        frontend_base_url = payload.get('frontend_base_url') or self._get_frontend_base_url()
+
+        if not email:
+            return self._json_response({'ok': False, 'error': 'email requerido'}, status=400)
+        if method not in ('link', 'otp'):
+            return self._json_response({'ok': False, 'error': 'Metodo invalido'}, status=400)
+
+        mobile_user = self._find_password_reset_user(email)
+        if not mobile_user:
+            return self._json_response({'ok': False, 'error': 'No existe una cuenta con ese correo.'}, status=404)
+
+        sent = mobile_user.action_send_password_reset_email(
+            method=method,
+            frontend_base_url=frontend_base_url,
+        )
+        if not sent:
+            return self._json_response(
+                {'ok': False, 'error': 'No se pudo enviar el correo de recuperacion.'},
+                status=500,
+            )
+
+        return self._json_response({
+            'ok': True,
+            'method': method,
+            'delivery': 'email',
+            'message': (
+                'Te enviamos un enlace para restablecer tu contrasena.'
+                if method == 'link'
+                else 'Te enviamos un codigo de verificacion a tu correo.'
+            ),
+        }, status=200)
+
+    @http.route('/api/auth/reset-password', type='http', auth='public', methods=['POST', 'OPTIONS'], csrf=False)
+    def reset_password(self):
+        if request.httprequest.method == 'OPTIONS':
+            return self._options_response()
+
+        payload = request.httprequest.get_json(silent=True) or {}
+        email = (payload.get('email') or '').strip().lower()
+        token = (payload.get('token') or '').strip()
+        otp = (payload.get('otp') or '').strip()
+        new_password = payload.get('newPassword') or payload.get('new_password') or ''
+        confirm_password = payload.get('confirmPassword') or payload.get('confirm_password') or ''
+
+        if not email:
+            return self._json_response({'ok': False, 'error': 'email requerido'}, status=400)
+        if not new_password:
+            return self._json_response({'ok': False, 'error': 'newPassword requerido'}, status=400)
+        if confirm_password and confirm_password != new_password:
+            return self._json_response({'ok': False, 'error': 'Las contrasenas no coinciden.'}, status=400)
+        if not token and not otp:
+            return self._json_response({'ok': False, 'error': 'Debes enviar token u otp.'}, status=400)
+
+        mobile_user = self._find_password_reset_user(email)
+        if not mobile_user:
+            return self._json_response({'ok': False, 'error': 'No existe una cuenta con ese correo.'}, status=404)
+
+        now = fields.Datetime.now()
+        if token:
+            is_valid_token = bool(
+                mobile_user.password_reset_token
+                and hmac.compare_digest(mobile_user.password_reset_token, token)
+            )
+            if not is_valid_token:
+                return self._json_response({'ok': False, 'error': 'El enlace de recuperacion no es valido.'}, status=401)
+            if mobile_user.password_reset_token_expiry and mobile_user.password_reset_token_expiry < now:
+                return self._json_response({'ok': False, 'error': 'El enlace de recuperacion ya expiro.'}, status=410)
+        else:
+            is_valid_otp = bool(
+                mobile_user.password_reset_otp
+                and hmac.compare_digest(mobile_user.password_reset_otp, otp)
+            )
+            if not is_valid_otp:
+                return self._json_response({'ok': False, 'error': 'El codigo OTP no es valido.'}, status=401)
+            if mobile_user.password_reset_otp_expiry and mobile_user.password_reset_otp_expiry < now:
+                return self._json_response({'ok': False, 'error': 'El codigo OTP ya expiro.'}, status=410)
+
+        res_user = mobile_user._get_res_user_including_inactive()
+        if not res_user or not res_user.exists():
+            return self._json_response({'ok': False, 'error': 'No existe un usuario vinculado a esta cuenta.'}, status=404)
+
+        res_user.sudo().write({'password': new_password})
+        mobile_user.action_clear_password_reset()
+
+        return self._json_response({'ok': True, 'message': 'Contrasena actualizada correctamente.'}, status=200)
+
     @http.route('/api/auth/verify-email', type='http', auth='public', methods=['POST', 'OPTIONS'], csrf=False)
     def verify_email(self):
         if request.httprequest.method == 'OPTIONS':
@@ -1220,6 +1339,7 @@ class AuthApiController(http.Controller):
 
         payload = request.httprequest.get_json(silent=True) or {}
         email = payload.get('email')
+        frontend_base_url = payload.get('frontend_base_url')
         if not email:
             return self._json_response({'ok': False, 'error': 'email requerido'}, status=400)
 
@@ -1232,7 +1352,9 @@ class AuthApiController(http.Controller):
         if mobile_user.active and mobile_user.email_verified_at:
             return self._json_response({'ok': True, 'message': 'La cuenta ya esta verificada.'}, status=200)
 
-        mobile_user.action_send_verification_email(frontend_base_url=self._get_frontend_base_url())
+        mobile_user.action_send_verification_email(
+            frontend_base_url=frontend_base_url or self._get_frontend_base_url()
+        )
         return self._json_response({'ok': True, 'message': 'Te enviamos un nuevo correo de verificacion.'}, status=200)
 
     @http.route('/api/auth/session', type='http', auth='public', methods=['GET', 'OPTIONS'], csrf=False)

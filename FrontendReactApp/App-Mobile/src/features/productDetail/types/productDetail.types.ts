@@ -16,6 +16,8 @@ export type Product = {
   name: string;
   brand: string;
   description: string;
+  detailType?: 'product' | 'service';
+  paymentFrequencyLabel?: string;
   price: number;
   originalPrice?: number;
   discount?: number;
@@ -42,6 +44,8 @@ export type ApiProductRecord = {
   name: string;
   default_code: string | null;
   list_price: number;
+  description_sale?: string;
+  image_url?: string | null;
 };
 
 export type ApiProductResponse = {
