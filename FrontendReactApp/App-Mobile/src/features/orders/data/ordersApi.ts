@@ -9,12 +9,18 @@ interface OrdersResponse {
 
 export const ordersApi = {
   async getAll(): Promise<{ ok: boolean; data?: Order[]; error?: string }> {
-    const res = await odooClient.get<OrdersResponse>('/api/pos/orders');
+    const res = await odooClient.get<OrdersResponse>('/api/pos/orders', {
+      requiresAuth: true,
+    });
     if (res.error) return { ok: false, error: res.error };
     return { ok: true, data: res.data?.data ?? [] };
   },
   async cancel(orderId: string): Promise<{ ok: boolean; error?: string }> {
-    const res = await odooClient.post<{ ok: boolean; error?: string }>(`/api/pos/order/${orderId}/cancel`, {});
+    const res = await odooClient.post<{ ok: boolean; error?: string }>(
+      `/api/pos/order/${orderId}/cancel`,
+      {},
+      { requiresAuth: true }
+    );
     if (res.error) return { ok: false, error: res.error };
     return { ok: true };
   },

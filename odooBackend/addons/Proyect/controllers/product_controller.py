@@ -10,6 +10,24 @@ _logger = logging.getLogger(__name__)
 
 
 class ProductApiController(http.Controller):
+    def _get_product_moderation_status(self, product):
+        template = getattr(product, "product_tmpl_id", None)
+        template_status = getattr(template, "moderation_status", None) if template else None
+        return product.moderation_status or template_status or "pending"
+
+    def _get_product_moderation_reason(self, product):
+        template = getattr(product, "product_tmpl_id", None)
+        template_reason = getattr(template, "moderation_reason", None) if template else None
+        return product.moderation_reason or template_reason or None
+
+    def _get_product_moderation_updated_at(self, product):
+        template = getattr(product, "product_tmpl_id", None)
+        return (
+            product.moderation_updated_at
+            or (getattr(template, "moderation_updated_at", None) if template else None)
+            or None
+        )
+
     def _get_current_res_user(self):
         AuthApiController()._ensure_session_from_request()
         session_uid = getattr(request.session, "uid", None)
@@ -92,7 +110,13 @@ class ProductApiController(http.Controller):
     def _resolve_company_id_for_request(self, raw_company_id=None):
         current_company_id = self._get_current_billnova_company_id()
         is_scoped_user = self._is_company_scoped_user()
-
+        requested_company_id = raw_company_id
+        _logger.info(
+            "COMPANY CHECK -> requested=%s current=%s scoped_user=%s",
+            requested_company_id,
+            current_company_id,
+            is_scoped_user,
+        )
         if is_scoped_user:
             if not current_company_id:
                 return None
@@ -156,6 +180,9 @@ class ProductApiController(http.Controller):
     def _serialize(self, product):
         company = product.company_id
         category = product.categ_id
+        moderation_status = self._get_product_moderation_status(product)
+        moderation_reason = self._get_product_moderation_reason(product)
+        moderation_updated_at = self._get_product_moderation_updated_at(product)
         image_base64 = None
         if product.image_1920:
             image_base64 = product.image_1920.decode() if isinstance(product.image_1920, bytes) else product.image_1920
@@ -167,9 +194,9 @@ class ProductApiController(http.Controller):
             "list_price": product.list_price,
             "standard_price": product.standard_price,
             "qty_available": product.qty_available,
-            "moderation_status": product.moderation_status or "pending",
-            "moderation_reason": product.moderation_reason or None,
-            "moderation_updated_at": product.moderation_updated_at.isoformat() if product.moderation_updated_at else None,
+            "moderation_status": moderation_status,
+            "moderation_reason": moderation_reason,
+            "moderation_updated_at": moderation_updated_at.isoformat() if moderation_updated_at else None,
 
             "company_id": company.id if company else None,
             "company_name": company.name if company else None,
@@ -282,11 +309,43 @@ class ProductApiController(http.Controller):
                 "data": [],
             })
 
+        _logger.info(
+            "[products] list_products scope user=%s scoped_user=%s requested_company_id=%s resolved_company_id=%s domain=%s",
+            getattr(self._get_current_res_user(), "login", None),
+            self._is_company_scoped_user(),
+            kwargs.get("company_id"),
+            company_id,
+            domain,
+        )
+
         products = request.env["product.product"].sudo().search(domain)
+        status_counts = {}
+        serialized_products = []
+
+        for product in products:
+            status = self._get_product_moderation_status(product)
+            status_counts[status] = status_counts.get(status, 0) + 1
+            serialized_products.append(self._serialize(product))
+
+        _logger.info(
+            "[products] list_products results total=%s status_counts=%s sample=%s",
+            len(products),
+            status_counts,
+            [
+                {
+                    "id": product.id,
+                    "name": product.name,
+                    "status": self._get_product_moderation_status(product),
+                    "template_status": getattr(getattr(product, "product_tmpl_id", None), "moderation_status", None),
+                    "company_id": product.company_id.id if product.company_id else None,
+                }
+                for product in products[:10]
+            ],
+        )
 
         return self._json_response({
             "ok": True,
-            "data": [self._serialize(p) for p in products],
+            "data": serialized_products,
         })
 
     @http.route("/api/categories", type="http", auth="public", methods=["GET", "POST", "OPTIONS"], csrf=False)

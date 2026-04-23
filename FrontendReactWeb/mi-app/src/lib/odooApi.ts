@@ -1,7 +1,7 @@
 const RAW_ODOO_URL =
   process.env.NEXT_PUBLIC_ODOO_URL ??
   (typeof window === "undefined" ? process.env.ODOO_URL : undefined) ??
-  "https://jwfn4vcd-8079.use2.devtunnels.ms/";
+  "http://localhost:8079";
 
 export const ODOO_URL = RAW_ODOO_URL.replace(/\/+$/, "");
 const AUTH_API_BASE = "/api/auth";

@@ -69,11 +69,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         tokenStorage.getToken(),
       ]);
 
-      if (user && token) {
-        dispatch({ type: 'SET_SESSION', payload: { user, token } });
-        return;
-      }
-
       if (token) {
         const { data } = await authApi.session();
         if (data?.ok && data.uid) {
@@ -123,16 +118,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       company_id: data.company_id ?? null,
     };
 
-    if (!data.session_token) {
+    const sessionHandle = data.session_id ?? data.session_token;
+    if (!sessionHandle) {
       dispatch({ type: 'SET_LOADING', payload: false });
       return { ok: false, error: 'El servidor no devolvió session_token.' };
     }
 
-    await tokenStorage.saveToken(data.session_token);
+    await tokenStorage.saveToken(sessionHandle);
     await tokenStorage.saveUser(user);
     dispatch({
       type: 'SET_SESSION',
-      payload: { user, token: data.session_token },
+      payload: { user, token: sessionHandle },
     });
     return { ok: true };
   }, []);
@@ -194,6 +190,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         Array.isArray(value) ? value[0] : value;
 
       const ok = getParam(queryParams?.ok);
+      const sessionId = getParam(queryParams?.session_id);
       const sessionToken = getParam(queryParams?.session_token);
       const uid = getParam(queryParams?.uid);
       const login = getParam(queryParams?.login);
@@ -203,9 +200,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const companyId = getParam(queryParams?.company_id);
       const error = getParam(queryParams?.error);
 
-      if (ok !== '1' || !sessionToken || !uid || !login) {
+      const sessionHandle = sessionId ?? sessionToken;
+
+      if (ok !== '1' || !sessionHandle || !uid || !login) {
         console.warn('[Google OAuth] invalid callback payload:', {
           ok,
+          hasSessionId: !!sessionId,
           hasSessionToken: !!sessionToken,
           uid,
           login,
@@ -227,11 +227,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         company_id: companyId ? Number(companyId) : null,
       };
 
-      await tokenStorage.saveToken(sessionToken);
+      await tokenStorage.saveToken(sessionHandle);
       await tokenStorage.saveUser(user);
       dispatch({
         type: 'SET_SESSION',
-        payload: { user, token: sessionToken },
+        payload: { user, token: sessionHandle },
       });
       console.log('[Google OAuth] login success:', {
         uid: user.uid,

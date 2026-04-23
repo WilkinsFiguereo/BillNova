@@ -88,7 +88,7 @@ export function useProducts() {
 
     const [productsResponse, servicesResponse] = await Promise.all([
       odooClient.get<ProductsResponse>('/api/products', { requiresAuth: true }),
-      odooClient.get<ServicesResponse>('/api/services', { requiresAuth: true }),
+      odooClient.get<ServicesResponse>('/api/services'),
     ]);
 
     if (!productsResponse.data?.ok && !servicesResponse.data?.ok) {

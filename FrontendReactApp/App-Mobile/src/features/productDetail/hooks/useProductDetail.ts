@@ -126,7 +126,6 @@ export function useProductDetail(productId: number | null) {
       if (productId < 0) {
         const response = await odooClient.get<{ ok: boolean; data?: ApiServiceRecord; error?: string }>(
           `/api/services/${Math.abs(productId)}`,
-          { requiresAuth: true },
         );
 
         if (!mounted) return;

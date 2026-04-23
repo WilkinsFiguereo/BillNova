@@ -9,72 +9,13 @@ _logger = logging.getLogger(__name__)
 
 
 class PosApiController(http.Controller):
-    def _get_current_billnova_company_id(self):
-        user = request.env.user
-        if not user or user._is_public():
-            return None
-
-        billnova_user = request.env['billnova.user'].sudo().search([('res_user_id', '=', user.id)], limit=1)
-        return billnova_user.company_id.id if billnova_user and billnova_user.company_id else None
-
-    def _resolve_company_id_for_request(self, raw_company_id=None):
-        current_company_id = self._get_current_billnova_company_id()
-        if not current_company_id:
-            return None
-
-        if raw_company_id in (None, ''):
-            return current_company_id
-
-        try:
-            requested_company_id = int(raw_company_id)
-        except (TypeError, ValueError):
-            return self._json_response({'ok': False, 'error': 'company_id must be integer'}, 400)
-
-        if requested_company_id != current_company_id:
-            _logger.warning(
-                "[seller/reports] blocked company access user=%s requested_company_id=%s current_company_id=%s",
-                getattr(request.env.user, 'login', None),
-                requested_company_id,
-                current_company_id,
-            )
-            return self._json_response({'ok': False, 'error': 'company_id does not belong to the current user'}, 403)
-
-        return current_company_id
-
-    def _log_event(self, company_id, accion, descripcion, detalle="", entidad_modelo="", entidad_id=None, entidad_nombre=""):
-        user = request.env.user
-        ua = request.httprequest.headers.get('User-Agent', '') or ''
-        request.env['billnova.bitacora'].sudo().create_event({
-            'company_id': company_id or False,
-            'user_id': user.id if user and not user._is_public() else False,
-            'accion': accion,
-            'modulo': 'Facturas',
-            'nivel': 'info',
-            'descripcion': descripcion,
-            'detalle': detalle,
-            'ip': request.httprequest.remote_addr or '',
-            'dispositivo': ua.split("(")[0].strip() if ua else 'Desconocido',
-            'entidad_modelo': entidad_modelo or False,
-            'entidad_id': entidad_id or 0,
-            'entidad_nombre': entidad_nombre or '',
-        })
-
-    def _order_origin_ref(self, order):
-        """
-        `pos.order.name` can be '/' (placeholder) for orders created programmatically.
-        If we use '/' as `invoice_origin`, every order points to the same invoice in lookups.
-        """
-        name = getattr(order, 'name', None) or ''
-        if name and name != '/':
-            return name
-        return f"POS-{order.id}"
 
     def _cors_headers(self):
         origin = request.httprequest.headers.get('Origin')
         return {
             'Access-Control-Allow-Origin': origin or '*',
             'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept, Origin, X-Auth-Session',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept, Origin',
             'Access-Control-Allow-Credentials': 'true',
         }
 
@@ -175,13 +116,9 @@ class PosApiController(http.Controller):
             product = request.env['product.product'].sudo().browse(int(line['product_id']))
             qty = float(line.get('qty', 1))
             price = float(line.get('price_unit', product.lst_price or 0))
-
-            # ← Filtrar impuestos por compañía para evitar el crossover
-            taxes = product.taxes_id.filtered(
-                lambda t: not t.company_id or t.company_id.id == company.id
-            )
-
+            taxes = product.taxes_id
             tax_res = taxes.compute_all(price, quantity=qty, product=product)
+
             subtotal_excl = tax_res['total_excluded']
             subtotal_incl = tax_res['total_included']
             amount_total += subtotal_incl
@@ -207,69 +144,24 @@ class PosApiController(http.Controller):
             'amount_return': 0.0,
         })
 
-        origin_ref = self._order_origin_ref(order)
-        # Ensure a stable, unique reference for later invoice lookups.
-        # Only overwrite placeholder '/' to avoid disrupting normal POS flows.
-        if getattr(order, 'name', '/') == '/':
-            try:
-                order.write({'name': origin_ref})
-            except Exception:
-                _logger.exception("Could not set pos.order name for order %s", order.id)
-
-        # Buscar partner de la misma compañía, o uno sin compañía (global)
-        partner = request.env['res.partner'].sudo().search([
-            '|',
-            ('company_id', '=', company.id),
-            ('company_id', '=', False),
-            ('customer_rank', '>', 0),
-        ], limit=1)
-
-        # Si no hay ninguno, usar el partner de la propia compañía
-        if not partner:
-            partner = company.partner_id
+        partner = request.env['res.partner'].sudo().search([], limit=1)
         invoice_lines = []
-
 
         for line in lines:
             product = request.env['product.product'].sudo().browse(int(line['product_id']))
             qty = float(line.get('qty', 1))
             price = float(line.get('price_unit', product.lst_price or 0))
-
-            taxes = product.taxes_id.filtered(
-                lambda t: not t.company_id or t.company_id.id == company.id
-            )
             account = (
-                product.property_account_income_id
-                or product.categ_id.property_account_income_categ_id
-            )
-
-            if not account:
-                account = request.env['account.account'].sudo().search([
-                    ('company_ids', 'in', [company.id]),
-                    ('account_type', '=', 'income'),
-                ], limit=1)
-
-            if not account:
-                return self._json_response({
-                    'ok': False,
-                    'error': f'No hay cuenta de ingresos para el producto {product.name}'
-                }, 400)
-
-            # ← esto debe estar FUERA del if, siempre se agrega
-            invoice_lines.append((0, 0, {
-                'product_id': product.id,
-                'quantity': qty,
-                'price_unit': price,
-                'name': product.name,
-                'account_id': account.id,
-                'tax_ids': [(6, 0, taxes.ids)],  # ← taxes filtradas, no product.taxes_id
-            }))
+            product.property_account_income_id
+            or product.categ_id.property_account_income_categ_id
+        )
 
         # Si aún no hay cuenta, buscar una cuenta de ingresos genérica
         if not account:
             account = request.env['account.account'].sudo().search([
-                ('company_ids', '=', company.id),
+                ('company_id', '=', company.id),
                 ('account_type', '=', 'income'),
+                ('deprecated', '=', False),
             ], limit=1)
             invoice_lines.append((0, 0, {
                 'product_id': product.id,
@@ -286,19 +178,10 @@ class PosApiController(http.Controller):
             'company_id': company.id,
             'journal_id': journal.id,
             'invoice_line_ids': invoice_lines,
-            'invoice_origin': origin_ref,
+            'invoice_origin': order.name,
         })
 
         invoice.action_post()
-        self._log_event(
-            company.id,
-            'crear',
-            f'Factura creada: {invoice.name or origin_ref}',
-            f'Pedido {order.name or origin_ref} · Total: {invoice.amount_total}',
-            'account.move',
-            invoice.id,
-            invoice.name or origin_ref,
-        )
 
         return self._json_response({
             'ok': True,
@@ -321,15 +204,6 @@ class PosApiController(http.Controller):
         if order.state in ('done', 'cancel'):
             return self._json_response({'ok': False, 'error': 'No se puede cancelar'}, 400)
         order.write({'state': 'cancel'})
-        self._log_event(
-            order.company_id.id if order.company_id else False,
-            'actualizar',
-            f'Pedido cancelado: {order.name or order.id}',
-            'El pedido fue marcado como cancelado',
-            'pos.order',
-            order.id,
-            order.name or str(order.id),
-        )
         return self._json_response({'ok': True})
 
     # =============================================================
@@ -377,16 +251,6 @@ class PosApiController(http.Controller):
         except Exception as e:
             _logger.exception("Error cambiando estado de factura %s", invoice_id)
             return self._json_response({'ok': False, 'error': str(e)}, 500)
-
-        self._log_event(
-            invoice.company_id.id if invoice.company_id else False,
-            'actualizar',
-            f'Estado de factura actualizado: {invoice.name or invoice.id}',
-            f'Nuevo estado: {invoice.state} · Pago: {invoice.payment_state}',
-            'account.move',
-            invoice.id,
-            invoice.name or str(invoice.id),
-        )
 
         return self._json_response({
             'ok': True,
@@ -488,43 +352,20 @@ class PosApiController(http.Controller):
             base_url = base_url.rstrip('/')
 
             company_id_raw = request.httprequest.args.get('company_id')
-            company_id_filter = self._resolve_company_id_for_request(company_id_raw)
-            if isinstance(company_id_filter, Response):
-                return company_id_filter
+            company_id_filter = None
+            if company_id_raw:
+                try:
+                    company_id_filter = int(company_id_raw)
+                except (TypeError, ValueError):
+                    pass
 
-            _logger.info(
-                "[seller/reports] /api/pos/orders params company_id_raw=%s parsed_company_id=%s user=%s origin=%s",
-                company_id_raw,
-                company_id_filter,
-                getattr(request.env.user, 'login', None),
-                request.httprequest.headers.get('Origin'),
-            )
-
-            if not company_id_filter:
-                _logger.info("[seller/reports] user has no billnova company, returning empty list")
-                return self._json_response({
-                    'ok': True,
-                    'data': [],
-                    'stats': {
-                        'totalFacturado': 0,
-                        'pagadas': {'count': 0, 'amount': 0},
-                        'pendientes': {'count': 0, 'amount': 0},
-                        'vencidas': {'count': 0, 'amount': 0},
-                        'borradores': {'count': 0, 'amount': 0},
-                    },
-                })
-
-            domain = [('company_id', '=', company_id_filter)]
-
-            _logger.info("[seller/reports] /api/pos/orders domain=%s", domain)
+            domain = []
+            if company_id_filter:
+                domain = [('company_id', '=', company_id_filter)]
 
             orders = request.env['pos.order'].sudo().search(domain, order='date_order desc', limit=100)
 
             _logger.info("ORDERS COUNT: %s", len(orders))
-            _logger.info(
-                "[seller/reports] orders ids=%s",
-                [o.id for o in orders[:20]]
-            )
 
             def map_invoice_status(invoice):
                 if not invoice:
@@ -545,11 +386,8 @@ class PosApiController(http.Controller):
 
             for o in orders:
                 try:
-                    origin_ref = self._order_origin_ref(o)
-                    # Never fallback to invoice_origin='/' because it's not unique and causes
-                    # every order to show the latest invoice values.
                     invoice = request.env['account.move'].sudo().search(
-                        [('invoice_origin', '=', origin_ref)],
+                        [('invoice_origin', '=', o.name)],
                         limit=1
                     )
 
@@ -652,25 +490,8 @@ class PosApiController(http.Controller):
                     if company_id_filter is not None:
                         entry_company_id = entry.get('company_id')
                         if entry_company_id is None or int(entry_company_id) != company_id_filter:
-                            _logger.info(
-                                "[seller/reports] skipping order id=%s because entry_company_id=%s filter=%s",
-                                o.id,
-                                entry_company_id,
-                                company_id_filter,
-                            )
                             continue
 
-                    _logger.info(
-                        "[seller/reports] mapped order id=%s company_id=%s date=%s total=%s status=%s invoice=%s lines=%s client=%s",
-                        entry.get('id'),
-                        entry.get('company_id'),
-                        entry.get('date'),
-                        entry.get('total'),
-                        entry.get('status'),
-                        bool(entry.get('invoice')),
-                        len(entry.get('lines') or []),
-                        entry.get('client'),
-                    )
                     data.append(entry)
 
                 except Exception as inner_error:
@@ -690,13 +511,6 @@ class PosApiController(http.Controller):
                 'vencidas': {'count': len(vencidas), 'amount': sum(e['total'] for e in vencidas)},
                 'borradores': {'count': len(borradores), 'amount': sum(e['total'] for e in borradores)},
             }
-
-            _logger.info(
-                "[seller/reports] response summary company_filter=%s rows=%s stats=%s",
-                company_id_filter,
-                len(data),
-                stats,
-            )
 
             return self._json_response({'ok': True, 'data': data, 'stats': stats})
 
@@ -720,8 +534,7 @@ class PosApiController(http.Controller):
             return self._options_response()
 
         order = request.env['pos.order'].sudo().browse(order_id)
-        origin_ref = self._order_origin_ref(order)
-        invoice = request.env['account.move'].sudo().search([('invoice_origin', '=', origin_ref)], limit=1)
+        invoice = request.env['account.move'].sudo().search([('invoice_origin', '=', order.name)], limit=1)
 
         if not invoice:
             return self._json_response({'ok': False, 'error': 'Factura no encontrada'}, 404)

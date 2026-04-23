@@ -51,10 +51,10 @@ export function AdminSidebar({ navItems }: AdminSidebarProps) {
             </div>
             <div>
               <div style={{ fontSize: 14, fontWeight: 700, color: colors.text.primary }}>
-                BillNova
+                BizAdmin
               </div>
               <div style={{ fontSize: 10, color: colors.text.tertiary, letterSpacing: "0.05em" }}>
-                BUSINESS
+                ENTERPRISE
               </div>
             </div>
           </div>

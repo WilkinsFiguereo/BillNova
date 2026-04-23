@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { Shield, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Shield, Bell, Settings, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { useDashboard } from './hooks/useDashboard';
 import { StatsSection } from './sections/StatsSection';
 import { ChartsSection } from './sections/ChartsSection';
@@ -49,7 +49,7 @@ export default function DashboardPage() {
           <AdminSidebar navItems={ADMIN_NAV_ITEMS} />
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-              <AlertTriangle size={40} color="var(--color-error)" strokeWidth={1.5} />
+              <WifiOff size={40} color="var(--color-error)" strokeWidth={1.5} />
               <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-text-primary)', margin: 0 }}>Error de conexión</p>
               <p style={{ fontSize: 14, color: 'var(--color-text-secondary)', margin: 0 }}>{error}</p>
               <button onClick={refresh} style={{ marginTop: 8, padding: '10px 24px', background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
@@ -98,6 +98,12 @@ export default function DashboardPage() {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {/* System health */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'var(--color-success-soft)', padding: '4px 10px', borderRadius: 'var(--radius-full)' }}>
+                <Wifi size={12} color="var(--color-success)" strokeWidth={2} />
+                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-success)' }}>{data?.systemHealth}%</span>
+              </div>
+
               {/* Refresh */}
               <button
                 onClick={refresh}
@@ -106,6 +112,14 @@ export default function DashboardPage() {
                 style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-alt)', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}
               >
                 <RefreshCw size={16} color="var(--color-text-secondary)" strokeWidth={2} style={isRefreshing ? { animation: 'spin .8s linear infinite' } : undefined} />
+              </button>
+
+              <button title="Notificaciones" style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-alt)', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}>
+                <Bell size={16} color="var(--color-text-secondary)" strokeWidth={2} />
+              </button>
+
+              <button title="Configuración" style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-alt)', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}>
+                <Settings size={16} color="var(--color-text-secondary)" strokeWidth={2} />
               </button>
             </div>
           </header>
