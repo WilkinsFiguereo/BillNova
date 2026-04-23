@@ -177,7 +177,27 @@ Eso se usa desde el modelo:
 
 - [odooBackend/addons/Proyect/models/users.py](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/odooBackend/addons/Proyect/models/users.py:116)
 
-### 7.1. Configurar servidor saliente SMTP
+### 7.1. Preparar una cuenta de Google para enviar correos
+
+Si vas a usar Gmail para enviar correos desde Odoo, primero debes preparar tu cuenta de Google.
+
+Paso a paso:
+
+1. entra a tu cuenta de Google
+2. ve a `Administrar tu cuenta de Google`
+3. entra a `Seguridad`
+4. activa la verificacion en dos pasos
+5. busca la opcion `Contrasenas de aplicaciones`
+6. crea una nueva contrasena de aplicacion para Odoo
+7. guarda esa contrasena porque la vas a usar en Odoo
+
+Importante:
+
+- no uses tu contrasena normal de Gmail
+- para Odoo debes usar una `contrasena de aplicacion`
+- ese correo sera el que enviara verificacion de cuenta, recuperacion de contrasena e invitaciones
+
+### 7.2. Configurar servidor saliente SMTP
 
 En Odoo:
 
@@ -190,11 +210,11 @@ En Odoo:
 Campos recomendados:
 
 - `Description`: nombre libre, por ejemplo `SMTP BillNova`
-- `SMTP Server`: host de tu proveedor de correo
-- `SMTP Port`: el puerto de tu proveedor
+- `SMTP Server`: `smtp.gmail.com` si usas Gmail
+- `SMTP Port`: `587` para `TLS/STARTTLS` o `465` para `SSL/TLS`
 - `Connection Security`: `TLS/STARTTLS` o `SSL/TLS`
-- `Username`: tu correo SMTP
-- `Password`: tu clave o app password
+- `Username`: tu correo de Google completo
+- `Password`: la contrasena de aplicacion que generaste en tu cuenta de Google
 - `From Filtering`: opcional
 
 Luego:
@@ -203,7 +223,7 @@ Luego:
 2. pulsa `Test Connection`
 3. confirma que el test responda correctamente
 
-### 7.2. Configurar correo remitente por defecto
+### 7.3. Configurar correo remitente por defecto
 
 En Odoo entra a:
 
@@ -217,7 +237,7 @@ mail.default.from=tu-correo@tudominio.com
 
 El modulo usa ese valor como remitente. Si no existe, intenta usar el correo de la compania en Odoo y, como ultimo fallback, usa `no-reply@billnova.local`.
 
-### 7.3. Probar verificacion y recuperacion
+### 7.4. Probar verificacion y recuperacion
 
 Endpoints relacionados:
 
@@ -261,25 +281,67 @@ Endpoints principales:
 
 El modulo depende de `auth_oauth`, segun el manifest del modulo.
 
-Primero debes crear tus credenciales en Google Cloud.
+Antes de configurar los parametros en Odoo, tienes que instalar el modulo necesario y crear las credenciales en Google Cloud.
+
+### 8.2.1. Instalar el modulo necesario
+
+Paso a paso:
+
+1. entra a Odoo con la base `wilkins`
+2. activa el modo desarrollador
+3. ve a `Apps`
+4. pulsa `Update Apps List`
+5. busca e instala el modulo `OAuth Authentication` o `auth_oauth` si no esta instalado
+6. busca e instala o actualiza el modulo `BillNova / Proyect`
+
+### 8.2.2. Crear credenciales en Google Cloud
+
+Tienes que sacar las credenciales desde Google Cloud Console.
+
+Paso a paso:
+
+1. entra a [Google Cloud Console](https://console.cloud.google.com/)
+2. crea un proyecto nuevo o selecciona uno existente
+3. entra a `APIs & Services`
+4. configura la pantalla de consentimiento OAuth
+5. completa los datos basicos de la aplicacion
+6. agrega usuarios de prueba si Google te lo pide
+7. entra a `Credentials`
+8. pulsa `Create Credentials`
+9. selecciona `OAuth client ID`
+10. elige el tipo de aplicacion correspondiente
+11. registra la URL de callback autorizada
+12. crea la credencial
+
+Debes copiar estos datos:
+
+- `Client ID`
+- `Client Secret`
+
+Para este proyecto local, la URL de callback que debes registrar en Google Cloud es:
+
+```text
+http://localhost:8079/api/auth/google/mobile/callback
+```
+
+Si usas otro dominio o servidor, registra esa URL real.
+
+### 8.2.3. Configurar los parametros obligatorios en Odoo
 
 Despues, en Odoo:
 
 1. entra a `Settings -> Technical -> Parameters -> System Parameters`
-2. crea o revisa estos parametros:
+2. crea o revisa estos parametros obligatorios:
 
 ```text
 web.base.url=http://localhost:8079
 billnova.google_oauth_client_id=TU_CLIENT_ID
 billnova.google_oauth_client_secret=TU_CLIENT_SECRET
-```
-
-Opcionales:
-
-```text
 billnova.google_oauth_token_endpoint=https://oauth2.googleapis.com/token
 billnova.google_oauth_userinfo_endpoint=https://openidconnect.googleapis.com/v1/userinfo
 ```
+
+En este proyecto esos parametros no son opcionales si vas a usar Google OAuth.
 
 Ademas, revisa que el proveedor OAuth de Google exista en Odoo si lo vas a manejar por interfaz:
 
@@ -287,9 +349,9 @@ Ademas, revisa que el proveedor OAuth de Google exista en Odoo si lo vas a manej
 2. crea o valida un proveedor de Google
 3. verifica que tenga `client_id`, `client_secret` y endpoint de autorizacion
 
-El backend tambien puede tomar la configuracion desde esos parametros del sistema aunque no dependas solo del registro visual del proveedor.
+Las credenciales que pongas en Odoo tienen que salir de Google Cloud Console.
 
-### Callback usado por el backend
+### 8.2.4. Callback usado por el backend
 
 El callback que construye el proyecto es:
 
@@ -299,7 +361,7 @@ http://localhost:8079/api/auth/google/mobile/callback
 
 Si publicas Odoo en otra URL, cambia `web.base.url` para que el callback generado sea correcto.
 
-### Endpoints Google OAuth
+### 8.2.5. Endpoints Google OAuth
 
 - `GET /api/auth/google/mobile/authorize-url`
 - `GET /api/auth/google/mobile/callback`
