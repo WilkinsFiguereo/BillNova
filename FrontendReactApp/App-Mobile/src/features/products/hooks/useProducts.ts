@@ -11,8 +11,16 @@ export function useProducts() {
   const fetch = useCallback(async (silent = false) => {
     if (!silent) setIsLoading(true);
     setError(null);
+    console.log('[mobile][products] loading products', { silent });
 
     const { data, error: err } = await productsApi.list();
+    console.log('[mobile][products] raw response', {
+      ok: data?.ok ?? null,
+      error: err,
+      total: data?.data?.length ?? 0,
+      approved:
+        data?.data?.filter((product) => product.moderation_status === 'approved').length ?? 0,
+    });
     if (data?.ok && data.data) {
       setProducts(
         data.data.filter((product) => product.moderation_status === 'approved')

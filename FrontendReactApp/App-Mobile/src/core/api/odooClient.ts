@@ -34,6 +34,12 @@ async function request<T>(
       headers['X-Auth-Session'] = token;
       headers['Authorization'] = `Bearer ${token}`;
     }
+    console.log('[mobile][odooClient] auth request', {
+      endpoint,
+      method,
+      requiresAuth,
+      hasToken: Boolean(token),
+    });
   }
 
   try {
@@ -48,6 +54,16 @@ async function request<T>(
       });
 
       const data = await response.json();
+      console.log('[mobile][odooClient] response', {
+        endpoint,
+        method,
+        status: response.status,
+        ok: response.ok,
+        requiresAuth,
+        hasData: Boolean(data),
+        dataOk: data?.ok ?? null,
+        error: data?.error ?? null,
+      });
 
       if (!response.ok) {
         return {
@@ -62,6 +78,12 @@ async function request<T>(
       clearTimeout(timeoutId);
     }
   } catch (err) {
+    console.log('[mobile][odooClient] request error', {
+      endpoint,
+      method,
+      requiresAuth,
+      error: err instanceof Error ? err.message : String(err),
+    });
     const message =
       err instanceof Error && err.name === 'AbortError'
         ? `Tiempo de espera agotado al conectar con ${BASE_URL}`

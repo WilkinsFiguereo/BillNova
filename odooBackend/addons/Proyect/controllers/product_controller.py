@@ -10,6 +10,10 @@ _logger = logging.getLogger(__name__)
 
 
 class ProductApiController(http.Controller):
+    def _is_mobile_request(self):
+        user_agent = (request.httprequest.headers.get("User-Agent") or "").lower()
+        return "expo" in user_agent or "okhttp" in user_agent or "reactnative" in user_agent
+
     def _get_product_moderation_status(self, product):
         template = getattr(product, "product_tmpl_id", None)
         template_status = getattr(template, "moderation_status", None) if template else None
@@ -77,6 +81,9 @@ class ProductApiController(http.Controller):
         _logger.info("=== PRODUCT SCOPE DEBUG: %s ===", label)
         _logger.info("SESSION UID: %s", getattr(request.session, "uid", None))
         _logger.info("SESSION LOGIN: %s", getattr(request.session, "login", None))
+        _logger.info("MOBILE REQUEST: %s", self._is_mobile_request())
+        _logger.info("X-AUTH-SESSION PRESENT: %s", bool(request.httprequest.headers.get("X-Auth-Session")))
+        _logger.info("USER AGENT: %s", request.httprequest.headers.get("User-Agent"))
         _logger.info("REQUESTED COMPANY ID: %s", requested_company_id)
         _logger.info(
             "RES USER -> id=%s login=%s active=%s company_id=%s",
@@ -319,17 +326,21 @@ class ProductApiController(http.Controller):
         )
 
         products = request.env["product.product"].sudo().search(domain)
+        approved_count = 0
         status_counts = {}
         serialized_products = []
 
         for product in products:
             status = self._get_product_moderation_status(product)
+            if status == "approved":
+                approved_count += 1
             status_counts[status] = status_counts.get(status, 0) + 1
             serialized_products.append(self._serialize(product))
 
         _logger.info(
-            "[products] list_products results total=%s status_counts=%s sample=%s",
+            "[products] list_products results total=%s approved=%s status_counts=%s sample=%s",
             len(products),
+            approved_count,
             status_counts,
             [
                 {

@@ -85,11 +85,23 @@ export function useProducts() {
   const load = useCallback(async (silent = false) => {
     if (!silent) setIsLoading(true);
     setError(null);
+    console.log('[mobile][home] loading catalog', { silent });
 
     const [productsResponse, servicesResponse] = await Promise.all([
       odooClient.get<ProductsResponse>('/api/products', { requiresAuth: true }),
       odooClient.get<ServicesResponse>('/api/services'),
     ]);
+
+    console.log('[mobile][home] raw catalog responses', {
+      productsStatus: productsResponse.status,
+      productsOk: productsResponse.data?.ok ?? null,
+      productsError: productsResponse.error,
+      productsCount: productsResponse.data?.data?.length ?? 0,
+      servicesStatus: servicesResponse.status,
+      servicesOk: servicesResponse.data?.ok ?? null,
+      servicesError: servicesResponse.error,
+      servicesCount: servicesResponse.data?.data?.length ?? 0,
+    });
 
     if (!productsResponse.data?.ok && !servicesResponse.data?.ok) {
       setError(productsResponse.error ?? servicesResponse.error ?? 'No se pudo cargar el catalogo');
@@ -100,6 +112,12 @@ export function useProducts() {
 
     const mappedProducts = mapProducts(productsResponse.data?.data ?? []);
     const mappedServices = mapServices(servicesResponse.data?.data ?? [], mappedProducts.length);
+    console.log('[mobile][home] mapped catalog', {
+      mappedProducts: mappedProducts.length,
+      mappedServices: mappedServices.length,
+      approvedProductsRaw:
+        (productsResponse.data?.data ?? []).filter((product) => product.moderation_status === 'approved').length,
+    });
     setProducts([...mappedProducts, ...mappedServices]);
 
     setIsLoading(false);
