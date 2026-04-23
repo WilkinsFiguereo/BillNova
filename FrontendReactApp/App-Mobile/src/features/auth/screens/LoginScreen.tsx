@@ -9,7 +9,7 @@ import { AuthHeader } from '../components/AuthHeader';
 import { Input } from '../../../shared/ui/Input';
 import { Button } from '../../../shared/ui/Button';
 import { IconAt, IconLock, IconWarning } from '../../../shared/ui/Icons';
-import { useLogin } from '../hooks/useAuth';
+import { useAuth, useLogin } from '../hooks/useAuth';
 import { colors } from '../../../shared/theme/colors';
 
 interface LoginScreenProps {
@@ -19,6 +19,7 @@ interface LoginScreenProps {
 
 export function LoginScreen({ onNavigateToRegister, onLoginSuccess }: LoginScreenProps) {
   const { handleLogin, isLoading, error, clearError } = useLogin();
+  const { loginWithGoogle } = useAuth();
   const [form, setForm] = useState({ login: '', password: '' });
   const [fieldErrors, setFieldErrors] = useState({ login: '', password: '' });
 
@@ -40,6 +41,11 @@ export function LoginScreen({ onNavigateToRegister, onLoginSuccess }: LoginScree
   const update = (f: keyof typeof form) => (v: string) => {
     setForm(p => ({ ...p, [f]: v }));
     if (fieldErrors[f]) setFieldErrors(p => ({ ...p, [f]: '' }));
+  };
+
+  const handleGooglePress = async () => {
+    const result = await loginWithGoogle('login');
+    if (result.ok) onLoginSuccess();
   };
 
   return (
@@ -137,7 +143,7 @@ export function LoginScreen({ onNavigateToRegister, onLoginSuccess }: LoginScree
             <Button
               label="Continuar con Google"
               variant="google"
-              onPress={() => {/* Google OAuth */}}
+              onPress={handleGooglePress}
               style={styles.googleBtn}
             />
 

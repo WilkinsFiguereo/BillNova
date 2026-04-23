@@ -24,7 +24,7 @@ export default function RootLayout() {
         <CartProvider>
           <Stack screenOptions={{ headerShown: false }}>
             {/* Grupo de autenticación */}
-            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="auth" />
 
             {/* Tabs principales */}
             <Stack.Screen name="(tabs)" />

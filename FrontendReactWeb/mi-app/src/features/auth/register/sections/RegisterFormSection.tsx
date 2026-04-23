@@ -10,9 +10,19 @@ interface RegisterFormSectionProps {
   state: RegisterFormState;
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+  onGoogleClick: () => void;
+  googleLoading: boolean;
+  googleError?: string | null;
 }
 
-export function RegisterFormSection({ state, onChange, onSubmit }: RegisterFormSectionProps) {
+export function RegisterFormSection({
+  state,
+  onChange,
+  onSubmit,
+  onGoogleClick,
+  googleLoading,
+  googleError,
+}: RegisterFormSectionProps) {
   const { values, errors, isLoading, serverError } = state;
 
   return (
@@ -42,8 +52,25 @@ export function RegisterFormSection({ state, onChange, onSubmit }: RegisterFormS
       </div>
 
       {serverError && <ServerErrorAlert message={serverError} />}
+      {googleError && <ServerErrorAlert message={googleError} />}
 
       <SubmitButton isLoading={isLoading} />
+
+      <button
+        type="button"
+        onClick={onGoogleClick}
+        disabled={googleLoading}
+        className="btn-submit"
+        style={{
+          marginTop: "0.9rem",
+          background: "#fff",
+          color: "#101828",
+          border: "1px solid rgba(16, 24, 40, 0.12)",
+          boxShadow: "none",
+        }}
+      >
+        {googleLoading ? "Abriendo Google..." : "Continuar con Google"}
+      </button>
 
       <p className="terms">
         Ya tienes cuenta? <a href="/navigation/auth/login">Inicia sesion</a>

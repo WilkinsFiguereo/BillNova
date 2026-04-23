@@ -6,7 +6,7 @@
     'author': 'Wilkins',
     'category': 'Tools',
     'license': 'LGPL-3',
-    'depends': ['base', 'point_of_sale', 'sale', 'account', 'mail', 'rating', 'product'],
+    'depends': ['base', 'point_of_sale', 'sale', 'account', 'mail', 'rating', 'product', 'auth_oauth'],
     'data': [
         'security/ir.model.access.csv',
         'views/users_views.xml',

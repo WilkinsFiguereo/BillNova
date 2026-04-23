@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCurrentUser } from '@/features/admin/profile/hooks/useCurrentUser';
+import { useCurrentUser } from '@/features/profile/hooks/useCurrentUser';
 import { colors } from '@/features/admin/users/theme/tokens';
 
 export function UserProfileSidebarSection() {

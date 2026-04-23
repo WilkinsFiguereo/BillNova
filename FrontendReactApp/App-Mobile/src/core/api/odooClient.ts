@@ -1,6 +1,6 @@
 import { tokenStorage } from '../storage/tokenStorage';
 
-const BASE_URL = process.env.EXPO_PUBLIC_ODOO_URL ?? 'https://jwfn4vcd-8079.use2.devtunnels.ms/';
+const BASE_URL = (process.env.EXPO_PUBLIC_ODOO_URL ?? 'https://jwfn4vcd-8079.use2.devtunnels.ms/').replace(/\/+$/, '');
 const REQUEST_TIMEOUT_MS = 12000;
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
@@ -31,6 +31,7 @@ async function request<T>(
   if (requiresAuth) {
     const token = await tokenStorage.getToken();
     if (token) {
+      headers['X-Auth-Session'] = token;
       headers['Authorization'] = `Bearer ${token}`;
     }
   }
@@ -77,6 +78,8 @@ async function request<T>(
 }
 
 export const odooClient = {
+  buildUrl: (endpoint: string) => `${BASE_URL}${endpoint}`,
+
   get:    <T>(endpoint: string, opts?: Omit<RequestOptions, 'method' | 'body'>) =>
     request<T>(endpoint, { ...opts, method: 'GET' }),
 

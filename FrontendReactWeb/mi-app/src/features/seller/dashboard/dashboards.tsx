@@ -141,8 +141,8 @@ export function Sidebar({ navItems }: SidebarProps) {
               <Zap size={18} />
             </div>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: t.textPrimary }}>BizAdmin</div>
-              <div style={{ fontSize: 10, color: t.textDisabled, letterSpacing: "0.05em" }}>ENTERPRISE</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: t.textPrimary }}>BillNova</div>
+              <div style={{ fontSize: 10, color: t.textDisabled, letterSpacing: "0.05em" }}>BUSINESS</div>
             </div>
           </div>
         </Link>
@@ -170,25 +170,28 @@ export function Sidebar({ navItems }: SidebarProps) {
       </nav>
 
       {/* User Avatar */}
-      <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
-        <div style={{
-          padding: "12px", background: t.bgAlt,
-          borderRadius: 12, display: "flex", alignItems: "center", gap: 10,
-        }}>
+      <Link href="/navigation/profile" style={{ textDecoration: "none" }}>
+        <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
           <div style={{
-            width: 32, height: 32, borderRadius: "50%",
-            background: `linear-gradient(135deg, ${t.brand600}, ${t.brand400})`,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 13, color: "white", fontWeight: 700,
+            padding: "12px", background: t.bgAlt,
+            borderRadius: 12, display: "flex", alignItems: "center", gap: 10,
+            cursor: "pointer",
           }}>
-            {userInitials}
-          </div>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: t.textPrimary }}>{userName}</div>
-            <div style={{ fontSize: 10, color: t.textDisabled }}>{userRole}</div>
+            <div style={{
+              width: 32, height: 32, borderRadius: "50%",
+              background: `linear-gradient(135deg, ${t.brand600}, ${t.brand400})`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 13, color: "white", fontWeight: 700,
+            }}>
+              {userInitials}
+            </div>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: t.textPrimary }}>{userName}</div>
+              <div style={{ fontSize: 10, color: t.textDisabled }}>{userRole}</div>
+            </div>
           </div>
         </div>
-      </div>
+      </Link>
     </aside>
   );
 }

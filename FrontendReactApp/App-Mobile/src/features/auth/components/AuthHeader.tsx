@@ -16,7 +16,7 @@ export function AuthHeader({ title, titleSoft, subtitle }: AuthHeaderProps) {
         <View style={styles.logoBox}>
           <IconBriefcase size={18} color="#fff" strokeWidth={1.8} />
         </View>
-        <Text style={styles.brandName}>OdooApp</Text>
+        <Text style={styles.brandName}>BillNova</Text>
         <View style={styles.versionPill}>
           <Text style={styles.versionText}>v2.0</Text>
         </View>

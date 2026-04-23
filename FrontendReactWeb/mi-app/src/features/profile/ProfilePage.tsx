@@ -5,7 +5,7 @@ import { ArrowLeft, Camera, Save, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCurrentUser } from './hooks/useCurrentUser';
 import { useUpdateProfile } from './hooks/useUpdateProfile';
-import { colors, font } from '../users/theme/tokens';
+import { colors, font } from '../admin/users/theme/tokens';
 
 export function ProfilePage() {
   const router = useRouter();

@@ -1,12 +1,21 @@
-from urllib.parse import urlparse
+from urllib.parse import urlencode, urlparse
 
 from odoo import fields, http
 from odoo.http import request, Response, root
 import json as json_lib
+import base64
+import hashlib
+import hmac
 import logging
+import requests
+import secrets
+import time
 
 _logger = logging.getLogger(__name__)
 TARGET_DB = 'wilkins'
+GOOGLE_AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth'
+GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token'
+GOOGLE_USERINFO_ENDPOINT = 'https://openidconnect.googleapis.com/v1/userinfo'
 
 
 class AuthApiController(http.Controller):
@@ -229,6 +238,274 @@ class AuthApiController(http.Controller):
                 return f"{parsed.scheme}://{parsed.netloc}"
         return None
 
+    def _get_google_oauth_config(self):
+        provider = None
+        provider_model = None
+        try:
+            provider_model = request.env['auth.oauth.provider'].sudo().with_context(active_test=False)
+        except Exception as error:
+            _logger.warning("No se pudo acceder a auth.oauth.provider: %s", error)
+
+        if provider_model is not None:
+            try:
+                for candidate in provider_model.search([], order='id asc'):
+                    name = (getattr(candidate, 'name', '') or '').lower()
+                    auth_endpoint = (getattr(candidate, 'auth_endpoint', '') or '').lower()
+                    if 'google' in name or 'google' in auth_endpoint or 'accounts.google.com' in auth_endpoint:
+                        provider = candidate
+                        break
+            except Exception as error:
+                _logger.warning("No se pudo leer la configuracion OAuth de Google: %s", error)
+
+        config = request.env['ir.config_parameter'].sudo()
+        oauth_config = {
+            'client_id': (
+                getattr(provider, 'client_id', None)
+                or config.get_param('billnova.google_oauth_client_id')
+                or config.get_param('auth_oauth.google_client_id')
+            ),
+            'client_secret': (
+                getattr(provider, 'client_secret', None)
+                or config.get_param('billnova.google_oauth_client_secret')
+                or config.get_param('auth_oauth.google_client_secret')
+            ),
+            'auth_endpoint': getattr(provider, 'auth_endpoint', None) or GOOGLE_AUTH_ENDPOINT,
+            'scope': getattr(provider, 'scope', None) or 'openid email profile',
+            'token_endpoint': config.get_param('billnova.google_oauth_token_endpoint') or GOOGLE_TOKEN_ENDPOINT,
+            'userinfo_endpoint': config.get_param('billnova.google_oauth_userinfo_endpoint') or GOOGLE_USERINFO_ENDPOINT,
+        }
+        _logger.info(
+            "GOOGLE OAUTH CONFIG provider=%s has_client_id=%s has_client_secret=%s auth_endpoint=%s callback_base=%s",
+            getattr(provider, 'name', None) if provider else None,
+            bool(oauth_config.get('client_id')),
+            bool(oauth_config.get('client_secret')),
+            oauth_config.get('auth_endpoint'),
+            request.env['ir.config_parameter'].sudo().get_param('web.base.url'),
+        )
+        return oauth_config
+
+    def _append_query_to_url(self, base_url, params):
+        if not base_url:
+            return None
+        clean_params = {key: value for key, value in params.items() if value not in (None, '')}
+        separator = '&' if '?' in base_url else '?'
+        return f"{base_url}{separator}{urlencode(clean_params)}"
+
+    def _mobile_google_redirect(self, redirect_uri, **params):
+        target = self._append_query_to_url(redirect_uri, params)
+        final_target = target or redirect_uri or '/'
+        parsed = urlparse(final_target)
+
+        # Deep links like exp:// or appmobile:// should be handed back to the mobile OS,
+        # not treated as regular browser redirects by Odoo/Werkzeug.
+        if parsed.scheme and parsed.scheme not in ('http', 'https'):
+            html = f"""
+                <!doctype html>
+                <html lang="en">
+                  <head>
+                    <meta charset="utf-8" />
+                    <meta name="viewport" content="width=device-width, initial-scale=1" />
+                    <title>Returning to app...</title>
+                    <style>
+                      body {{
+                        font-family: Arial, sans-serif;
+                        background: #0f172a;
+                        color: #e2e8f0;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        min-height: 100vh;
+                        margin: 0;
+                        padding: 24px;
+                        text-align: center;
+                      }}
+                      .card {{
+                        max-width: 420px;
+                        background: rgba(15, 23, 42, 0.92);
+                        border: 1px solid rgba(148, 163, 184, 0.22);
+                        border-radius: 16px;
+                        padding: 24px;
+                      }}
+                      a {{
+                        color: #93c5fd;
+                        word-break: break-all;
+                      }}
+                    </style>
+                  </head>
+                  <body>
+                    <div class="card">
+                      <h1 style="margin-top:0;">Volviendo a la app</h1>
+                      <p>Si no se abre automaticamente, toca el enlace de abajo.</p>
+                      <p><a href="{final_target}">Abrir app</a></p>
+                    </div>
+                    <script>
+                      console.log("[Google OAuth][mobile bridge] opening deep link", {json_lib.dumps(final_target)});
+                      window.location.replace({json_lib.dumps(final_target)});
+                      setTimeout(function () {{
+                        console.log("[Google OAuth][mobile bridge] retrying deep link navigation");
+                        window.location.href = {json_lib.dumps(final_target)};
+                      }}, 500);
+                    </script>
+                  </body>
+                </html>
+            """
+            _logger.info(
+                "GOOGLE MOBILE redirecting via bridge page target=%s params=%s",
+                final_target,
+                params,
+            )
+            return Response(html, status=200, content_type='text/html')
+
+        if parsed.scheme in ('http', 'https'):
+            target_origin = f"{parsed.scheme}://{parsed.netloc}"
+            payload = {key: value for key, value in params.items() if value not in (None, '')}
+            html = f"""
+                <!doctype html>
+                <html lang="en">
+                  <head>
+                    <meta charset="utf-8" />
+                    <meta name="viewport" content="width=device-width, initial-scale=1" />
+                    <title>Completing sign in...</title>
+                    <style>
+                      body {{
+                        font-family: Arial, sans-serif;
+                        background: #0f172a;
+                        color: #e2e8f0;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        min-height: 100vh;
+                        margin: 0;
+                        padding: 24px;
+                        text-align: center;
+                      }}
+                      .card {{
+                        max-width: 460px;
+                        background: rgba(15, 23, 42, 0.92);
+                        border: 1px solid rgba(148, 163, 184, 0.22);
+                        border-radius: 16px;
+                        padding: 24px;
+                      }}
+                      a {{
+                        color: #93c5fd;
+                        word-break: break-all;
+                      }}
+                    </style>
+                  </head>
+                  <body>
+                    <div class="card">
+                      <h1 style="margin-top:0;">Completando inicio de sesion</h1>
+                      <p>Si esta ventana no se cierra sola, pulsa el enlace para volver a la aplicacion.</p>
+                      <p><a href="{final_target}">Volver a BillNova</a></p>
+                    </div>
+                    <script>
+                      (function () {{
+                        var target = {json_lib.dumps(final_target)};
+                        var origin = {json_lib.dumps(target_origin)};
+                        var payload = {json_lib.dumps(payload)};
+                        console.log("[Google OAuth][web bridge] loaded", {{
+                          target: target,
+                          origin: origin,
+                          payload: payload,
+                          hasOpener: !!window.opener,
+                          openerClosed: window.opener ? window.opener.closed : null
+                        }});
+                        if (window.opener && !window.opener.closed) {{
+                          try {{
+                            console.log("[Google OAuth][web bridge] posting message to opener");
+                            window.opener.postMessage({{
+                              type: "billnova-google-oauth-result",
+                              target: target,
+                              payload: payload
+                            }}, origin);
+                            console.log("[Google OAuth][web bridge] postMessage sent, closing popup");
+                            window.close();
+                            return;
+                          }} catch (error) {{
+                            console.error("[Google OAuth][web bridge] postMessage failed", error);
+                          }}
+                        }}
+                        console.warn("[Google OAuth][web bridge] no opener available, redirecting current window", target);
+                        window.location.replace(target);
+                      }})();
+                    </script>
+                  </body>
+                </html>
+            """
+            _logger.info(
+                "GOOGLE WEB redirecting via popup bridge target=%s origin=%s payload=%s",
+                final_target,
+                target_origin,
+                payload,
+            )
+            return Response(html, status=200, content_type='text/html')
+
+        _logger.info("GOOGLE MOBILE redirecting via HTTP redirect target=%s", final_target)
+        return request.redirect(final_target)
+
+    def _get_google_mobile_callback_url(self):
+        base_url = (
+            request.env['ir.config_parameter'].sudo().get_param('web.base.url')
+            or self._get_frontend_base_url()
+            or ''
+        ).rstrip('/')
+        callback_url = f"{base_url}/api/auth/google/mobile/callback"
+        _logger.info("GOOGLE OAUTH CALLBACK URL resolved=%s", callback_url)
+        return callback_url
+
+    def _get_google_state_secret(self):
+        config = request.env['ir.config_parameter'].sudo()
+        return (
+            config.get_param('database.secret')
+            or config.get_param('database.uuid')
+            or 'billnova-google-mobile-oauth'
+        )
+
+    def _build_google_mobile_state(self, redirect_uri):
+        payload = {
+            'redirect_uri': redirect_uri,
+            'iat': int(time.time()),
+            'nonce': secrets.token_urlsafe(12),
+        }
+        payload_raw = json_lib.dumps(payload, separators=(',', ':')).encode()
+        payload_b64 = base64.urlsafe_b64encode(payload_raw).decode().rstrip('=')
+        signature = hmac.new(
+            self._get_google_state_secret().encode(),
+            payload_b64.encode(),
+            hashlib.sha256,
+        ).hexdigest()
+        return f"{payload_b64}.{signature}"
+
+    def _parse_google_mobile_state(self, state_token):
+        if not state_token or '.' not in state_token:
+            return None
+
+        payload_b64, signature = state_token.rsplit('.', 1)
+        expected_signature = hmac.new(
+            self._get_google_state_secret().encode(),
+            payload_b64.encode(),
+            hashlib.sha256,
+        ).hexdigest()
+
+        if not hmac.compare_digest(signature, expected_signature):
+            return None
+
+        try:
+            padded = payload_b64 + '=' * (-len(payload_b64) % 4)
+            payload = json_lib.loads(base64.urlsafe_b64decode(padded.encode()).decode())
+        except Exception:
+            return None
+
+        issued_at = int(payload.get('iat') or 0)
+        if not issued_at or abs(int(time.time()) - issued_at) > 900:
+            return None
+
+        redirect_uri = payload.get('redirect_uri')
+        if not redirect_uri or not urlparse(redirect_uri).scheme:
+            return None
+
+        return payload
+
     def _find_res_user(self, login_value):
         if not login_value:
             return request.env['res.users']
@@ -236,6 +513,59 @@ class AuthApiController(http.Controller):
             ['|', ('login', '=', login_value), ('email', '=', login_value)],
             limit=1,
         )
+
+    def _upsert_google_mobile_user(self, *, name, email):
+        user_model = request.env['res.users'].sudo().with_context(active_test=False)
+        mobile_model = request.env['billnova.user'].sudo().with_context(active_test=False)
+        now = fields.Datetime.now()
+        password = secrets.token_urlsafe(32)
+
+        res_user = user_model.search(['|', ('login', '=', email), ('email', '=', email)], limit=1)
+        if res_user:
+            user_vals = {
+                'name': name or res_user.name or email,
+                'email': email,
+                'active': True,
+            }
+            if not res_user.login:
+                user_vals['login'] = email
+            res_user.write(user_vals)
+        else:
+            res_user = user_model.create(
+                self._build_res_user_vals(
+                    name=name or email,
+                    login=email,
+                    password=password,
+                    email=email,
+                )
+            )
+
+        mobile_user = mobile_model.search([('res_user_id', '=', res_user.id)], limit=1)
+        if not mobile_user:
+            mobile_user = mobile_model.search([('email', '=', email)], limit=1)
+
+        mobile_vals = {
+            'name': name or res_user.name or email,
+            'email': email,
+            'is_mobile_user': True,
+            'active': True,
+            'email_verified_at': now,
+            'verification_token': False,
+            'verification_token_expiry': False,
+            'res_user_id': res_user.id,
+        }
+        if mobile_user:
+            mobile_user.write(mobile_vals)
+        else:
+            mobile_user = mobile_model.create({
+                **mobile_vals,
+                'role': 'seller',
+            })
+
+        if not res_user.active:
+            res_user.write({'active': True})
+
+        return res_user, mobile_user
 
     def _get_current_res_user(self):
         self._ensure_session_from_request()
@@ -625,6 +955,231 @@ class AuthApiController(http.Controller):
             'session_id': session_id,
             'session_token': session_token,
         }, status=200)
+
+    @http.route('/api/auth/google/mobile/start', type='http', auth='public', methods=['GET', 'OPTIONS'], csrf=False)
+    def google_mobile_start(self):
+        if request.httprequest.method == 'OPTIONS':
+            return self._options_response()
+
+        redirect_uri = request.httprequest.args.get('redirect_uri') or 'appmobile://auth'
+        oauth_config = self._get_google_oauth_config()
+        if not oauth_config.get('client_id') or not oauth_config.get('client_secret'):
+            return self._mobile_google_redirect(
+                redirect_uri,
+                ok=0,
+                error='Google OAuth no esta configurado en Odoo.',
+            )
+
+        state = secrets.token_urlsafe(24)
+        request.session['google_oauth_mobile_state'] = state
+        request.session['google_oauth_mobile_redirect_uri'] = redirect_uri
+
+        auth_url = self._append_query_to_url(
+            oauth_config['auth_endpoint'],
+            {
+                'client_id': oauth_config['client_id'],
+                'redirect_uri': self._get_google_mobile_callback_url(),
+                'response_type': 'code',
+                'scope': oauth_config['scope'],
+                'access_type': 'offline',
+                'prompt': 'select_account',
+                'state': state,
+            }
+        )
+        return request.redirect(auth_url)
+
+    @http.route('/api/auth/google/mobile/authorize-url', type='http', auth='public', methods=['GET', 'OPTIONS'], csrf=False)
+    def google_mobile_authorize_url(self):
+        if request.httprequest.method == 'OPTIONS':
+            return self._options_response()
+
+        redirect_uri = request.httprequest.args.get('redirect_uri') or 'appmobile://auth'
+        _logger.info(
+            "GOOGLE AUTHORIZE URL request redirect_uri=%s origin=%s user_agent=%s",
+            redirect_uri,
+            request.httprequest.headers.get('Origin'),
+            request.httprequest.headers.get('User-Agent'),
+        )
+        oauth_config = self._get_google_oauth_config()
+        if not oauth_config.get('client_id') or not oauth_config.get('client_secret'):
+            _logger.warning(
+                "GOOGLE AUTHORIZE URL missing config has_client_id=%s has_client_secret=%s",
+                bool(oauth_config.get('client_id')),
+                bool(oauth_config.get('client_secret')),
+            )
+            return self._json_response(
+                {'ok': False, 'error': 'Google OAuth no esta configurado en Odoo.'},
+                status=503,
+            )
+
+        auth_url = self._append_query_to_url(
+            oauth_config['auth_endpoint'],
+            {
+                'client_id': oauth_config['client_id'],
+                'redirect_uri': self._get_google_mobile_callback_url(),
+                'response_type': 'code',
+                'scope': oauth_config['scope'],
+                'access_type': 'offline',
+                'prompt': 'select_account',
+                'state': self._build_google_mobile_state(redirect_uri),
+            }
+        )
+
+        _logger.info("GOOGLE AUTHORIZE URL generated auth_url=%s", auth_url)
+        return self._json_response({'ok': True, 'auth_url': auth_url}, status=200)
+
+    @http.route('/api/auth/google/mobile/callback', type='http', auth='public', methods=['GET'], csrf=False)
+    def google_mobile_callback(self, **kwargs):
+        error = kwargs.get('error')
+        state = kwargs.get('state')
+        code = kwargs.get('code')
+        _logger.info(
+            "GOOGLE CALLBACK received has_code=%s has_state=%s error=%s",
+            bool(code),
+            bool(state),
+            error,
+        )
+        state_payload = self._parse_google_mobile_state(state)
+        redirect_uri = (state_payload or {}).get('redirect_uri') or 'appmobile://auth'
+        _logger.info(
+            "GOOGLE CALLBACK parsed state_valid=%s redirect_uri=%s",
+            bool(state_payload),
+            redirect_uri,
+        )
+
+        if error:
+            _logger.warning("GOOGLE CALLBACK returned error=%s description=%s", error, kwargs.get('error_description'))
+            return self._mobile_google_redirect(
+                redirect_uri,
+                ok=0,
+                error=kwargs.get('error_description') or error,
+            )
+        if not state_payload:
+            _logger.warning("GOOGLE CALLBACK invalid state raw=%s", state)
+            return self._mobile_google_redirect(
+                redirect_uri,
+                ok=0,
+                error='Estado OAuth invalido.',
+            )
+        if not code:
+            _logger.warning("GOOGLE CALLBACK missing code kwargs=%s", kwargs)
+            return self._mobile_google_redirect(
+                redirect_uri,
+                ok=0,
+                error='Google no devolvio un codigo de autorizacion.',
+            )
+
+        oauth_config = self._get_google_oauth_config()
+        if not oauth_config.get('client_id') or not oauth_config.get('client_secret'):
+            _logger.warning(
+                "GOOGLE CALLBACK missing config has_client_id=%s has_client_secret=%s",
+                bool(oauth_config.get('client_id')),
+                bool(oauth_config.get('client_secret')),
+            )
+            return self._mobile_google_redirect(
+                redirect_uri,
+                ok=0,
+                error='Google OAuth no esta configurado en Odoo.',
+            )
+
+        try:
+            token_response = requests.post(
+                oauth_config['token_endpoint'],
+                data={
+                    'client_id': oauth_config['client_id'],
+                    'client_secret': oauth_config['client_secret'],
+                    'code': code,
+                    'grant_type': 'authorization_code',
+                    'redirect_uri': self._get_google_mobile_callback_url(),
+                },
+                timeout=15,
+            )
+            _logger.info("GOOGLE CALLBACK token exchange status=%s", token_response.status_code)
+            token_response.raise_for_status()
+            token_payload = token_response.json()
+            access_token = token_payload.get('access_token')
+            if not access_token:
+                raise ValueError('Google no devolvio access_token')
+
+            profile_response = requests.get(
+                oauth_config['userinfo_endpoint'],
+                headers={'Authorization': f'Bearer {access_token}'},
+                timeout=15,
+            )
+            _logger.info("GOOGLE CALLBACK userinfo status=%s", profile_response.status_code)
+            profile_response.raise_for_status()
+            profile = profile_response.json()
+            _logger.info(
+                "GOOGLE CALLBACK profile email=%s email_verified=%s name=%s",
+                profile.get('email'),
+                profile.get('email_verified'),
+                profile.get('name'),
+            )
+        except Exception as exchange_error:
+            _logger.exception("Fallo el intercambio OAuth con Google: %s", exchange_error)
+            return self._mobile_google_redirect(
+                redirect_uri,
+                ok=0,
+                error='No se pudo validar la cuenta de Google.',
+            )
+
+        email = profile.get('email')
+        if not email:
+            return self._mobile_google_redirect(
+                redirect_uri,
+                ok=0,
+                error='Google no devolvio un correo electronico.',
+            )
+        if profile.get('email_verified') is False:
+            return self._mobile_google_redirect(
+                redirect_uri,
+                ok=0,
+                error='El correo de Google no esta verificado.',
+            )
+
+        user, mobile_user = self._upsert_google_mobile_user(
+            name=profile.get('name') or email,
+            email=email,
+        )
+
+        rotate_fn = getattr(request.session, "rotate", None)
+        if callable(rotate_fn):
+            try:
+                rotate_fn()
+            except Exception:
+                pass
+
+        request.session.uid = user.id
+        request.session.login = user.login
+        try:
+            request.session.db = TARGET_DB
+        except Exception:
+            pass
+
+        session_id = getattr(request.session, "sid", None)
+        session_token = getattr(request.session, "session_token", None) or session_id
+        try:
+            if hasattr(request.session, "session_token") and not getattr(request.session, "session_token", None):
+                request.session.session_token = session_token
+        except Exception:
+            pass
+
+        user_role = mobile_user.role if mobile_user else 'seller'
+        company_id = self._get_effective_company_id(user=user, mobile_user=mobile_user)
+        self._log_session_snapshot('google_mobile_login', user, mobile_user, user_role, company_id, session_id, session_token)
+
+        return self._mobile_google_redirect(
+            redirect_uri,
+            ok=1,
+            uid=user.id,
+            login=user.login,
+            name=user.name,
+            email=user.email,
+            role=user_role,
+            company_id=company_id,
+            session_id=session_id,
+            session_token=session_token,
+        )
 
     @http.route('/api/auth/verify-email', type='http', auth='public', methods=['POST', 'OPTIONS'], csrf=False)
     def verify_email(self):

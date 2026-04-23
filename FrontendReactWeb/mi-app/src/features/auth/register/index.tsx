@@ -1,5 +1,6 @@
 "use client";
 
+import { useGoogleOAuth } from "../login";
 import { useRegister } from "./hooks/useRegister";
 import { RegisterFormSection } from "./sections/RegisterFormSection";
 import { RegisterSuccessSection } from "./sections/RegisterSuccessSection";
@@ -10,6 +11,7 @@ export type { RegisterPayload } from "./types/register.types";
 
 export function RegisterPage() {
   const { state, handleChange, handleSubmit } = useRegister();
+  const { googleLoading, googleError, startGoogleOAuth } = useGoogleOAuth();
 
   return (
     <main className="page">
@@ -107,7 +109,14 @@ export function RegisterPage() {
               {state.success ? (
                 <RegisterSuccessSection />
               ) : (
-                <RegisterFormSection state={state} onChange={handleChange} onSubmit={handleSubmit} />
+                <RegisterFormSection
+                  state={state}
+                  onChange={handleChange}
+                  onSubmit={handleSubmit}
+                  onGoogleClick={startGoogleOAuth}
+                  googleLoading={googleLoading}
+                  googleError={googleError}
+                />
               )}
             </div>
           </div>

@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "App-Mobile",
-    "slug": "App-Mobile",
+    "name": "BillNova",
+    "slug": "billnova",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -54,10 +54,10 @@ export function UsersSidebar({ navItems }: UsersSidebarProps) {
             </div>
             <div>
               <div style={{ fontSize: 14, fontWeight: 700, color: colors.text.primary }}>
-                BizAdmin
+                BillNova
               </div>
               <div style={{ fontSize: 10, color: colors.text.tertiary, letterSpacing: "0.05em" }}>
-                ENTERPRISE
+                BUSINESS
               </div>
             </div>
           </div>

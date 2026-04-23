@@ -7,7 +7,7 @@ export default function Index() {
   if (isLoading) return null; // puedes poner un spinner aquí
 
   if (!isAuthenticated) {
-    return <Redirect href="/login" />;
+    return <Redirect href="/auth" />;
   }
 
   return <Redirect href="/(tabs)" />;

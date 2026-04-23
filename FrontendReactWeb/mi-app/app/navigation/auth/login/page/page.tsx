@@ -3,13 +3,16 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useLogin } from "@/features/auth/login";
+import { useGoogleOAuth, useLogin } from "@/features/auth/login";
 import { getStoredAuthState } from "@/features/auth/login/data/storage";
 import { getUserRoleRoute } from "@/features/auth/login/hooks/useRoleGuard";
 
 export default function LoginPage() {
   const router = useRouter();
   const { values, errors, isLoading, serverError, errorCode, verificationEmail, onFieldChange, onSubmit } = useLogin();
+  const { googleLoading, googleError, startGoogleOAuth } = useGoogleOAuth({
+    rememberMe: values.rememberMe,
+  });
 
   useEffect(() => {
     const cached = getStoredAuthState();
@@ -123,6 +126,12 @@ export default function LoginPage() {
                   </div>
                 )}
 
+                {googleError && (
+                  <div className="alert show">
+                    <p className="alert-msg">{googleError}</p>
+                  </div>
+                )}
+
                 {errorCode === "ACCOUNT_NOT_VERIFIED" && verificationEmail && (
                   <p className="fh-sub" style={{ marginTop: "-0.5rem" }}>
                     <Link href={`/navigation/auth/verify-email?email=${encodeURIComponent(verificationEmail)}`}>Verificar correo / reenviar email</Link>
@@ -133,6 +142,22 @@ export default function LoginPage() {
 
                 <button type="submit" disabled={isLoading} className="btn-submit">
                   {isLoading ? "Validando..." : "Iniciar sesion"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={startGoogleOAuth}
+                  disabled={googleLoading}
+                  className="btn-submit"
+                  style={{
+                    marginTop: "0.85rem",
+                    background: "#fff",
+                    color: "#101828",
+                    border: "1px solid rgba(16, 24, 40, 0.12)",
+                    boxShadow: "none",
+                  }}
+                >
+                  {googleLoading ? "Abriendo Google..." : "Continuar con Google"}
                 </button>
               </form>
 

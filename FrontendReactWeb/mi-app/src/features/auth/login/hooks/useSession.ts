@@ -17,6 +17,7 @@ interface UseSessionReturn {
   isLoading: boolean;
   refreshSession: () => Promise<void>;
   logout: () => Promise<void>;
+  updateProfile: (data: { name?: string; phone?: string; companyName?: string }) => Promise<{ ok: boolean; error?: string }>;
 }
 
 export function useSession(): UseSessionReturn {
@@ -31,15 +32,18 @@ export function useSession(): UseSessionReturn {
     try {
       const response = await authApi.getSession(cached?.sessionToken);
       if (response.ok && response.uid && response.email && response.name) {
-        const sessionUser = {
+        const sessionUser: AuthUser = {
           uid: response.uid,
           email: response.email,
           name: response.name,
           role: normalizeUserRole(response.role ?? cached?.role),
           companyId: response.company_id,
+          phone: response.phone ?? cached?.phone,
+          companyName: response.company_name ?? cached?.companyName,
           sessionToken: response.session_token ?? cached?.sessionToken,
           sessionExpiresAt: response.session_expires_at ?? cached?.sessionExpiresAt,
         };
+
         setUser(sessionUser);
         persistAuthState(sessionUser, getRememberMeDefault());
         syncCompanyIdWithCurrentUser(sessionUser.companyId);
@@ -64,9 +68,35 @@ export function useSession(): UseSessionReturn {
     }
   }, []);
 
+  const updateProfile = useCallback(
+    async (data: { name?: string; phone?: string; companyName?: string }) => {
+      const cached = getStoredAuthState();
+
+      const result = await authApi.updateProfile(cached?.sessionToken, {
+        name: data.name,
+        phone: data.phone,
+      });
+
+      if (result.ok && user) {
+        const updated: AuthUser = {
+          ...user,
+          name: data.name ?? user.name,
+          phone: data.phone ?? user.phone,
+          companyName: data.companyName ?? user.companyName,
+        };
+
+        setUser(updated);
+        persistAuthState(updated, getRememberMeDefault());
+      }
+
+      return result;
+    },
+    [user]
+  );
+
   useEffect(() => {
     void refreshSession();
   }, [refreshSession]);
 
-  return { user, isLoading, refreshSession, logout };
+  return { user, isLoading, refreshSession, logout, updateProfile };
 }

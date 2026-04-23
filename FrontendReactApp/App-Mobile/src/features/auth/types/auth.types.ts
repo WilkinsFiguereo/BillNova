@@ -15,6 +15,12 @@ export interface RegisterPayload {
 export interface LoginResponse {
   ok: boolean;
   uid?: number;
+  name?: string;
+  email?: string;
+  role?: string;
+  company_id?: number | null;
+  session_id?: string;
+  session_token?: string;
   error?: string;
 }
 
@@ -28,6 +34,9 @@ export interface AuthUser {
   uid: number;
   login: string;
   name: string;
+  email?: string;
+  role?: string;
+  company_id?: number | null;
 }
 
 export interface AuthState {

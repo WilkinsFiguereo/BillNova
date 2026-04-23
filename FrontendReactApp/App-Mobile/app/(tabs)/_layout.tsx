@@ -56,7 +56,7 @@ export default function TabsLayout() {
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) return null;
-  if (!isAuthenticated) return <Redirect href="/(auth)" />;
+  if (!isAuthenticated) return <Redirect href="/auth" />;
 
   return (
     <Tabs

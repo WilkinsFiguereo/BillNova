@@ -7,8 +7,8 @@ export default function ModalScreen() {
 
   return (
     <RegisterScreen
-      onNavigateToLogin={() => router.dismissTo('/login')}
-      onRegisterSuccess={() => router.dismissTo('/login')}
+      onNavigateToLogin={() => router.dismissTo('/auth')}
+      onRegisterSuccess={() => router.dismissTo('/auth')}
     />
   );
 }

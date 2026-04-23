@@ -1,284 +1,231 @@
-# BillNova - Sistema de Gestión Empresarial
+# BillNova
 
-**BillNova** es un sistema ERP completo para la gestión de empresas, desarrollado con **Next.js (React)** para el frontend web, **React Native (Expo)** para el frontend móvil, y **Odoo 19** para el backend.
+Sistema ERP con frontend web en Next.js, app movil en Expo/React Native y backend en Odoo.
 
-## Estructura del Proyecto
+## Estructura
 
-```
+```text
 ProyectRijo/
-├── FrontendReactWeb/          # Frontend Web (Next.js)
-│   └── mi-app/
-│       ├── app/               # Páginas Next.js App Router
-│       ├── src/features/      # Módulos de la aplicación
-│       └── lib/               # Utilidades y configuración
-├── FrontendReactApp/         # Frontend Móvil (React Native/Expo)
-│   └── App-Mobile/
-│       ├── src/features/      # Pantallas y componentes
-│       └── app.json           # Configuración Expo
-├── odooBackend/              # Backend Odoo
-│   └── addons/Proyect/       # Módulo personalizado
-│       ├── controllers/       # API REST
-│       ├── models/            # Modelos de datos
-│       └── patches/           # Parches de seguridad
-└── README.md
+|-- FrontendReactWeb/
+|   `-- mi-app/                  # Next.js web app
+|-- FrontendReactApp/
+|   `-- App-Mobile/              # Expo mobile app
+|-- odooBackend/
+|   |-- addons/Proyect/          # Modulo Odoo custom
+|   `-- docker-compose.yml
+`-- README.md
 ```
 
-## Tecnologías
+## Stack
 
-| Capa | Tecnología |
-|------|------------|
-| Frontend Web | Next.js 14, React 19, TypeScript |
-| Frontend Móvil | Expo SDK 54, React Native 0.81, Expo Router |
-| UI Web | Tailwind CSS, Lucide Icons |
-| UI Móvil | React Native, Expo UI |
-| Backend | Odoo 19, Python |
+| Capa | Tecnologia |
+| --- | --- |
+| Frontend web | Next.js, React 19, TypeScript |
+| Frontend movil | Expo SDK 54, React Native 0.81, Expo Router |
+| Backend | Odoo, Python |
 | Base de datos | PostgreSQL |
 
-## Módulos del Frontend
+## Ejecucion
 
-### Frontend Web (`FrontendReactWeb/mi-app`)
+### Web
 
-#### `seller` - Panel de Vendedor
-- **Dashboard** - Estadísticas y gráficos de ventas
-- **Productos** - Gestión de inventario (CRUD)
-- **Servicios** - Gestión de servicios
-- **Facturas** - Gestión de facturación
-- **Pedidos** - Órdenes de compra/venta
-- **Reportes** - Reportes y análisis
-- **Impuestos** - Calculadora y gestión de impuestos
-- **Empresa** - Configuración de empresa
-- **Registro de Empresa** - Onboarding
-
-#### `admin` - Panel de Administrador
-- Dashboard administrativo
-- Gestión de usuarios (BillNova y Odoo)
-- Gestión de empresas
-- Configuración del sistema
-
-#### `moderator` - Panel de Moderador
-- Moderación de productos
-- Moderación de empresas
-- Reportes de problemas
-- Estadísticas
-
-#### `auth` - Autenticación
-- Login con sesión
-- Registro de usuarios
-- Recuperación de contraseña
-- Verificación de email
-- Gestión de sesiones
-
----
-
-### Frontend Móvil (`FrontendReactApp/App-Mobile`)
-
-Aplicación móvil desarrollada con **Expo SDK 54** y **React Native**.
-
-#### Características
-- **Autenticación** - Login/Registro con navegación
-- **Catálogo de Productos** - Vista en grilla y lista
-- **Carrito de Compras** - Gestión deitems, códigos promo
-- **Carrito** - Estado global con Zustand
-- **Navegación** - Bottom tabs con React Navigation
-- **UI Components** - Buttons, Inputs, SearchBar, TabBar
-
-#### Estructura de Pantallas
-```
-src/features/
-├── auth/           # Login, Register, AuthHeader
-│   ├── components/
-│   ├── hooks/
-│   ├── screens/
-│   └── types/
-├── home/           # Home principal
-│   ├── hooks/
-│   ├── sections/
-│   ├── types/
-│   ├── ui/
-│   └── data/
-├── products/       # Catálogo de productos
-│   ├── components/
-│   ├── hooks/
-│   ├── screens/
-│   ├── sections/
-│   ├── types/
-│   ├── ui/
-│   └── api/
-├── cart/           # Carrito de compras
-│   ├── hooks/
-│   ├── sections/
-│   ├── store/      # Zustand store
-│   ├── theme/
-│   ├── types/
-│   └── ui/
-└── shared/
-    ├── theme/
-    └── ui/
-```
-
-#### Ejecución
-```bash
-cd FrontendReactApp/App-Mobile
-npm install
-npm start
-# o usando Expo
-npx expo start --android
-npx expo start --ios
-```
-
-## API del Backend (Odoo)
-
-### Endpoints disponibles
-
-| Recurso | Métodos | Descripción |
-|---------|---------|-------------|
-| `/api/auth/*` | POST | Autenticación (login, logout, register) |
-| `/api/users/*` | GET, POST, PUT, DELETE | Gestión de usuarios |
-| `/api/companies/*` | GET, POST, PUT | Gestión de empresas |
-| `/api/products/*` | GET, POST, PUT, DELETE | Gestión de productos |
-| `/api/services/*` | GET, POST, PUT, DELETE | Gestión de servicios |
-| `/api/taxes/*` | GET | Impuestos |
-| `/api/invoices/*` | GET, POST | Facturación |
-| `/api/pos/*` | GET, POST | Punto de venta |
-| `/api/bitacora/*` | GET | Registro de eventos |
-| `/api/moderation/*` | GET, PUT | Moderación |
-
-### Modelos de Datos
-
-- **billnova.user** - Usuarios de la app
-- **res.company** - Empresas (extendido)
-- **product.product** - Productos (extendido)
-- **billnova.service** - Servicios
-- **billnova.bitacora** - Registro de auditoría
-
-### Roles de Usuario
-
-| Rol | Descripción |
-|-----|-------------|
-| `admin` | Administrador del sistema |
-| `moderator` | Moderador de contenido |
-| `gerente` | Gerente de empresa |
-| `seller` | Vendedor |
-
-## Configuración
-
-### Variables de Entorno
-
-**Frontend** (`.env.local`):
-```env
-NEXT_PUBLIC_ODOO_URL=http://localhost:8079
-```
-
-**Backend Odoo** (`odoo.conf`):
-```ini
-[options]
-admin_passwd = admin
-db_host = db
-db_port = 5432
-db_user = odoo
-db_password = odoo
-addons_path = /mnt/extra-addons
-```
-
-## Ejecución
-
-### Frontend Web
 ```bash
 cd FrontendReactWeb/mi-app
 npm install
 npm run dev
-# Acceder: http://localhost:3000
 ```
 
-### Frontend Móvil (Expo)
+### Mobile
+
 ```bash
 cd FrontendReactApp/App-Mobile
 npm install
-npm start
-# o usando Expo
-npx expo start --android
-npx expo start --ios
-# Escanea el QR con la app Expo Go
+npx expo start
 ```
 
-### Backend Odoo
+### Odoo
+
 ```bash
-# Con Docker
+cd odooBackend
 docker-compose up -d
-
-# O manual
-odoo -c /etc/odoo/odoo.conf -d tu_base_datos
-# Acceder: http://localhost:8069
 ```
 
-## Arquitectura
+Despues de tocar el modulo `Proyect`, reinicia Odoo y actualiza el modulo.
 
-```
-┌─────────────────────────────┐     ┌─────────────────────────────┐
-│   Frontend Web (Next.js)    │     │  Frontend Móvil (Expo)       │
-│  ┌─────────────────────┐  │     │  ┌─────────────────────┐   │
-│  │ Seller │ Admin │Mod │  │     │  │ Products │ Cart │  │
-│  └────────┬────────────┘  │     │  └────────┬──────────┘   │
-│           │               │     │           │              │
-│           ▼               │     │           ▼              │
-│      API Calls (REST)      │     │     API Calls (REST)      │
-└───────────┬───────────────┘     └───────────┬───────────────┘
-            │                            │
-            └──────────┬───────────────┘
-                       ▼
-┌──────────────────────────────────────────────────────────────┐
-│                    Backend (Odoo 19)                      │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │         Controladores API REST                    │   │
-│  │  auth | users | products | services | companies     │   │
-│  └─────────────────────────────────────────────────┘   │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │              Modelos Odoo                         │   │
-│  │  billnova.user | res.company | product.product   │   │
-│  └─────────────────────────────────────────────────┘   │
-│                         ▼                            │
-│             PostgreSQL Database                        │
-└──────────────────────────────────────────────────────┘
+## Variables y parametros
+
+### Frontend web
+
+`FrontendReactWeb/mi-app/.env.local`
+
+```env
+NEXT_PUBLIC_ODOO_URL=https://tu-url-publica-de-odoo
 ```
 
-## Estado del Proyecto
+### Frontend movil
 
-- [x] Autenticación completa con sesiones
-- [x] Gestión de empresas
-- [x] Gestión de productos (CRUD)
-- [x] Gestión de servicios (CRUD)
-- [x] Panel de vendedor
-- [x] Panel de administrador
-- [x] Panel de moderador
-### Frontend Móvil
-- [x] Autenticación (login/register)
-- [x] Catálogo de productos
-- [x] Carrito de compras
-- [ ] Checkout y pago
-- [ ] Órdenes
-- [ ] Perfil de usuario
+`FrontendReactApp/App-Mobile/.env`
 
-### Frontend Web
-- [x] Autenticación completa con sesiones
-- [x] Gestión de empresas
-- [x] Gestión de productos (CRUD)
-- [x] Gestión de servicios (CRUD)
-- [x] Panel de vendedor
-- [x] Panel de administrador
-- [x] Panel de moderador
-- [ ] Facturación (en desarrollo)
-- [ ] Punto de venta (en desarrollo)
-- [ ] Impuestos (en desarrollo)
+```env
+EXPO_PUBLIC_ODOO_URL=https://tu-url-publica-de-odoo
+```
 
-## Notas
+### Odoo system parameters
 
-- El backend está configurado para ejecutarse en Docker
-- La API usa autenticación por sesión con token
-- Los logs de Odoo se encuentran en `/var/log/odoo/`
-- **FrontendReactApp/App-Mobile** es la app móvil activa
-- El contenido en `node_modules` dentro de App-Mobile son dependencias de Expo
+Configura estos parametros en `Settings -> Technical -> Parameters -> System Parameters`:
 
----
+```text
+web.base.url=https://tu-url-publica-de-odoo
+billnova.google_oauth_client_id=TU_CLIENT_ID
+billnova.google_oauth_client_secret=TU_CLIENT_SECRET
+```
 
-**Versión:** 1.0.0  
-**Última actualización:** 2026-04-20
+Tambien puede leer `client_id` desde `auth.oauth.provider`, pero el `client_secret` debe existir en el provider o en los parametros anteriores.
+
+## Autenticacion
+
+### Endpoints principales
+
+| Endpoint | Metodo | Uso |
+| --- | --- | --- |
+| `/api/auth/login` | POST | Login usuario/password |
+| `/api/auth/register` | POST | Registro |
+| `/api/auth/session` | GET | Restaurar sesion |
+| `/api/auth/logout` | POST | Cerrar sesion |
+| `/api/auth/verify-email` | POST | Verificar correo |
+| `/api/auth/resend-code` | POST | Reenviar verificacion |
+| `/api/auth/google/mobile/authorize-url` | GET | Construye URL OAuth para web y mobile |
+| `/api/auth/google/mobile/callback` | GET | Callback OAuth de Google |
+
+### Sesion
+
+- Web y mobile usan `session_token` de Odoo.
+- Las peticiones autenticadas envian `X-Auth-Session`.
+- En mobile el token se guarda con `expo-secure-store`.
+- En web el estado se persiste en `localStorage` o `sessionStorage`.
+
+## Google OAuth
+
+### Redirect URI oficial
+
+Si tu `web.base.url` es:
+
+```text
+https://jwfn4vcd-8079.use2.devtunnels.ms
+```
+
+entonces la redirect URI autorizada en Google Cloud debe ser:
+
+```text
+https://jwfn4vcd-8079.use2.devtunnels.ms/api/auth/google/mobile/callback
+```
+
+### Configuracion en Google Cloud
+
+1. Crear un OAuth Client de tipo `Web application`.
+2. En `Authorized redirect URIs`, agregar:
+
+```text
+https://TU_WEB_BASE_URL/api/auth/google/mobile/callback
+```
+
+3. Si el consentimiento esta en `Testing`, agregar tu correo en `Test users`.
+
+### Configuracion en Odoo
+
+1. Instalar `auth_oauth`.
+2. Activar el provider de Google si lo usas.
+3. Verificar que el backend encuentre:
+   - `client_id`
+   - `client_secret`
+   - `web.base.url`
+
+### Como funciona el flujo
+
+#### Mobile
+
+1. La app pide a Odoo `/api/auth/google/mobile/authorize-url`.
+2. Odoo devuelve la URL final de Google.
+3. La app abre Google.
+4. Google vuelve a `/api/auth/google/mobile/callback`.
+5. Odoo valida el token y devuelve una pagina puente que reabre la app con el deep link.
+6. La app recibe `session_token`, guarda sesion y entra al home.
+
+#### Web
+
+1. La pagina de login/register pide a Odoo `/api/auth/google/mobile/authorize-url`.
+2. El navegador va a Google.
+3. Google vuelve a `/api/auth/google/mobile/callback`.
+4. Odoo valida y redirige otra vez al login/register web con `ok`, `uid`, `session_token`, `role`, etc.
+5. El frontend web persiste la sesion y redirige al dashboard correcto.
+
+## Cambios recientes
+
+### Routing y auth mobile
+
+- Se corrigio el enrutado inicial de Expo Router para que entre a `auth` o `tabs` segun sesion.
+- Se corrigieron rutas inconsistentes como `/login` y `/(auth)`.
+- Se ajusto logout y retorno desde registro.
+
+### Sesion mobile
+
+- `AuthProvider` ahora guarda `session_token`.
+- `odooClient` envia `X-Auth-Session` en las requests autenticadas.
+- Se agregaron mensajes de error visibles para OAuth.
+- Se separo el loading de Google del loading de login normal.
+
+### Google OAuth backend
+
+- Se agrego soporte a `auth_oauth` en el modulo Odoo.
+- Se implementaron:
+  - `/api/auth/google/mobile/authorize-url`
+  - `/api/auth/google/mobile/callback`
+- El backend crea o actualiza el usuario BillNova/Odoo despues del login con Google.
+- Se agregaron logs detallados del flujo OAuth.
+- Se agrego una pagina puente para devolver deep links a la app y evitar `404` al volver desde Odoo.
+
+### Google OAuth frontend web
+
+- Se agrego boton `Continuar con Google` en:
+  - login web
+  - register web
+- El frontend web ya procesa el callback OAuth y persiste la sesion sin pasar manualmente por Odoo.
+
+## Archivos clave tocados en estos cambios
+
+- [FrontendReactApp/App-Mobile/app/_layout.tsx](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/FrontendReactApp/App-Mobile/app/_layout.tsx)
+- [FrontendReactApp/App-Mobile/app/index.tsx](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/FrontendReactApp/App-Mobile/app/index.tsx)
+- [FrontendReactApp/App-Mobile/src/core/providers/AuthProvider.tsx](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/FrontendReactApp/App-Mobile/src/core/providers/AuthProvider.tsx)
+- [FrontendReactApp/App-Mobile/src/core/api/odooClient.ts](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/FrontendReactApp/App-Mobile/src/core/api/odooClient.ts)
+- [FrontendReactWeb/mi-app/app/navigation/auth/login/page/page.tsx](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/FrontendReactWeb/mi-app/app/navigation/auth/login/page/page.tsx)
+- [FrontendReactWeb/mi-app/src/features/auth/login/hooks/useGoogleOAuth.ts](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/FrontendReactWeb/mi-app/src/features/auth/login/hooks/useGoogleOAuth.ts)
+- [FrontendReactWeb/mi-app/src/features/auth/register/index.tsx](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/FrontendReactWeb/mi-app/src/features/auth/register/index.tsx)
+- [odooBackend/addons/Proyect/controllers/auth_controller.py](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/odooBackend/addons/Proyect/controllers/auth_controller.py)
+- [odooBackend/addons/Proyect/__manifest__.py](/c:/Users/Wilkins1209/Desktop/Proyects/ProyectRijo/odooBackend/addons/Proyect/__manifest__.py)
+
+## Verificacion recomendada
+
+### Mobile
+
+1. Abrir app.
+2. Pulsar `Continuar con Google`.
+3. Elegir cuenta.
+4. Confirmar que vuelve al home y queda sesion activa.
+
+### Web
+
+1. Ir a `/navigation/auth/login`.
+2. Pulsar `Continuar con Google`.
+3. Elegir cuenta.
+4. Confirmar redireccion al dashboard segun rol.
+
+### Backend
+
+Buscar en logs de Odoo:
+
+```text
+GOOGLE OAUTH CONFIG
+GOOGLE AUTHORIZE URL
+GOOGLE CALLBACK
+GOOGLE MOBILE redirecting via bridge page
+```

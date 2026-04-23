@@ -9,8 +9,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "MyApp",
-  description: "Plataforma conectada con Odoo",
+  title: "BillNova",
+  description: "Plataforma empresarial para gestionar tu negocio",
 };
 
 export default function RootLayout({

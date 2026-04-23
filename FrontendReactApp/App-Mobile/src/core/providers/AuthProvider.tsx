@@ -1,13 +1,15 @@
 import React, { createContext, useContext, useEffect, useReducer, useCallback } from 'react';
+import * as Linking from 'expo-linking';
 import { authApi } from '../../features/auth/api/authApi';
 import { tokenStorage } from '../storage/tokenStorage';
 import type { AuthState, AuthUser, LoginPayload, RegisterPayload } from '../../features/auth/types/auth.types';
+
 
 // ─── State & Actions ─────────────────────────────────────────────────────────
 
 type Action =
   | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_USER'; payload: AuthUser }
+  | { type: 'SET_SESSION'; payload: { user: AuthUser; token: string | null } }
   | { type: 'CLEAR_USER' };
 
 const initialState: AuthState = {
@@ -21,8 +23,14 @@ function authReducer(state: AuthState, action: Action): AuthState {
   switch (action.type) {
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload };
-    case 'SET_USER':
-      return { ...state, user: action.payload, isAuthenticated: true, isLoading: false };
+    case 'SET_SESSION':
+      return {
+        ...state,
+        user: action.payload.user,
+        token: action.payload.token,
+        isAuthenticated: true,
+        isLoading: false,
+      };
     case 'CLEAR_USER':
       return { ...initialState, isLoading: false };
     default:
@@ -34,6 +42,7 @@ function authReducer(state: AuthState, action: Action): AuthState {
 
 interface AuthContextValue extends AuthState {
   login: (payload: LoginPayload) => Promise<{ ok: boolean; error?: string }>;
+  loginWithGoogle: (mode?: 'login' | 'register') => Promise<{ ok: boolean; error?: string }>;
   register: (payload: RegisterPayload) => Promise<{ ok: boolean; error?: string }>;
   logout: () => Promise<void>;
 }
@@ -48,10 +57,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Restore session on mount
   useEffect(() => {
     (async () => {
-      const user = await tokenStorage.getUser<AuthUser>();
-      if (user) {
-        dispatch({ type: 'SET_USER', payload: user });
+      const [user, token] = await Promise.all([
+        tokenStorage.getUser<AuthUser>(),
+        tokenStorage.getToken(),
+      ]);
+      if (user && token) {
+        dispatch({ type: 'SET_SESSION', payload: { user, token } });
       } else {
+        await tokenStorage.clearAll();
         dispatch({ type: 'SET_LOADING', payload: false });
       }
     })();
@@ -68,13 +81,138 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const user: AuthUser = {
       uid:   data.uid!,
-      login: payload.login,
-      name:  payload.login,
+      login: data.email ?? payload.login,
+      name:  data.name ?? payload.login,
+      email: data.email,
+      role: data.role,
+      company_id: data.company_id ?? null,
     };
 
+    if (!data.session_token) {
+      dispatch({ type: 'SET_LOADING', payload: false });
+      return { ok: false, error: 'El servidor no devolvió session_token.' };
+    }
+
+    await tokenStorage.saveToken(data.session_token);
     await tokenStorage.saveUser(user);
-    dispatch({ type: 'SET_USER', payload: user });
+    dispatch({
+      type: 'SET_SESSION',
+      payload: { user, token: data.session_token },
+    });
     return { ok: true };
+  }, []);
+
+  const loginWithGoogle = useCallback(async (_mode: 'login' | 'register' = 'login') => {
+    dispatch({ type: 'SET_LOADING', payload: true });
+
+    try {
+      const redirectUri = Linking.createURL('/auth');
+      console.log('[Google OAuth] redirectUri:', redirectUri);
+      const { data, error: authUrlError } = await authApi.googleAuthorizeUrl(redirectUri);
+      console.log('[Google OAuth] authorize-url response:', {
+        hasData: !!data,
+        ok: data?.ok,
+        hasAuthUrl: !!data?.auth_url,
+        error: authUrlError ?? data?.error ?? null,
+      });
+
+      if (!data?.ok || !data.auth_url || authUrlError) {
+        dispatch({ type: 'SET_LOADING', payload: false });
+        return {
+          ok: false,
+          error: data?.error ?? authUrlError ?? 'No se pudo iniciar Google OAuth.',
+        };
+      }
+
+      const callbackUrl = await new Promise<string>((resolve, reject) => {
+        let settled = false;
+
+        const timeoutId = setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          subscription.remove();
+          reject(new Error('Google no respondio a tiempo.'));
+        }, 90000);
+
+        const subscription = Linking.addEventListener('url', ({ url }) => {
+          console.log('[Google OAuth] deep link received:', url);
+          if (settled || !url.startsWith(redirectUri)) return;
+          settled = true;
+          clearTimeout(timeoutId);
+          subscription.remove();
+          resolve(url);
+        });
+
+        Linking.openURL(data.auth_url).catch((openError) => {
+          console.error('[Google OAuth] failed opening auth URL:', openError);
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeoutId);
+          subscription.remove();
+          reject(openError);
+        });
+      });
+      console.log('[Google OAuth] callbackUrl parsed:', callbackUrl);
+
+      const { queryParams } = Linking.parse(callbackUrl);
+      const getParam = (value: string | string[] | undefined) =>
+        Array.isArray(value) ? value[0] : value;
+
+      const ok = getParam(queryParams?.ok);
+      const sessionToken = getParam(queryParams?.session_token);
+      const uid = getParam(queryParams?.uid);
+      const login = getParam(queryParams?.login);
+      const name = getParam(queryParams?.name);
+      const email = getParam(queryParams?.email);
+      const role = getParam(queryParams?.role);
+      const companyId = getParam(queryParams?.company_id);
+      const error = getParam(queryParams?.error);
+
+      if (ok !== '1' || !sessionToken || !uid || !login) {
+        console.warn('[Google OAuth] invalid callback payload:', {
+          ok,
+          hasSessionToken: !!sessionToken,
+          uid,
+          login,
+          error,
+        });
+        dispatch({ type: 'SET_LOADING', payload: false });
+        return {
+          ok: false,
+          error: error ?? 'No se pudo completar la autenticación con Google.',
+        };
+      }
+
+      const user: AuthUser = {
+        uid: Number(uid),
+        login,
+        name: name ?? login,
+        email: email ?? undefined,
+        role: role ?? undefined,
+        company_id: companyId ? Number(companyId) : null,
+      };
+
+      await tokenStorage.saveToken(sessionToken);
+      await tokenStorage.saveUser(user);
+      dispatch({
+        type: 'SET_SESSION',
+        payload: { user, token: sessionToken },
+      });
+      console.log('[Google OAuth] login success:', {
+        uid: user.uid,
+        login: user.login,
+        role: user.role ?? null,
+        company_id: user.company_id ?? null,
+      });
+      return { ok: true };
+    } catch (error) {
+      console.error('[Google OAuth] flow failed:', error);
+      dispatch({ type: 'SET_LOADING', payload: false });
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : 'Google OAuth failed',
+      };
+    }
   }, []);
 
   const register = useCallback(async (payload: RegisterPayload) => {
@@ -97,7 +235,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ ...state, login, register, logout }}>
+    <AuthContext.Provider value={{ ...state, login, loginWithGoogle, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import {
   View, Text, ScrollView, StyleSheet,
   TouchableOpacity, KeyboardAvoidingView,
-  Platform, StatusBar, Animated,
+  Platform, StatusBar, Animated, TextInput,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Input } from '../../../shared/ui/Input';
@@ -12,9 +12,8 @@ import {
   IconAt, IconLock, IconUser, IconMail,
   IconShield, IconWarning, IconCheck,
 } from '../../../shared/ui/Icons';
-import { useLogin, useRegister } from '../hooks/useAuth';
+import { useAuth, useLogin, useRegister } from '../hooks/useAuth';
 import { colors } from '../../../shared/theme/colors';
-import { TextInput } from 'react-native';
 
 interface AuthScreenProps {
   onLoginSuccess: () => void;
@@ -25,9 +24,12 @@ type Tab = 'login' | 'register';
 export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
   const [tab, setTab] = useState<Tab>('login');
   const fadeAnim = useRef(new Animated.Value(1)).current;
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [oauthError, setOauthError] = useState<string | null>(null);
 
   // ── Login state ──────────────────────────────────────────────
   const { handleLogin, isLoading: loginLoading, error: loginError, clearError: clearLoginError } = useLogin();
+  const { loginWithGoogle } = useAuth();
   const [loginForm, setLoginForm] = useState({ login: '', password: '' });
   const [loginErrors, setLoginErrors] = useState({ login: '', password: '' });
 
@@ -74,6 +76,7 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
 
   // ── Submit handlers ──────────────────────────────────────────
   const handleLoginSubmit = async () => {
+    setOauthError(null);
     clearLoginError();
     if (!validateLogin()) return;
     const result = await handleLogin(loginForm);
@@ -81,6 +84,7 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
   };
 
   const handleRegisterSubmit = async () => {
+    setOauthError(null);
     clearRegisterError();
     if (!validateRegister()) return;
     await handleRegister({
@@ -91,6 +95,15 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
     });
     // on success, switch to login after short delay
     if (success) setTimeout(() => switchTab('login'), 1200);
+  };
+
+  const handleGoogleAuth = async (mode: 'login' | 'register') => {
+    setOauthError(null);
+    setGoogleLoading(true);
+    const result = await loginWithGoogle(mode);
+    setGoogleLoading(false);
+    if (result.ok) onLoginSuccess();
+    else setOauthError(result.error ?? 'No se pudo completar la autenticacion con Google.');
   };
 
   // ── Field helpers ────────────────────────────────────────────
@@ -178,6 +191,12 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
                       <Text style={styles.alertErrText}>{loginError}</Text>
                     </View>
                   )}
+                  {oauthError && (
+                    <View style={styles.alertErr}>
+                      <IconWarning size={14} />
+                      <Text style={styles.alertErrText}>{oauthError}</Text>
+                    </View>
+                  )}
 
                   
                   <Text style={{ marginBottom: 4 }}>Usuario</Text>
@@ -228,7 +247,7 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
                   <Button
                     label="Iniciar sesión"
                     onPress={handleLoginSubmit}
-                    isLoading={loginLoading}
+                    isLoading={loginLoading && !googleLoading}
                     style={styles.submitBtn}
                   />
 
@@ -241,7 +260,8 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
                   <Button
                     label="Continuar con Google"
                     variant="google"
-                    onPress={() => { /* Google OAuth */ }}
+                    onPress={() => handleGoogleAuth('login')}
+                    isLoading={googleLoading}
                     style={styles.googleBtn}
                   />
 
@@ -261,6 +281,12 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
                     <View style={styles.alertErr}>
                       <IconWarning size={14} />
                       <Text style={styles.alertErrText}>{registerError}</Text>
+                    </View>
+                  )}
+                  {oauthError && (
+                    <View style={styles.alertErr}>
+                      <IconWarning size={14} />
+                      <Text style={styles.alertErrText}>{oauthError}</Text>
                     </View>
                   )}
                   {success && (
@@ -319,8 +345,22 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
                   <Button
                     label="Crear cuenta"
                     onPress={handleRegisterSubmit}
-                    isLoading={registerLoading}
+                    isLoading={registerLoading && !googleLoading}
                     style={styles.submitBtn}
+                  />
+
+                  <View style={styles.divider}>
+                    <View style={styles.dividerLine} />
+                    <Text style={styles.dividerText}>o continua con</Text>
+                    <View style={styles.dividerLine} />
+                  </View>
+
+                  <Button
+                    label="Continuar con Google"
+                    variant="google"
+                    onPress={() => handleGoogleAuth('register')}
+                    isLoading={googleLoading}
+                    style={styles.googleBtn}
                   />
 
                   <View style={styles.footer}>

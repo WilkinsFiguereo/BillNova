@@ -12,7 +12,7 @@ import {
   IconUser, IconMail, IconAt, IconLock,
   IconShield, IconBriefcase, IconCheck, IconWarning,
 } from '../../../shared/ui/Icons';
-import { useRegister } from '../hooks/useAuth';
+import { useAuth, useRegister } from '../hooks/useAuth';
 import { colors } from '../../../shared/theme/colors';
 
 interface RegisterScreenProps {
@@ -31,6 +31,7 @@ function IconArrowLeft({ size = 18, color = 'rgba(255,255,255,0.75)' }: { size?:
 
 export function RegisterScreen({ onNavigateToLogin, onRegisterSuccess }: RegisterScreenProps) {
   const { handleRegister, isLoading, error, success, clearError } = useRegister();
+  const { loginWithGoogle } = useAuth();
   const [form, setForm] = useState({
     name: '', login: '', email: '',
     password: '', confirmPassword: '',
@@ -66,6 +67,11 @@ export function RegisterScreen({ onNavigateToLogin, onRegisterSuccess }: Registe
   const update = (f: string) => (v: string) => {
     setForm(p => ({ ...p, [f]: v }));
     if (fieldErrors[f]) setFieldErrors(p => ({ ...p, [f]: '' }));
+  };
+
+  const handleGooglePress = async () => {
+    const result = await loginWithGoogle('register');
+    if (result.ok) onRegisterSuccess();
   };
 
   return (
@@ -149,6 +155,19 @@ export function RegisterScreen({ onNavigateToLogin, onRegisterSuccess }: Registe
               error={fieldErrors.confirmPassword} />
 
             <Button label="Crear cuenta" onPress={handleSubmit} isLoading={isLoading} style={styles.submitBtn} />
+
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>o continua con</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <Button
+              label="Continuar con Google"
+              variant="google"
+              onPress={handleGooglePress}
+              style={styles.googleBtn}
+            />
 
             <View style={styles.footer}>
               <Text style={styles.footerText}>¿Ya tienes cuenta? </Text>
@@ -239,6 +258,10 @@ const styles = StyleSheet.create({
   successText: { flex: 1, fontSize: 12.5, color: colors.success.default, fontWeight: '500' },
 
   submitBtn: { marginTop: 6, marginBottom: 22 },
+  divider: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: colors.border.light },
+  dividerText: { fontSize: 11, color: colors.text.disabled },
+  googleBtn: { marginBottom: 22 },
   footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 18 },
   footerText: { fontSize: 12.5, color: colors.text.tertiary },
   footerLink: { fontSize: 12.5, fontWeight: '600', color: colors.brand[600] },

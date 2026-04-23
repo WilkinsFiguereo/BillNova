@@ -13,21 +13,24 @@ import type {
 import { authPath, odooGet, odooPost } from "@/lib/odooApi";
 
 export const authApi = {
-  login: async (payload: LoginPayload): Promise<LoginResponse> => {
-  const res = await odooPost<LoginResponse>(
-    authPath("/login"),
-    {
-      login: payload.username.trim(),
-      password: payload.password,
-      remember_me: payload.rememberMe,
-    },
-    { allowedStatuses: [400, 401, 403, 404, 409, 429] },
-  );
+  login: async (payload: LoginPayload): Promise<LoginResponse> =>
+    odooPost<LoginResponse>(
+      authPath("/login"),
+      {
+        login: payload.username.trim(),
+        password: payload.password,
+        remember_me: payload.rememberMe,
+      },
+      { allowedStatuses: [400, 401, 403, 404, 409, 429] },
+    ),
 
-  console.log("LOGIN RESPONSE >>>", res); // 👈 IMPORTANTE
-
-  return res;
-},
+  googleAuthorizeUrl: async (
+    redirectUri: string,
+  ): Promise<{ ok: boolean; auth_url?: string; error?: string }> =>
+    odooGet<{ ok: boolean; auth_url?: string; error?: string }>(
+      authPath(`/google/mobile/authorize-url?redirect_uri=${encodeURIComponent(redirectUri)}`),
+      { allowedStatuses: [400, 401, 403, 404, 429, 503] },
+    ),
 
   forgotPassword: async (payload: ForgotPasswordPayload): Promise<ForgotPasswordResponse> =>
     odooPost<ForgotPasswordResponse>(
