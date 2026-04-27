@@ -23,10 +23,11 @@ async function request<T>(
 ): Promise<ApiResponse<T>> {
   const { method = 'GET', body, requiresAuth = false } = options;
 
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    Accept: 'application/json',
-  };
+  const headers: Record<string, string> = {};
+  if (body) {
+    headers['Content-Type'] = 'application/json';
+  }
+  headers.Accept = 'application/json';
 
   if (requiresAuth) {
     const token = await tokenStorage.getToken();
@@ -53,7 +54,28 @@ async function request<T>(
         signal: controller.signal,
       });
 
-      const data = await response.json();
+      const rawText = await response.text();
+      let data: any = null;
+      if (rawText.trim()) {
+        try {
+          data = JSON.parse(rawText);
+        } catch (parseError) {
+          console.log('[mobile][odooClient] invalid json response', {
+            endpoint,
+            method,
+            status: response.status,
+            ok: response.ok,
+            contentType: response.headers.get('content-type'),
+            bodyPreview: rawText.slice(0, 300),
+            parseError: parseError instanceof Error ? parseError.message : String(parseError),
+          });
+          return {
+            data: null,
+            error: `Respuesta invalida del servidor (${response.status})`,
+            status: response.status,
+          };
+        }
+      }
       console.log('[mobile][odooClient] response', {
         endpoint,
         method,
@@ -61,6 +83,7 @@ async function request<T>(
         ok: response.ok,
         requiresAuth,
         hasData: Boolean(data),
+        hasBody: Boolean(rawText.trim()),
         dataOk: data?.ok ?? null,
         error: data?.error ?? null,
       });
@@ -68,7 +91,15 @@ async function request<T>(
       if (!response.ok) {
         return {
           data: null,
-          error: data?.error ?? `HTTP ${response.status}`,
+          error: data?.error ?? rawText.trim() ?? `HTTP ${response.status}`,
+          status: response.status,
+        };
+      }
+
+      if (!data) {
+        return {
+          data: null,
+          error: `Respuesta vacia del servidor (${response.status})`,
           status: response.status,
         };
       }
