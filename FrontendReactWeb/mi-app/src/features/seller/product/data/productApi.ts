@@ -46,6 +46,11 @@ function requestInit(init: RequestInit = {}): RequestInit {
 
 function mapProducto(product: any): Producto {
   const stock = product.quantity_on_hand ?? product.stock ?? product.qty_available ?? 0;
+  const imageUrls = Array.isArray(product.image_urls)
+    ? product.image_urls.filter((value: unknown): value is string => typeof value === "string" && value.length > 0)
+    : product.image_url
+      ? [String(product.image_url)]
+      : [];
 
   return {
     id: String(product.id),
@@ -58,7 +63,8 @@ function mapProducto(product: any): Producto {
     costo: product.cost_price ?? product.standard_price ?? 0,
     proveedor: product.seller_ids?.[0]?.name?.name ?? "",
     ultimaActualizacion: product.write_date ?? new Date().toISOString().split("T")[0],
-    imageUrl: product.image_url ?? "",
+    imageUrl: imageUrls[0] ?? "",
+    imageUrls,
   };
 }
 
@@ -89,7 +95,8 @@ export async function apiCreateProducto(payload: Partial<Producto>): Promise<{ i
   if (payload.stock !== undefined) body.quantity = payload.stock;
   if (payload.categoria) body.category = payload.categoria;
   if (payload.proveedor) body.supplier = payload.proveedor;
-  if ("imageDataUrl" in payload) body.image_data_url = payload.imageDataUrl || null;
+  if ("imageDataUrls" in payload) body.image_data_urls = payload.imageDataUrls || [];
+  else if ("imageDataUrl" in payload) body.image_data_url = payload.imageDataUrl || null;
 
   const companyId = getCompanyId();
   if (!companyId) {
@@ -116,7 +123,8 @@ export async function apiUpdateProducto(id: number, payload: Partial<Producto>):
   if (payload.stock !== undefined) body.quantity = payload.stock;
   if (payload.categoria) body.category = payload.categoria;
   if (payload.proveedor) body.supplier = payload.proveedor;
-  if ("imageDataUrl" in payload) body.image_data_url = payload.imageDataUrl || null;
+  if ("imageDataUrls" in payload) body.image_data_urls = payload.imageDataUrls || [];
+  else if ("imageDataUrl" in payload) body.image_data_url = payload.imageDataUrl || null;
 
   const companyId = getCompanyId();
   if (companyId) body.company_id = companyId;

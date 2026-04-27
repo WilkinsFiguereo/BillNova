@@ -7,6 +7,7 @@ export interface Product {
   moderation_status?: 'pending' | 'approved' | 'rejected' | string;
   category?: string;
   image_url?: string;
+  image_urls?: string[];
   description?: string;
   company_name?: string;
   payment_frequency?: string | null;

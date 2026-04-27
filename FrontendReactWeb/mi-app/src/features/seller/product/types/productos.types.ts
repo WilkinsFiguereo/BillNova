@@ -20,7 +20,9 @@ export interface Producto {
   proveedor: string;
   ultimaActualizacion: string;
   imageUrl?: string;
+  imageUrls?: string[];
   imageDataUrl?: string;
+  imageDataUrls?: string[];
 }
 
 export interface ProductoStatCard {

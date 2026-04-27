@@ -42,8 +42,6 @@ export default function DashboardPage() {
         <SalesChartSection
           fechaLabel={meta.fechaLabel}
           resumenLabel={meta.resumenLabel}
-          onNewInvoice={() => showToast("Factura generada correctamente")}
-          onAddProduct={() => showToast("Producto agregado al inventario")}
         />
 
         {error && (

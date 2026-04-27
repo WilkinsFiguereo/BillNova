@@ -29,31 +29,12 @@ async function checkResponse<T>(res: Response): Promise<T> {
   return json.data ?? json;
 }
 
-export async function apiListServicios(): Promise<Servicio[]> {
-  const companyId = getCompanyId();
-  const url = companyId
-    ? `${baseUrl}/api/services?company_id=${encodeURIComponent(String(companyId))}`
-    : `${baseUrl}/api/services`;
-
-  const res = await fetch(url, { headers: jsonHeaders() });
-  const data = await checkResponse<any>(res);
-
-  return data.map((service: any) => ({
-    id: String(service.id),
-    nombre: service.name ?? "",
-    descripcion: service.description ?? "",
-    detalles: service.details ?? "",
-    precio: service.price ?? 0,
-    pagoFrecuencia: service.payment_frequency ?? "unico",
-    status: service.active !== false ? "activo" : "inactivo",
-    ultimaActualizacion: service.write_date ?? new Date().toISOString().split("T")[0],
-    imageUrl: service.image_url ?? "",
-  }));
-}
-
-export async function apiGetServicio(id: number): Promise<Servicio> {
-  const res = await fetch(`${baseUrl}/api/services/${id}`, { headers: jsonHeaders() });
-  const service = await checkResponse<any>(res);
+function mapServicio(service: any): Servicio {
+  const imageUrls = Array.isArray(service.image_urls)
+    ? service.image_urls.filter((value: unknown): value is string => typeof value === "string" && value.length > 0)
+    : service.image_url
+      ? [String(service.image_url)]
+      : [];
 
   return {
     id: String(service.id),
@@ -64,8 +45,27 @@ export async function apiGetServicio(id: number): Promise<Servicio> {
     pagoFrecuencia: service.payment_frequency ?? "unico",
     status: service.active !== false ? "activo" : "inactivo",
     ultimaActualizacion: service.write_date ?? new Date().toISOString().split("T")[0],
-    imageUrl: service.image_url ?? "",
+    imageUrl: imageUrls[0] ?? "",
+    imageUrls,
   };
+}
+
+export async function apiListServicios(): Promise<Servicio[]> {
+  const companyId = getCompanyId();
+  const url = companyId
+    ? `${baseUrl}/api/services?company_id=${encodeURIComponent(String(companyId))}`
+    : `${baseUrl}/api/services`;
+
+  const res = await fetch(url, { headers: jsonHeaders() });
+  const data = await checkResponse<any>(res);
+
+  return data.map(mapServicio);
+}
+
+export async function apiGetServicio(id: number): Promise<Servicio> {
+  const res = await fetch(`${baseUrl}/api/services/${id}`, { headers: jsonHeaders() });
+  const service = await checkResponse<any>(res);
+  return mapServicio(service);
 }
 
 export async function apiCreateServicio(payload: Partial<Servicio>): Promise<{ id: number }> {
@@ -76,7 +76,8 @@ export async function apiCreateServicio(payload: Partial<Servicio>): Promise<{ i
   if (payload.precio !== undefined) body.price = payload.precio;
   if (payload.pagoFrecuencia) body.payment_frequency = payload.pagoFrecuencia;
   if (payload.status) body.active = payload.status === "activo";
-  if ("imageDataUrl" in payload) body.image_data_url = payload.imageDataUrl || null;
+  if ("imageDataUrls" in payload) body.image_data_urls = payload.imageDataUrls || [];
+  else if ("imageDataUrl" in payload) body.image_data_url = payload.imageDataUrl || null;
 
   const companyId = getCompanyId();
   if (!companyId) {
@@ -102,7 +103,8 @@ export async function apiUpdateServicio(id: string, payload: Partial<Servicio>):
   if (payload.precio !== undefined) body.price = payload.precio;
   if (payload.pagoFrecuencia) body.payment_frequency = payload.pagoFrecuencia;
   if (payload.status) body.active = payload.status === "activo";
-  if ("imageDataUrl" in payload) body.image_data_url = payload.imageDataUrl || null;
+  if ("imageDataUrls" in payload) body.image_data_urls = payload.imageDataUrls || [];
+  else if ("imageDataUrl" in payload) body.image_data_url = payload.imageDataUrl || null;
 
   const companyId = getCompanyId();
   if (companyId) body.company_id = companyId;

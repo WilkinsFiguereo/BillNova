@@ -18,7 +18,9 @@ export interface Servicio {
   status: ServicioStatus;
   ultimaActualizacion: string;
   imageUrl?: string;
+  imageUrls?: string[];
   imageDataUrl?: string;
+  imageDataUrls?: string[];
 }
 
 export type VistaMode = "tabla" | "grilla";

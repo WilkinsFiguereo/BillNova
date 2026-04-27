@@ -2,6 +2,8 @@
 
 Repositorio oficial: `https://github.com/WilkinsFiguereo/BillNova`
 
+Project Manager: `Jose Rijo`
+
 ## Descripcion
 
 BillNova es un sistema ERP con:

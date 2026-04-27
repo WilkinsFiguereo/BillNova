@@ -10,6 +10,13 @@ _logger = logging.getLogger(__name__)
 
 
 class ProductApiController(http.Controller):
+    _GALLERY_FIELD_NAMES = (
+        "billnova_image_2_1920",
+        "billnova_image_3_1920",
+        "billnova_image_4_1920",
+        "billnova_image_5_1920",
+    )
+
     def _is_mobile_request(self):
         user_agent = (request.httprequest.headers.get("User-Agent") or "").lower()
         return "expo" in user_agent or "okhttp" in user_agent or "reactnative" in user_agent
@@ -187,12 +194,12 @@ class ProductApiController(http.Controller):
     def _serialize(self, product):
         company = product.company_id
         category = product.categ_id
+        template = product.product_tmpl_id
         moderation_status = self._get_product_moderation_status(product)
         moderation_reason = self._get_product_moderation_reason(product)
         moderation_updated_at = self._get_product_moderation_updated_at(product)
-        image_base64 = None
-        if product.image_1920:
-            image_base64 = product.image_1920.decode() if isinstance(product.image_1920, bytes) else product.image_1920
+        image_urls = self._serialize_product_images(product)
+        primary_image_url = image_urls[0] if image_urls else None
 
         return {
             "id": product.id,
@@ -218,10 +225,30 @@ class ProductApiController(http.Controller):
             "category_name": category.name if category else None,
 
             "description_sale": product.description_sale or "",
-            "image_url": f"data:image/png;base64,{image_base64}" if image_base64 else None,
+            "image_url": primary_image_url,
+            "image_urls": image_urls,
             "create_date": product.create_date.isoformat() if product.create_date else None,
             "write_date": product.write_date.isoformat() if product.write_date else None,
         }
+
+    def _to_image_url(self, value):
+        if not value:
+            return None
+        encoded = value.decode() if isinstance(value, bytes) else value
+        return f"data:image/png;base64,{encoded}" if encoded else None
+
+    def _serialize_product_images(self, product):
+        template = getattr(product, "product_tmpl_id", None)
+        image_urls = []
+        primary = self._to_image_url(product.image_1920)
+        if primary:
+            image_urls.append(primary)
+        if template:
+            for field_name in self._GALLERY_FIELD_NAMES:
+                image_url = self._to_image_url(getattr(template, field_name, False))
+                if image_url:
+                    image_urls.append(image_url)
+        return image_urls[:5]
 
     def _decode_image_data_url(self, image_data_url):
         if image_data_url in (None, "", False):
@@ -245,6 +272,58 @@ class ProductApiController(http.Controller):
             return False
 
         return raw_value
+
+    def _decode_image_list(self, image_data_urls):
+        if image_data_urls in (None, False):
+            return []
+        if not isinstance(image_data_urls, list):
+            return None
+
+        decoded = []
+        for raw_image in image_data_urls:
+            decoded_image = self._decode_image_data_url(raw_image)
+            if not decoded_image:
+                return None
+            decoded.append(decoded_image)
+        return decoded
+
+    def _extract_image_payload(self, payload, require_images=False):
+        if "image_data_urls" in payload:
+            decoded_images = self._decode_image_list(payload.get("image_data_urls"))
+            if decoded_images is None:
+                return None, self._json_response({"ok": False, "error": "image_data_urls must be a list of valid base64 images"}, 400)
+            if len(decoded_images) < 1:
+                return None, self._json_response({"ok": False, "error": "Debes agregar al menos 1 imagen."}, 400)
+            if len(decoded_images) > 5:
+                return None, self._json_response({"ok": False, "error": "Solo se permiten hasta 5 imagenes."}, 400)
+            return decoded_images, None
+
+        if "image_data_url" in payload:
+            decoded_image = self._decode_image_data_url(payload.get("image_data_url"))
+            if require_images and not decoded_image:
+                return None, self._json_response({"ok": False, "error": "Debes agregar al menos 1 imagen."}, 400)
+            if decoded_image:
+                return [decoded_image], None
+            return [], None
+
+        if require_images:
+            return None, self._json_response({"ok": False, "error": "Debes agregar al menos 1 imagen."}, 400)
+
+        return None, None
+
+    def _apply_gallery_to_product(self, product, decoded_images):
+        if decoded_images is None:
+            return
+
+        template_vals = {}
+        primary_image = decoded_images[0] if decoded_images else False
+        product.write({"image_1920": primary_image})
+
+        for index, field_name in enumerate(self._GALLERY_FIELD_NAMES, start=1):
+            template_vals[field_name] = decoded_images[index] if index < len(decoded_images) else False
+
+        if template_vals:
+            product.product_tmpl_id.write(template_vals)
 
     def _parse_company_id(self, payload):
         company_id_int = self._resolve_company_id_for_request(
@@ -540,6 +619,10 @@ class ProductApiController(http.Controller):
                 {"ok": False, "error": "company_id is required"}, 400
             )
 
+        decoded_images, image_error = self._extract_image_payload(payload, require_images=True)
+        if image_error:
+            return image_error
+
         product = request.env["product.product"].sudo().create({
             "name": name,
             "default_code": payload.get("default_code"),
@@ -547,8 +630,9 @@ class ProductApiController(http.Controller):
             "standard_price": payload.get("standard_price", payload.get("cost_price", 0.0)),
             "description_sale": payload.get("description_sale") or "",
             "company_id": company_id,
-            "image_1920": self._decode_image_data_url(payload.get("image_data_url")),
+            "image_1920": decoded_images[0] if decoded_images else False,
         })
+        self._apply_gallery_to_product(product, decoded_images)
 
         return self._json_response({
             "ok": True,
@@ -586,6 +670,9 @@ class ProductApiController(http.Controller):
         payload = request.httprequest.get_json(silent=True) or {}
         previous_moderation_status = product.moderation_status
         previous_moderation_reason = product.moderation_reason
+        decoded_images, image_error = self._extract_image_payload(payload, require_images=False)
+        if image_error:
+            return image_error
 
         vals = {}
 
@@ -606,9 +693,6 @@ class ProductApiController(http.Controller):
         if "description_sale" in payload:
             vals["description_sale"] = payload.get("description_sale") or ""
 
-        if "image_data_url" in payload:
-            vals["image_1920"] = self._decode_image_data_url(payload.get("image_data_url"))
-
         if "moderation_status" in payload:
             vals["moderation_status"] = payload.get("moderation_status") or "pending"
             vals["moderation_updated_at"] = fields.Datetime.now()
@@ -627,11 +711,15 @@ class ProductApiController(http.Controller):
             vals["company_id"] = company_id
 
         if not vals:
-            return self._json_response(
-                {"ok": False, "error": "No fields to update"}, 400
-            )
+            if decoded_images is None:
+                return self._json_response(
+                    {"ok": False, "error": "No fields to update"}, 400
+                )
 
-        product.write(vals)
+        if vals:
+            product.write(vals)
+        if decoded_images is not None:
+            self._apply_gallery_to_product(product, decoded_images)
         if (
             "moderation_status" in vals
             and vals["moderation_status"] in ("approved", "rejected")

@@ -46,6 +46,7 @@ export type ApiProductRecord = {
   list_price: number;
   description_sale?: string;
   image_url?: string | null;
+  image_urls?: string[];
 };
 
 export type ApiProductResponse = {

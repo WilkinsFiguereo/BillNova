@@ -22,8 +22,11 @@ const defaultForm: Partial<Producto> = {
   precio: 0,
   costo: 0,
   proveedor: "",
-  imageDataUrl: "",
+  imageDataUrls: [],
 };
+
+const MAX_IMAGES = 5;
+const MIN_IMAGES = 1;
 
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -88,7 +91,7 @@ export default function ProductosPage() {
       precio: p.precio,
       costo: p.costo,
       proveedor: p.proveedor,
-      imageDataUrl: p.imageUrl ?? "",
+      imageDataUrls: p.imageUrls ?? (p.imageUrl ? [p.imageUrl] : []),
     });
     setIsModalOpen(true);
   };
@@ -132,19 +135,44 @@ export default function ProductosPage() {
     URL.revokeObjectURL(url);
   };
 
-  const handleImageChange = async (file: File | null) => {
-    if (!file) return;
+  const handleImageChange = async (files: FileList | null) => {
+    if (!files?.length) return;
+    const currentImages = formValues.imageDataUrls ?? [];
+    const availableSlots = MAX_IMAGES - currentImages.length;
+    if (availableSlots <= 0) {
+      showToast("Solo puedes agregar hasta 5 imagenes.");
+      return;
+    }
+
     try {
-      const dataUrl = await readFileAsDataUrl(file);
-      setFormValues((prev) => ({ ...prev, imageDataUrl: dataUrl }));
+      const selectedFiles = Array.from(files).slice(0, availableSlots);
+      const nextImages = await Promise.all(selectedFiles.map(readFileAsDataUrl));
+      setFormValues((prev) => ({
+        ...prev,
+        imageDataUrls: [...(prev.imageDataUrls ?? []), ...nextImages].slice(0, MAX_IMAGES),
+      }));
+      if (files.length > availableSlots) {
+        showToast("Solo se cargaron las primeras 5 imagenes.");
+      }
     } catch (error: any) {
       showToast(error?.message ?? "No se pudo cargar la imagen.");
     }
   };
 
+  const removeImageAt = (index: number) => {
+    setFormValues((prev) => ({
+      ...prev,
+      imageDataUrls: (prev.imageDataUrls ?? []).filter((_, imageIndex) => imageIndex !== index),
+    }));
+  };
+
   const guardaryCerrar = async () => {
     if (!formValues.nombre?.trim()) {
       showToast("El nombre del producto es obligatorio");
+      return;
+    }
+    if ((formValues.imageDataUrls ?? []).length < MIN_IMAGES) {
+      showToast("Debes agregar al menos 1 imagen.");
       return;
     }
 
@@ -156,7 +184,7 @@ export default function ProductosPage() {
       stock: Number(formValues.stock ?? 0),
       categoria: formValues.categoria || "Electronica",
       proveedor: formValues.proveedor || "",
-      imageDataUrl: String(formValues.imageDataUrl ?? ""),
+      imageDataUrls: formValues.imageDataUrls ?? [],
     };
 
     try {
@@ -337,35 +365,49 @@ export default function ProductosPage() {
             <div style={{ padding: "4px 0 4px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                 <p style={{ fontSize: 10, fontWeight: 700, color: t.textDisabled, letterSpacing: "0.08em", textTransform: "uppercase", margin: 0 }}>
-                  Imagen principal
+                  Galeria de imagenes
                 </p>
                 <label className="btn-secondary" style={{ display: "inline-flex", cursor: "pointer" }}>
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={(e) => void handleImageChange(e.target.files?.[0] ?? null)}
+                    multiple
+                    onChange={(e) => {
+                      void handleImageChange(e.target.files);
+                      e.currentTarget.value = "";
+                    }}
                     style={{ display: "none" }}
                   />
-                  Subir imagen
+                  Subir imagenes
                 </label>
               </div>
+              <p style={{ margin: "0 0 10px", fontSize: 12, color: t.textSecondary }}>
+                Minimo {MIN_IMAGES}, maximo {MAX_IMAGES}. La primera sera la principal.
+              </p>
 
-              {formValues.imageDataUrl ? (
-                <div style={{ border: `1px solid ${t.border}`, borderRadius: 12, overflow: "hidden", background: "white" }}>
-                  <div style={{ height: 180, background: `url(${formValues.imageDataUrl}) center/cover no-repeat` }} />
-                  <div style={{ padding: 10, display: "flex", justifyContent: "flex-end" }}>
-                    <button
-                      className="btn-secondary"
-                      type="button"
-                      onClick={() => setFormValues((prev) => ({ ...prev, imageDataUrl: "" }))}
-                    >
-                      Quitar
-                    </button>
-                  </div>
+              {(formValues.imageDataUrls ?? []).length > 0 ? (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
+                  {(formValues.imageDataUrls ?? []).map((imageUrl, index) => (
+                    <div key={`${imageUrl}-${index}`} style={{ border: `1px solid ${t.border}`, borderRadius: 12, overflow: "hidden", background: "white" }}>
+                      <div style={{ height: 140, background: `url(${imageUrl}) center/cover no-repeat` }} />
+                      <div style={{ padding: 10, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 12, color: t.textSecondary }}>
+                          {index === 0 ? "Principal" : `Imagen ${index + 1}`}
+                        </span>
+                        <button
+                          className="btn-secondary"
+                          type="button"
+                          onClick={() => removeImageAt(index)}
+                        >
+                          Quitar
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <div style={{ padding: 14, border: `1px dashed ${t.border}`, borderRadius: 12, color: t.textSecondary, fontSize: 13 }}>
-                  No hay imagen cargada.
+                  No hay imagenes cargadas.
                 </div>
               )}
             </div>

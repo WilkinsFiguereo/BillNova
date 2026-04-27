@@ -20,8 +20,11 @@ const defaultForm: Partial<Servicio> = {
   precio: 0,
   pagoFrecuencia: "unico",
   status: "activo",
-  imageDataUrl: "",
+  imageDataUrls: [],
 };
+
+const MAX_IMAGES = 5;
+const MIN_IMAGES = 1;
 
 function labelFrecuencia(v: PagoFrecuencia) {
   const map: Record<PagoFrecuencia, string> = {
@@ -94,7 +97,7 @@ export default function ServiciosPage() {
       precio: s.precio,
       pagoFrecuencia: s.pagoFrecuencia,
       status: s.status,
-      imageDataUrl: s.imageUrl ?? "",
+      imageDataUrls: s.imageUrls ?? (s.imageUrl ? [s.imageUrl] : []),
     });
     setIsModalOpen(true);
   };
@@ -150,14 +153,34 @@ export default function ServiciosPage() {
     [],
   );
 
-  const handleImageChange = async (file: File | null) => {
-    if (!file) return;
+  const handleImageChange = async (files: FileList | null) => {
+    if (!files?.length) return;
+    const currentImages = formValues.imageDataUrls ?? [];
+    const availableSlots = MAX_IMAGES - currentImages.length;
+    if (availableSlots <= 0) {
+      showToast("Solo puedes agregar hasta 5 imagenes.");
+      return;
+    }
     try {
-      const dataUrl = await readFileAsDataUrl(file);
-      setFormValues((prev) => ({ ...prev, imageDataUrl: dataUrl }));
+      const selectedFiles = Array.from(files).slice(0, availableSlots);
+      const nextImages = await Promise.all(selectedFiles.map(readFileAsDataUrl));
+      setFormValues((prev) => ({
+        ...prev,
+        imageDataUrls: [...(prev.imageDataUrls ?? []), ...nextImages].slice(0, MAX_IMAGES),
+      }));
+      if (files.length > availableSlots) {
+        showToast("Solo se cargaron las primeras 5 imagenes.");
+      }
     } catch (e: any) {
       showToast(e?.message ?? "No se pudo cargar la imagen.");
     }
+  };
+
+  const removeImageAt = (index: number) => {
+    setFormValues((prev) => ({
+      ...prev,
+      imageDataUrls: (prev.imageDataUrls ?? []).filter((_, imageIndex) => imageIndex !== index),
+    }));
   };
 
   const guardaryCerrar = async () => {
@@ -169,6 +192,10 @@ export default function ServiciosPage() {
       showToast("La descripcion es obligatoria");
       return;
     }
+    if ((formValues.imageDataUrls ?? []).length < MIN_IMAGES) {
+      showToast("Debes agregar al menos 1 imagen.");
+      return;
+    }
 
     const payload: Partial<Servicio> = {
       nombre: String(formValues.nombre ?? "").trim(),
@@ -177,7 +204,7 @@ export default function ServiciosPage() {
       precio: Number(formValues.precio ?? 0),
       pagoFrecuencia: (formValues.pagoFrecuencia as PagoFrecuencia) ?? "unico",
       status: (formValues.status as ServicioStatus) ?? "activo",
-      imageDataUrl: String(formValues.imageDataUrl ?? ""),
+      imageDataUrls: formValues.imageDataUrls ?? [],
     };
 
     try {
@@ -315,34 +342,48 @@ export default function ServiciosPage() {
 
             <div style={{ gridColumn: "span 2" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <div style={{ fontWeight: 600 }}>Imagen principal</div>
+                <div style={{ fontWeight: 600 }}>Galeria de imagenes</div>
                 <label className="btn-secondary" style={{ display: "inline-flex", gap: 8, alignItems: "center", cursor: "pointer" }}>
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={(e) => void handleImageChange(e.target.files?.[0] ?? null)}
+                    multiple
+                    onChange={(e) => {
+                      void handleImageChange(e.target.files);
+                      e.currentTarget.value = "";
+                    }}
                     style={{ display: "none" }}
                   />
-                  Subir imagen
+                  Subir imagenes
                 </label>
               </div>
+              <p style={{ margin: "0 0 10px", fontSize: 12, color: t.textSecondary }}>
+                Minimo {MIN_IMAGES}, maximo {MAX_IMAGES}. La primera sera la principal.
+              </p>
 
-              {formValues.imageDataUrl ? (
-                <div style={{ border: `1px solid ${t.border}`, borderRadius: 12, overflow: "hidden", background: "white" }}>
-                  <div style={{ height: 180, background: `url(${formValues.imageDataUrl}) center/cover no-repeat` }} />
-                  <div style={{ padding: 10, display: "flex", justifyContent: "flex-end" }}>
-                    <button
-                      className="icon-btn danger"
-                      type="button"
-                      onClick={() => setFormValues((prev) => ({ ...prev, imageDataUrl: "" }))}
-                    >
-                      Quitar
-                    </button>
-                  </div>
+              {(formValues.imageDataUrls ?? []).length > 0 ? (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
+                  {(formValues.imageDataUrls ?? []).map((imageUrl, index) => (
+                    <div key={`${imageUrl}-${index}`} style={{ border: `1px solid ${t.border}`, borderRadius: 12, overflow: "hidden", background: "white" }}>
+                      <div style={{ height: 140, background: `url(${imageUrl}) center/cover no-repeat` }} />
+                      <div style={{ padding: 10, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 12, color: t.textSecondary }}>
+                          {index === 0 ? "Principal" : `Imagen ${index + 1}`}
+                        </span>
+                        <button
+                          className="icon-btn danger"
+                          type="button"
+                          onClick={() => removeImageAt(index)}
+                        >
+                          Quitar
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <div style={{ padding: 14, border: `1px dashed ${t.border}`, borderRadius: 12, color: t.textSecondary, fontSize: 13 }}>
-                  No hay imagen cargada.
+                  No hay imagenes cargadas.
                 </div>
               )}
             </div>

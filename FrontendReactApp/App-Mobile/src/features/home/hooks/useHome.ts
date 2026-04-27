@@ -11,6 +11,7 @@ type ServiceApiItem = {
   price?: number;
   payment_frequency?: string;
   image_url?: string | null;
+  image_urls?: string[];
   moderation_status?: string;
   company_name?: string;
   create_date?: string | null;

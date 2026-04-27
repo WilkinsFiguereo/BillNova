@@ -9,6 +9,7 @@ export interface Product {
   category?: string;
   category_name?: string;
   image_url?: string;
+  image_urls?: string[];
   description?: string;
   description_sale?: string;
   company_name?: string;

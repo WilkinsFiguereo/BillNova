@@ -1,21 +1,18 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { FileText, Plus } from "lucide-react";
 import { dashboardTheme as t } from "../theme/dashboard.theme";
 
 interface SalesChartSectionProps {
   fechaLabel: string;
   resumenLabel: string;
-  onNewInvoice: () => void;
-  onAddProduct: () => void;
 }
 
 export function SalesChartSection({
   fechaLabel,
   resumenLabel,
-  onNewInvoice,
-  onAddProduct,
 }: SalesChartSectionProps) {
   return (
     <div
@@ -47,12 +44,12 @@ export function SalesChartSection({
       </div>
 
       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-        <button className="btn-secondary" onClick={onNewInvoice}>
-          <FileText size={15} /> Nueva Factura
-        </button>
-        <button className="btn-primary" onClick={onAddProduct}>
+        <Link href="/navigation/seller/bill" className="btn-secondary">
+          <FileText size={15} /> Ver Factura
+        </Link>
+        <Link href="/navigation/seller/product" className="btn-primary">
           <Plus size={15} /> Agregar Producto
-        </button>
+        </Link>
       </div>
     </div>
   );

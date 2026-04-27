@@ -9,7 +9,10 @@ function mapApiProductToDetail(product: ApiProductRecord): Product {
   const base = Number(product.list_price || 0);
   const original = Number((base * 1.2).toFixed(2));
   const discount = base > 0 ? Math.round((1 - base / original) * 100) : undefined;
-  const primaryImage = product.image_url || `https://picsum.photos/seed/prod-${product.id}-1/900/900`;
+  const imageUris = Array.isArray(product.image_urls) && product.image_urls.length > 0
+    ? product.image_urls
+    : [product.image_url || `https://picsum.photos/seed/prod-${product.id}-1/900/900`];
+  const primaryImage = imageUris[0];
 
   return {
     id: String(product.id),
@@ -25,11 +28,7 @@ function mapApiProductToDetail(product: ApiProductRecord): Product {
     inStock: true,
     category: 'General',
     tags: ['catalogo', 'destacado', 'api'],
-    images: [
-      { id: `img-${product.id}-1`, uri: primaryImage },
-      { id: `img-${product.id}-2`, uri: primaryImage },
-      { id: `img-${product.id}-3`, uri: primaryImage },
-    ],
+    images: imageUris.map((uri, index) => ({ id: `img-${product.id}-${index + 1}`, uri })),
     colors: ['#111827', '#1D4ED8', '#DC2626', '#F8FAFC'],
     sizes: ['S', 'M', 'L', 'XL'],
     reviews: [
@@ -59,11 +58,14 @@ type ApiServiceRecord = {
   price?: number;
   payment_frequency?: string;
   image_url?: string | null;
+  image_urls?: string[];
 };
 
 function mapApiServiceToDetail(service: ApiServiceRecord): Product {
   const base = Number(service.price || 0);
-  const primaryImage = service.image_url || `https://picsum.photos/seed/service-${service.id}-1/900/900`;
+  const imageUris = Array.isArray(service.image_urls) && service.image_urls.length > 0
+    ? service.image_urls
+    : [service.image_url || `https://picsum.photos/seed/service-${service.id}-1/900/900`];
   const paymentMap: Record<string, string> = {
     unico: 'Pago unico',
     diario: 'Pago diario',
@@ -86,10 +88,7 @@ function mapApiServiceToDetail(service: ApiServiceRecord): Product {
     inStock: true,
     category: 'Servicios',
     tags: ['servicio', service.payment_frequency || 'unico'],
-    images: [
-      { id: `srv-${service.id}-1`, uri: primaryImage },
-      { id: `srv-${service.id}-2`, uri: primaryImage },
-    ],
+    images: imageUris.map((uri, index) => ({ id: `srv-${service.id}-${index + 1}`, uri })),
     colors: ['#1D4ED8'],
     sizes: ['Plan'],
     reviews: [],
