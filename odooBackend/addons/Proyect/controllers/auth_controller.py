@@ -19,35 +19,171 @@ GOOGLE_USERINFO_ENDPOINT = 'https://openidconnect.googleapis.com/v1/userinfo'
 
 
 class AuthApiController(http.Controller):
-    def _get_request_session_token(self):
+    def _get_api_token_secret(self):
+        config = request.env['ir.config_parameter'].sudo()
         return (
+            config.get_param('database.secret')
+            or config.get_param('database.uuid')
+            or 'billnova-mobile-api-token'
+        )
+
+    def _build_mobile_api_token(self, user):
+        payload = {
+            'uid': user.id,
+            'login': user.login,
+            'iat': int(time.time()),
+        }
+        payload_raw = json_lib.dumps(payload, separators=(',', ':')).encode()
+        payload_b64 = base64.urlsafe_b64encode(payload_raw).decode().rstrip('=')
+        signature = hmac.new(
+            self._get_api_token_secret().encode(),
+            payload_b64.encode(),
+            hashlib.sha256,
+        ).hexdigest()
+        return f"m.{payload_b64}.{signature}"
+
+    def _parse_mobile_api_token(self, token):
+        if not token or not token.startswith('m.'):
+            return None
+
+        try:
+            _, payload_b64, signature = token.split('.', 2)
+        except ValueError:
+            return None
+
+        expected_signature = hmac.new(
+            self._get_api_token_secret().encode(),
+            payload_b64.encode(),
+            hashlib.sha256,
+        ).hexdigest()
+        if not hmac.compare_digest(signature, expected_signature):
+            return None
+
+        try:
+            padded = payload_b64 + '=' * (-len(payload_b64) % 4)
+            payload = json_lib.loads(base64.urlsafe_b64decode(padded.encode()).decode())
+        except Exception:
+            return None
+
+        issued_at = int(payload.get('iat') or 0)
+        if not issued_at or abs(int(time.time()) - issued_at) > 60 * 60 * 24 * 30:
+            return None
+
+        uid = int(payload.get('uid') or 0)
+        login = payload.get('login')
+        if not uid or not login:
+            return None
+
+        return payload
+
+    def _mask_token(self, token):
+        value = (token or '').strip()
+        if not value:
+            return None
+        if len(value) <= 12:
+            return value
+        return f"{value[:8]}...{value[-4:]}"
+
+    def _log_request_auth_context(self, label, *, include_token=True):
+        auth_header = request.httprequest.headers.get('Authorization')
+        header_token = request.httprequest.headers.get('X-Auth-Session') or request.httprequest.headers.get('x-auth-session')
+        query_token = request.httprequest.args.get('session_token') or request.httprequest.args.get('session_id')
+        resolved_token = self._get_request_session_token() if include_token else None
+        _logger.info(
+            "[AUTH TRACE][%s] path=%s method=%s origin=%s has_auth_header=%s auth_scheme=%s has_x_auth=%s has_query_token=%s resolved_token=%s session_sid=%s session_uid=%s session_login=%s session_db=%s",
+            label,
+            request.httprequest.path,
+            request.httprequest.method,
+            request.httprequest.headers.get('Origin'),
+            bool(auth_header),
+            auth_header.split(' ', 1)[0] if auth_header else None,
+            bool(header_token),
+            bool(query_token),
+            self._mask_token(resolved_token),
+            getattr(request.session, 'sid', None),
+            getattr(request.session, 'uid', None),
+            getattr(request.session, 'login', None),
+            getattr(request.session, 'db', None),
+        )
+
+    def _get_request_session_token(self):
+        token = (
             request.httprequest.headers.get('X-Auth-Session')
             or request.httprequest.headers.get('x-auth-session')
             or request.httprequest.args.get('session_token')
             or request.httprequest.args.get('session_id')
         )
 
+        if not token:
+            # Check Authorization header for Bearer token
+            auth_header = request.httprequest.headers.get('Authorization')
+            if auth_header and auth_header.startswith('Bearer '):
+                token = auth_header[7:].strip()  # Remove 'Bearer ' prefix
+
+        return token
+
     def _ensure_session_from_request(self):
+        self._log_request_auth_context('ensure_session:start')
         if getattr(request.session, "uid", None):
+            _logger.info(
+                "[AUTH TRACE][ensure_session:skip] session already present sid=%s uid=%s login=%s",
+                getattr(request.session, 'sid', None),
+                getattr(request.session, 'uid', None),
+                getattr(request.session, 'login', None),
+            )
             return getattr(request.session, "uid", None)
 
         token = self._get_request_session_token()
         if not token:
+            _logger.warning("[AUTH TRACE][ensure_session:missing_token] no token found in request")
             return None
 
         try:
             stored_session = root.session_store.get(token)
         except Exception as error:
-            _logger.warning("No se pudo leer la sesion %s desde session_store: %s", token, error)
-            return None
+            _logger.warning("No se pudo leer la sesion %s desde session_store: %s", self._mask_token(token), error)
+            stored_session = None
 
         if not stored_session:
-            _logger.warning("No se encontro sesion activa para token %s", token)
-            return None
+            token_payload = self._parse_mobile_api_token(token)
+            if not token_payload:
+                _logger.warning("No se encontro sesion activa para token %s", self._mask_token(token))
+                return None
+
+            uid = int(token_payload['uid'])
+            user = request.env['res.users'].sudo().with_context(active_test=False).browse(uid)
+            if not user.exists() or not user.active:
+                _logger.warning("Token movil valido pero usuario no disponible uid=%s token=%s", uid, self._mask_token(token))
+                return None
+
+            request.session.uid = user.id
+            request.session.login = user.login
+            try:
+                request.session.db = TARGET_DB
+            except Exception:
+                pass
+            try:
+                request.session.session_token = token
+            except Exception:
+                pass
+
+            _logger.info(
+                "Sesion restaurada desde token movil token=%s uid=%s login=%s",
+                self._mask_token(token),
+                user.id,
+                user.login,
+            )
+            return user.id
 
         uid = getattr(stored_session, "uid", None)
         if not uid:
-            _logger.warning("La sesion %s existe pero no tiene uid", token)
+            _logger.warning(
+                "La sesion %s existe pero no tiene uid sid=%s login=%s db=%s",
+                self._mask_token(token),
+                getattr(stored_session, 'sid', None),
+                getattr(stored_session, 'login', None),
+                getattr(stored_session, 'db', None),
+            )
             return None
 
         request.session.uid = uid
@@ -64,13 +200,31 @@ class AuthApiController(http.Controller):
             pass
 
         _logger.info(
-            "Sesion restaurada desde header token=%s uid=%s login=%s db=%s",
-            token,
+            "Sesion restaurada desde header token=%s sid=%s uid=%s login=%s db=%s",
+            self._mask_token(token),
+            getattr(stored_session, "sid", None),
             uid,
             getattr(stored_session, "login", None),
             getattr(stored_session, "db", None),
         )
         return uid
+
+    def _persist_request_session(self):
+        save_fn = getattr(root.session_store, "save", None)
+        if not callable(save_fn):
+            _logger.warning("session_store.save no esta disponible; no se pudo forzar persistencia de sesion")
+            return
+
+        try:
+            save_fn(request.session)
+            _logger.info(
+                "Sesion persistida manualmente sid=%s uid=%s login=%s",
+                getattr(request.session, "sid", None),
+                getattr(request.session, "uid", None),
+                getattr(request.session, "login", None),
+            )
+        except Exception as error:
+            _logger.warning("No se pudo persistir manualmente la sesion %s: %s", getattr(request.session, "sid", None), error)
 
     def _serialize_res_user_debug(self, user):
         return {
@@ -831,6 +985,7 @@ class AuthApiController(http.Controller):
         if request.httprequest.method == 'OPTIONS':
             return self._options_response()
 
+        self._log_request_auth_context('login:start', include_token=False)
         _logger.info("LOGIN DEBUG - Headers: %s", dict(request.httprequest.headers))
 
         try:
@@ -857,6 +1012,14 @@ class AuthApiController(http.Controller):
 
         found_user = self._find_res_user(login)
         auth_login = found_user.login if found_user and found_user.exists() else login
+        _logger.info(
+            "[AUTH TRACE][login:payload] requested_login=%s resolved_auth_login=%s found_user=%s found_user_id=%s active=%s",
+            login,
+            auth_login,
+            bool(found_user and found_user.exists()),
+            found_user.id if found_user and found_user.exists() else None,
+            bool(found_user.active) if found_user and found_user.exists() else None,
+        )
 
         if found_user and found_user.exists() and not found_user.active:
             try:
@@ -929,20 +1092,21 @@ class AuthApiController(http.Controller):
         except Exception:
             pass
 
-        _logger.info("LOGIN OK - UID: %s", request.session.uid)
-
-        session_id = getattr(request.session, "sid", None)
-        session_token = getattr(request.session, "session_token", None) or session_id
-        try:
-            if hasattr(request.session, "session_token") and not getattr(request.session, "session_token", None):
-                request.session.session_token = session_token
-        except Exception:
-            pass
-
         user = self._get_current_res_user()
         mobile_user = self._get_current_billnova_user(user)
         user_role = mobile_user.role if mobile_user else 'seller'
         company_id = self._get_effective_company_id(user=user, mobile_user=mobile_user)
+        _logger.info("LOGIN OK - UID: %s", request.session.uid)
+
+        session_id = getattr(request.session, "sid", None)
+        session_token = self._build_mobile_api_token(user)
+        try:
+            request.session.session_token = session_token
+        except Exception:
+            pass
+
+        self._persist_request_session()
+        self._log_request_auth_context('login:after_persist')
         self._log_session_snapshot('login', user, mobile_user, user_role, company_id, session_id, session_token)
 
         return self._json_response({
@@ -1157,12 +1321,13 @@ class AuthApiController(http.Controller):
             pass
 
         session_id = getattr(request.session, "sid", None)
-        session_token = getattr(request.session, "session_token", None) or session_id
+        session_token = self._build_mobile_api_token(user)
         try:
-            if hasattr(request.session, "session_token") and not getattr(request.session, "session_token", None):
-                request.session.session_token = session_token
+            request.session.session_token = session_token
         except Exception:
             pass
+
+        self._persist_request_session()
 
         user_role = mobile_user.role if mobile_user else 'seller'
         company_id = self._get_effective_company_id(user=user, mobile_user=mobile_user)
@@ -1180,6 +1345,82 @@ class AuthApiController(http.Controller):
             session_id=session_id,
             session_token=session_token,
         )
+
+    @http.route('/api/auth/google/mobile/token-login', type='http', auth='public', methods=['POST', 'OPTIONS'], csrf=False)
+    def google_mobile_token_login(self):
+        if request.httprequest.method == 'OPTIONS':
+            return self._options_response()
+
+        payload = request.httprequest.get_json(silent=True) or {}
+        access_token = payload.get('access_token')
+
+        if not access_token:
+            return self._json_response({'ok': False, 'error': 'access_token requerido'}, status=400)
+
+        oauth_config = self._get_google_oauth_config()
+        if not oauth_config.get('userinfo_endpoint'):
+            return self._json_response({'ok': False, 'error': 'Google OAuth no esta configurado en Odoo.'}, status=503)
+
+        try:
+            profile_response = requests.get(
+                oauth_config['userinfo_endpoint'],
+                headers={'Authorization': f'Bearer {access_token}'},
+                timeout=15,
+            )
+            profile_response.raise_for_status()
+            profile = profile_response.json()
+        except Exception as profile_error:
+            _logger.exception("Fallo la validacion directa del token de Google: %s", profile_error)
+            return self._json_response({'ok': False, 'error': 'No se pudo validar la cuenta de Google.'}, status=401)
+
+        email = profile.get('email')
+        if not email:
+            return self._json_response({'ok': False, 'error': 'Google no devolvio un correo electronico.'}, status=400)
+        if profile.get('email_verified') is False:
+            return self._json_response({'ok': False, 'error': 'El correo de Google no esta verificado.'}, status=403)
+
+        user, mobile_user = self._upsert_google_mobile_user(
+            name=profile.get('name') or email,
+            email=email,
+        )
+
+        rotate_fn = getattr(request.session, "rotate", None)
+        if callable(rotate_fn):
+            try:
+                rotate_fn()
+            except Exception:
+                pass
+
+        request.session.uid = user.id
+        request.session.login = user.login
+        try:
+            request.session.db = TARGET_DB
+        except Exception:
+            pass
+
+        session_id = getattr(request.session, "sid", None)
+        session_token = self._build_mobile_api_token(user)
+        try:
+            request.session.session_token = session_token
+        except Exception:
+            pass
+
+        self._persist_request_session()
+
+        user_role = mobile_user.role if mobile_user else 'seller'
+        company_id = self._get_effective_company_id(user=user, mobile_user=mobile_user)
+        self._log_session_snapshot('google_mobile_token_login', user, mobile_user, user_role, company_id, session_id, session_token)
+
+        return self._json_response({
+            'ok': True,
+            'uid': user.id,
+            'name': user.name,
+            'email': user.email,
+            'role': user_role,
+            'company_id': company_id,
+            'session_id': session_id,
+            'session_token': session_token,
+        }, status=200)
 
     @http.route('/api/auth/verify-email', type='http', auth='public', methods=['POST', 'OPTIONS'], csrf=False)
     def verify_email(self):
@@ -1240,6 +1481,7 @@ class AuthApiController(http.Controller):
         if request.httprequest.method == 'OPTIONS':
             return self._options_response()
 
+        self._log_request_auth_context('session:start')
         user = self._get_current_res_user()
         _logger.info("=== API SESSION DEBUG ===")
         _logger.info("USER: %s", user.name if user else "None")
@@ -1258,7 +1500,7 @@ class AuthApiController(http.Controller):
         company_id = self._get_effective_company_id(user=user, mobile_user=mobile_user)
 
         session_id = getattr(request.session, "sid", None)
-        session_token = getattr(request.session, "session_token", None) or session_id
+        session_token = self._build_mobile_api_token(user)
         self._log_session_snapshot('session', user, mobile_user, user_role, company_id, session_id, session_token)
 
         return self._json_response({

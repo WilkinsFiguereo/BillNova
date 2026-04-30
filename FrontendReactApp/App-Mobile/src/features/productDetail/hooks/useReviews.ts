@@ -107,8 +107,6 @@ export function useReviews(productId: number | null): UseReviewsReturn {
   }, [resolvedProductId, refreshKey]);
 
   // ── submit ─────────────────────────────────────────────────────────────────
-  // ⚠️  odooClient envía JSON, pero Odoo con **kwargs espera form-urlencoded.
-  //     Hacemos el fetch directamente con el Content-Type correcto.
   const submitReview = useCallback(async (rating: number, comment: string): Promise<boolean> => {
     if (!resolvedProductId) {
       console.warn(`${LOG} submitReview called without productId`);
@@ -129,38 +127,24 @@ export function useReviews(productId: number | null): UseReviewsReturn {
     console.log(`${LOG} POST body: ${body}`);
 
     try {
-      const response = await fetch(url, {
-        method:  'POST',
+      const { data, error, status } = await odooClient.request<SubmitResponse>(endpoint, {
+        method: 'POST',
+        rawBody: body,
+        accept: 'application/json',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'Accept':       'application/json',
         },
-        body,
-        credentials: 'omit',
+        timeoutMs: 30000,
       });
 
-      console.log(`${LOG} POST status=${response.status}`);
-      console.log(`${LOG} POST response headers:`, JSON.stringify(
-        Object.fromEntries(response.headers.entries()), null, 2
-      ));
+      console.log(`${LOG} POST status=${status}`);
+      console.log(`${LOG} POST data=`, JSON.stringify(data, null, 2));
 
-      const text = await response.text();
-      console.log(`${LOG} POST raw response: ${text.slice(0, 500)}`);
-
-      let data: SubmitResponse;
-      try {
-        data = JSON.parse(text);
-      } catch {
-        console.error(`${LOG} POST response is not JSON. Raw: ${text.slice(0, 200)}`);
-        setSubmitError('Server returned an invalid response');
-        return false;
-      }
-
-      if (!response.ok || !data.ok) {
+      if (error || !data?.ok) {
         const msg =
-          typeof data.error === 'object'
+          typeof data?.error === 'object'
             ? Object.values(data.error).join(' ')
-            : data.error ?? `HTTP ${response.status}`;
+            : data?.error ?? error ?? `HTTP ${status}`;
         console.warn(`${LOG} POST failed: ${msg}`);
         setSubmitError(msg);
         return false;
@@ -175,7 +159,6 @@ export function useReviews(productId: number | null): UseReviewsReturn {
       return true;
 
     } catch (err) {
-      // Este es el "Network request failed" — logueamos todo lo posible
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`${LOG} POST network error: ${msg}`);
       console.error(`${LOG} Full error object:`, err);

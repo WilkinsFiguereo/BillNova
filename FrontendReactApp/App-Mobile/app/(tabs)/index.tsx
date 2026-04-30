@@ -1,11 +1,11 @@
 import { useRouter } from 'expo-router';
 import { HomeScreen } from '../../src/features/home/HomeScreen';
-import { useCart } from '../../src/features/cart/hooks/useCart';
+import { useAddToCart } from '../../src/features/cart/hooks/useAddToCart';
 import type { Product } from '../../src/features/home/types/home.types';
 
 export default function HomeTab() {
   const router = useRouter();
-  const { addToCart } = useCart();
+  const { add } = useAddToCart();
 
   const handleProductPress = (product: Product) => {
     router.push(`./product-detail/${product.id}`);
@@ -16,7 +16,7 @@ export default function HomeTab() {
   };
 
   const handleAddToCart = (product: Product) => {
-    addToCart({ product, quantity: 1 });
+    add({ product, quantity: 1 });
   };
 
   return (

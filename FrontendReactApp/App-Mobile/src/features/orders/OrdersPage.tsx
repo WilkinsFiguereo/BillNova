@@ -23,11 +23,13 @@ import { RightDrawer } from '../navigation/ui/rightDrawer';
 import { DrawerOverlay } from '../navigation/ui/overLay';
 import { OrderDetailModal } from './ui/OrderDetailModal';
 import { useNavDrawer } from '../navigation/hooks/useNavDrawer';
+import { tokenStorage } from '../../core/storage/tokenStorage';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Buffer } from 'buffer';
 import * as Sharing from 'expo-sharing';
 
 const BASE_URL = (process.env.EXPO_PUBLIC_ODOO_URL ?? 'https://jwfn4vcd-8079.use2.devtunnels.ms/').replace(/\/+$/, '');
+const INVOICE_TIMEOUT_MS = Number(process.env.EXPO_PUBLIC_ODOO_TIMEOUT_MS ?? 20000) + 15000;
 
 type Props = {
   onMenuPress: () => void;
@@ -147,14 +149,26 @@ export function OrdersPage({
     if (!selectedOrder) return;
 
     const invoiceUrl = `${BASE_URL}/api/pos/order/${selectedOrder.id}/invoice`;
+    const token = await tokenStorage.getToken();
+    const headers: Record<string, string> = {};
+
+    if (token) {
+      headers['X-Auth-Session'] = token;
+      headers.Authorization = `Bearer ${token}`;
+    }
 
     // If no invoice, try to create it first
     if (!selectedOrder.invoice) {
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), INVOICE_TIMEOUT_MS);
         const createResponse = await fetch(invoiceUrl, {
           method: 'POST',
+          headers,
           credentials: 'include',
+          signal: controller.signal,
         });
+        clearTimeout(timeoutId);
         if (!createResponse.ok) {
           throw new Error('No se pudo crear la factura');
         }
@@ -167,7 +181,14 @@ export function OrdersPage({
     }
 
     try {
-      const response = await fetch(invoiceUrl, { credentials: 'include' });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), INVOICE_TIMEOUT_MS);
+      const response = await fetch(invoiceUrl, {
+        headers,
+        credentials: 'include',
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
       if (!response.ok) {
         throw new Error('No se pudo descargar la factura');
       }

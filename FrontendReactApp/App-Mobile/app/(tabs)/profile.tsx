@@ -12,6 +12,7 @@ import {
 import { useRouter } from 'expo-router';
 
 import { profileApi } from '../../src/features/profile/api/profileApi';
+import { tokenStorage } from '../../src/core/storage/tokenStorage';
 import type { MobileProfile } from '../../src/features/profile/types/profile.types';
 import { useAuth, useLogout } from '../../src/features/auth/hooks/useAuth';
 import { colors } from '../../src/shared/theme/colors';
@@ -80,20 +81,47 @@ export default function ProfileTab() {
   const [error, setError] = useState<string | null>(null);
 
   const loadProfile = useCallback(async () => {
+    const [token, storedUser] = await Promise.all([
+      tokenStorage.getToken(),
+      tokenStorage.getUser(),
+    ]);
+
+    console.log('[mobile][profile] loadProfile start', {
+      authUser: user
+        ? {
+            uid: user.uid,
+            login: user.login,
+            name: user.name,
+            company_id: user.company_id ?? null,
+          }
+        : null,
+      hasToken: Boolean(token),
+      tokenPreview: token ? `${token.slice(0, 12)}...` : null,
+      storedUser,
+    });
+
     setLoading(true);
     setError(null);
 
     const { data, error: requestError } = await profileApi.getCurrent();
     if (!data?.ok || !data.data) {
+      console.log('[mobile][profile] loadProfile failed', {
+        requestError,
+        dataError: data?.error ?? null,
+        statusOk: data?.ok ?? null,
+      });
       setError(requestError ?? data?.error ?? 'No se pudo cargar tu perfil.');
       setLoading(false);
       return;
     }
 
+    console.log('[mobile][profile] loadProfile success', {
+      profile: data.data,
+    });
     setProfile(data.data);
     setForm(emptyForm(data.data));
     setLoading(false);
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     void loadProfile();
@@ -134,13 +162,28 @@ export default function ProfileTab() {
       password: form.password.trim() || undefined,
     };
 
+    console.log('[mobile][profile] handleSave start', {
+      payload: {
+        ...payload,
+        password: payload.password ? '***' : undefined,
+      },
+    });
+
     const { data, error: requestError } = await profileApi.updateCurrent(payload);
     if (!data?.ok || !data.data) {
+      console.log('[mobile][profile] handleSave failed', {
+        requestError,
+        dataError: data?.error ?? null,
+        statusOk: data?.ok ?? null,
+      });
       setSaving(false);
       setError(requestError ?? data?.error ?? 'No se pudo guardar tu perfil.');
       return;
     }
 
+    console.log('[mobile][profile] handleSave success', {
+      profile: data.data,
+    });
     setProfile(data.data);
     setForm(emptyForm(data.data));
     await updateUser({

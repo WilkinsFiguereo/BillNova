@@ -1,13 +1,13 @@
 import React, { useEffect } from "react";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { ProductsScreen } from "../../src/features/products/ProductsScreen";
-import { useCart } from "../../src/features/cart/hooks/useCart";
+import { useAddToCart } from "../../src/features/cart/hooks/useAddToCart";
 import type { Product } from "../../src/features/home/types/home.types";
 
 export default function ProductsTab() {
   const router = useRouter();
   const params = useLocalSearchParams<{ category?: string }>();
-  const { addToCart } = useCart();
+  const { add } = useAddToCart();
 
   useEffect(() => {
     if (params.category) {
@@ -21,7 +21,7 @@ export default function ProductsTab() {
   };
 
   const handleAddToCart = (product: Product) => {
-    addToCart({ product, quantity: 1 });
+    add({ product, quantity: 1 });
   };
 
   return (

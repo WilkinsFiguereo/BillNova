@@ -32,23 +32,72 @@ class UserApiController(http.Controller):
     def _options_response(self):
         return Response(status=200, headers=self._cors_headers())
 
+    def _mask_token(self, token):
+        value = (token or '').strip()
+        if not value:
+            return None
+        if len(value) <= 12:
+            return value
+        return f"{value[:8]}...{value[-4:]}"
+
+    def _log_profile_request_context(self, label):
+        auth_controller = AuthApiController()
+        auth_header = request.httprequest.headers.get('Authorization')
+        header_token = request.httprequest.headers.get('X-Auth-Session') or request.httprequest.headers.get('x-auth-session')
+        query_token = request.httprequest.args.get('session_token') or request.httprequest.args.get('session_id')
+        resolved_token = auth_controller._get_request_session_token()
+        _logger.info(
+            "[PROFILE TRACE][%s] path=%s method=%s origin=%s has_auth_header=%s auth_scheme=%s has_x_auth=%s has_query_token=%s resolved_token=%s session_sid=%s session_uid=%s session_login=%s session_db=%s",
+            label,
+            request.httprequest.path,
+            request.httprequest.method,
+            request.httprequest.headers.get('Origin'),
+            bool(auth_header),
+            auth_header.split(' ', 1)[0] if auth_header else None,
+            bool(header_token),
+            bool(query_token),
+            self._mask_token(resolved_token),
+            getattr(request.session, 'sid', None),
+            getattr(request.session, 'uid', None),
+            getattr(request.session, 'login', None),
+            getattr(request.session, 'db', None),
+        )
+
     def _get_current_res_user(self):
+        self._log_profile_request_context('get_current_res_user:start')
         AuthApiController()._ensure_session_from_request()
         session_uid = getattr(request.session, 'uid', None)
         if session_uid:
             user = request.env['res.users'].sudo().with_context(active_test=False).browse(session_uid)
             if user.exists():
+                _logger.info(
+                    "[PROFILE TRACE][get_current_res_user:session] uid=%s login=%s active=%s company_id=%s",
+                    user.id,
+                    user.login,
+                    bool(user.active),
+                    user.company_id.id if user.company_id else None,
+                )
                 return user
 
         user = request.env.user
         if user and getattr(user, 'id', False):
             try:
                 if user._is_public():
+                    _logger.warning("[PROFILE TRACE][get_current_res_user:fallback] request.env.user is public")
                     return request.env['res.users']
             except Exception:
+                _logger.warning("[PROFILE TRACE][get_current_res_user:fallback] failed checking public user")
                 return request.env['res.users']
+            _logger.info(
+                "[PROFILE TRACE][get_current_res_user:fallback] uid=%s login=%s active=%s company_id=%s",
+                user.id,
+                user.login,
+                bool(user.active),
+                user.company_id.id if user.company_id else None,
+            )
             return user.sudo().with_context(active_test=False)
 
+        _logger.warning("[PROFILE TRACE][get_current_res_user:none] no session user resolved")
         return request.env['res.users']
 
     def _get_current_billnova_user(self):
@@ -507,11 +556,21 @@ class UserApiController(http.Controller):
         if request.httprequest.method == 'OPTIONS':
             return self._options_response()
 
+        self._log_profile_request_context('get_mobile_profile:start')
         res_user = self._get_current_res_user()
         if not res_user or not res_user.exists():
+            _logger.warning("[PROFILE TRACE][get_mobile_profile:unauthorized] no session user resolved")
             return self._json_response({'ok': False, 'error': 'No hay sesion activa'}, 401)
 
         billnova_user = self._get_current_billnova_user()
+        _logger.info(
+            "[PROFILE TRACE][get_mobile_profile:success] res_user_id=%s login=%s billnova_user_id=%s company_id=%s company_name=%s",
+            res_user.id,
+            res_user.login,
+            billnova_user.id if billnova_user and billnova_user.exists() else None,
+            billnova_user.company_id.id if billnova_user and billnova_user.exists() and billnova_user.company_id else None,
+            billnova_user.company_id.name if billnova_user and billnova_user.exists() and billnova_user.company_id else None,
+        )
         return self._json_response({
             'ok': True,
             'data': self._serialize_mobile_profile(billnova_user, res_user),
@@ -522,8 +581,10 @@ class UserApiController(http.Controller):
         if request.httprequest.method == 'OPTIONS':
             return self._options_response()
 
+        self._log_profile_request_context('update_mobile_profile:start')
         res_user = self._get_current_res_user()
         if not res_user or not res_user.exists():
+            _logger.warning("[PROFILE TRACE][update_mobile_profile:unauthorized] no session user resolved")
             return self._json_response({'ok': False, 'error': 'No hay sesion activa'}, 401)
 
         billnova_user = self._get_current_billnova_user()

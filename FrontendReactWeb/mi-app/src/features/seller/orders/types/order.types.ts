@@ -21,6 +21,7 @@ export interface Order {
   phone:   string;
   email?: string;
   invoiceStatus?: string;
+  orderState?: string;
   lines?: OrderLine[];
 }
 
@@ -37,3 +38,37 @@ export const ALL_STATUSES: OrderStatus[] = [
   "delivered",
   "cancelled",
 ];
+
+export function getNextOrderActions(order: Order): OrderStatus[] {
+  const actions: OrderStatus[] = [];
+
+  if (order.status !== "sent") {
+    actions.push("sent");
+  }
+  if (order.status !== "delivered") {
+    actions.push("delivered");
+  }
+  if (order.status !== "pending") {
+    actions.push("pending");
+  }
+  if (order.status !== "cancelled") {
+    actions.push("cancelled");
+  }
+
+  return actions;
+}
+
+export function getOrderStateForStatus(status: OrderStatus): string {
+  switch (status) {
+    case "pending":
+      return "draft";
+    case "sent":
+      return "paid";
+    case "delivered":
+      return "done";
+    case "cancelled":
+      return "cancel";
+    default:
+      return "";
+  }
+}

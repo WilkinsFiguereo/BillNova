@@ -80,14 +80,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
   const buildGoogleRedirectUri = useCallback(() => {
+    if (Platform.OS === 'android' || Platform.OS === 'ios') {
+      return 'appmobile://auth';
+    }
+
     const generatedUrl = Linking.createURL('/auth');
 
     if (generatedUrl) {
       return generatedUrl;
-    }
-
-    if (Platform.OS === 'android' || Platform.OS === 'ios') {
-      return 'appmobile://auth';
     }
 
     return '/auth';
@@ -95,14 +95,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     (async () => {
-      const [user, token] = await Promise.all([
-        tokenStorage.getUser<AuthUser>(),
-        tokenStorage.getToken(),
-      ]);
+      const persistedSession = await tokenStorage.getSession<AuthUser>();
+      const user = persistedSession?.user ?? null;
+      const token = persistedSession?.token ?? (await tokenStorage.getToken());
 
       console.log('[mobile][auth] restoring session', {
         hasStoredUser: Boolean(user),
         hasStoredToken: Boolean(token),
+        hasPersistedSession: Boolean(persistedSession),
       });
 
       if (token && user) {
@@ -130,7 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             company_name: user?.company_name,
           };
 
-          await tokenStorage.saveUser(restoredUser);
+          await tokenStorage.saveSession({ token, user: restoredUser });
           dispatch({ type: 'SET_SESSION', payload: { user: restoredUser, token } });
           return;
         }
@@ -284,9 +284,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const updateUser = useCallback(async (user: AuthUser) => {
-    await tokenStorage.saveUser(user);
+    if (state.token) {
+      await tokenStorage.saveSession({ token: state.token, user });
+    } else {
+      await tokenStorage.saveUser(user);
+    }
     dispatch({ type: 'UPDATE_USER', payload: user });
-  }, []);
+  }, [state.token]);
 
   const logout = useCallback(async () => {
     await authApi.logout();

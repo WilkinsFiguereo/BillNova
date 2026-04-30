@@ -6,7 +6,7 @@
 
 import { Ban, CheckCircle, Package, type LucideIcon } from "lucide-react";
 
-import { Order, OrderStatus } from "../types/order.types";
+import { getNextOrderActions, Order, OrderStatus } from "../types/order.types";
 
 import T from "../theme/ordersTheme";
 
@@ -66,19 +66,20 @@ export default function DetailModal({ order, onClose, onStatus }: Props) {
 
 
 
-  const nextActions: NextAction[] = (
-
-    [
-
-      order.status !== "sent"      && ["Marcar enviado",   "sent"      as OrderStatus, T.brand600, Package],
-
-      order.status !== "delivered" && ["Marcar entregado", "delivered" as OrderStatus, T.success, CheckCircle],
-
-      order.status !== "cancelled" && ["Cancelar envio",   "cancelled" as OrderStatus, T.error, Ban],
-
-    ] as (NextAction | false)[]
-
-  ).filter((a): a is NextAction => Boolean(a));
+  const nextActions: NextAction[] = getNextOrderActions(order).map((status) => {
+    switch (status) {
+      case "sent":
+        return ["Marcar enviado", status, T.brand600, Package];
+      case "delivered":
+        return ["Marcar entregado", status, T.success, CheckCircle];
+      case "cancelled":
+        return ["Cancelar envio", status, T.error, Ban];
+      case "pending":
+        return ["Volver a pendiente", status, T.warn, Package];
+      default:
+        return [status, status, T.text2, Package];
+    }
+  });
 
 
 

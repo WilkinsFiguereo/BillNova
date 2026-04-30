@@ -2,7 +2,7 @@
 // src/feature/orders/hooks/useOrders.ts
 
 import { useState, useCallback, useEffect } from "react";
-import { Order, OrderStatus } from "../types/order.types";
+import { getOrderStateForStatus, Order, OrderStatus } from "../types/order.types";
 import { fetchOrders, updateOrderStatus, deleteOrder, createOrder } from "../data/orderService";
 import mockOrders from "../data/mockOrders";
 
@@ -31,7 +31,13 @@ export function useOrders() {
   }, [loadOrders]);
 
   const updateStatus = useCallback(async (id: string, status: OrderStatus) => {
-    setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)));
+    setOrders((prev) =>
+      prev.map((o) => (
+        o.id === id
+          ? { ...o, status, orderState: getOrderStateForStatus(status) }
+          : o
+      ))
+    );
     try {
       await updateOrderStatus(id, status);
     } catch (err) {

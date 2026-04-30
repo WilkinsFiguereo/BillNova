@@ -9,8 +9,11 @@ type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 interface RequestOptions {
   method?: HttpMethod;
   body?: object;
+  rawBody?: BodyInit;
   requiresAuth?: boolean;
   accept?: string | false;
+  headers?: Record<string, string>;
+  timeoutMs?: number;
 }
 
 interface ApiResponse<T> {
@@ -35,10 +38,12 @@ async function executeRequest<T>(
   options: RequestOptions,
   attempt: number,
 ): Promise<ApiResponse<T>> {
-  const { method = 'GET', body, requiresAuth = false, accept } = options;
+  const { method = 'GET', body, rawBody, requiresAuth = false, accept, headers: customHeaders, timeoutMs } = options;
+  const fullUrl = `${BASE_URL}${endpoint}`;
+  const effectiveTimeoutMs = timeoutMs ?? REQUEST_TIMEOUT_MS;
 
-  const headers: Record<string, string> = {};
-  if (body) {
+  const headers: Record<string, string> = { ...(customHeaders ?? {}) };
+  if (body && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json';
   }
   if (accept) {
@@ -53,6 +58,7 @@ async function executeRequest<T>(
     }
     console.log('[mobile][odooClient] auth request', {
       endpoint,
+      fullUrl,
       method,
       requiresAuth,
       hasToken: Boolean(token),
@@ -62,12 +68,12 @@ async function executeRequest<T>(
   try {
     const controller = new AbortController();
     const startedAt = Date.now();
-    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    const timeoutId = setTimeout(() => controller.abort(), effectiveTimeoutMs);
     try {
       const response = await fetch(`${BASE_URL}${endpoint}`, {
         method,
         headers,
-        body: body ? JSON.stringify(body) : undefined,
+        body: body ? JSON.stringify(body) : rawBody,
         signal: controller.signal,
       });
 
@@ -79,6 +85,7 @@ async function executeRequest<T>(
         } catch (parseError) {
           console.log('[mobile][odooClient] invalid json response', {
             endpoint,
+            fullUrl,
             method,
             status: response.status,
             ok: response.ok,
@@ -95,9 +102,11 @@ async function executeRequest<T>(
       }
       console.log('[mobile][odooClient] response', {
         endpoint,
+        fullUrl,
         method,
         attempt,
         durationMs: Date.now() - startedAt,
+        timeoutMs: effectiveTimeoutMs,
         status: response.status,
         ok: response.ok,
         requiresAuth,
@@ -131,6 +140,7 @@ async function executeRequest<T>(
     if (method === 'GET' && isAbortError(err) && attempt < GET_RETRY_LIMIT) {
       console.log('[mobile][odooClient] retrying aborted request', {
         endpoint,
+        fullUrl,
         method,
         attempt,
         nextAttempt: attempt + 1,
@@ -140,14 +150,16 @@ async function executeRequest<T>(
 
     console.log('[mobile][odooClient] request error', {
       endpoint,
+      fullUrl,
       method,
       requiresAuth,
       attempt,
       error: err instanceof Error ? err.message : String(err),
+      timeoutMs: effectiveTimeoutMs,
     });
     const message =
       isAbortError(err)
-        ? `Tiempo de espera agotado en ${endpoint} (${REQUEST_TIMEOUT_MS} ms)`
+        ? `Tiempo de espera agotado en ${fullUrl} (${effectiveTimeoutMs} ms)`
         : err instanceof Error
           ? err.message
           : 'Network error';
@@ -162,6 +174,9 @@ async function executeRequest<T>(
 
 export const odooClient = {
   buildUrl: (endpoint: string) => `${BASE_URL}${endpoint}`,
+
+  request:  <T>(endpoint: string, opts?: RequestOptions) =>
+    request<T>(endpoint, opts),
 
   get:    <T>(endpoint: string, opts?: Omit<RequestOptions, 'method' | 'body'>) =>
     request<T>(endpoint, { ...opts, method: 'GET' }),

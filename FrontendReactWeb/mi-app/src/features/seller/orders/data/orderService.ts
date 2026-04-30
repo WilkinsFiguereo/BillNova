@@ -95,7 +95,8 @@ export async function fetchOrders(): Promise<Order[]> {
       address: String(order?.address ?? ""),
       phone: String(order?.phone ?? ""),
       email: String(order?.clienteEmail ?? order?.email ?? ""),
-      invoiceStatus: String(order?.status ?? ""),
+      invoiceStatus: String(order?.invoice_status ?? order?.status ?? ""),
+      orderState: String(order?.order_state ?? ""),
       lines,
     };
   });
@@ -127,7 +128,16 @@ export async function updateOrderStatus(id: string, status: OrderStatus): Promis
     body: JSON.stringify({ status }),
     credentials: "include",
   });
-  if (!res.ok) throw new Error("Error al actualizar estado");
+  if (!res.ok) {
+    let message = "Error al actualizar estado";
+    try {
+      const payload = await res.json();
+      if (payload?.error) {
+        message = String(payload.error);
+      }
+    } catch {}
+    throw new Error(message);
+  }
   return res.json();
 }
 

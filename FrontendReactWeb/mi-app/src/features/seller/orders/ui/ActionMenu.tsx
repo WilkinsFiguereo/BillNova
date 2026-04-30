@@ -8,7 +8,7 @@ import { useState } from "react";
 
 import { Ban, CheckCircle, Eye, Package, RotateCcw, Trash2, type LucideIcon } from "lucide-react";
 
-import { Order, OrderStatus } from "../types/order.types";
+import { getNextOrderActions, Order, OrderStatus } from "../types/order.types";
 
 import T from "../theme/ordersTheme";
 
@@ -46,23 +46,22 @@ export default function ActionMenu({ order, onStatus, onDelete, onView }: Props)
 
   const [open, setOpen] = useState(false);
 
+  const nextStatuses = getNextOrderActions(order);
 
-
-  const statusActions: StatusAction[] = (
-
-    [
-
-      order.status !== "sent"      && { label: "Marcar como enviado",   next: "sent"      as OrderStatus, color: T.brand600, Icon: Package },
-
-      order.status !== "delivered" && { label: "Marcar como entregado", next: "delivered" as OrderStatus, color: T.success,  Icon: CheckCircle },
-
-      order.status !== "pending"   && { label: "Volver a pendiente",    next: "pending"   as OrderStatus, color: T.warn,     Icon: RotateCcw },
-
-      order.status !== "cancelled" && { label: "Cancelar envio",        next: "cancelled" as OrderStatus, color: T.error,    Icon: Ban },
-
-    ] as (StatusAction | false)[]
-
-  ).filter((a): a is StatusAction => Boolean(a));
+  const statusActions: StatusAction[] = nextStatuses.map((next) => {
+    switch (next) {
+      case "sent":
+        return { label: "Marcar como enviado", next, color: T.brand600, Icon: Package };
+      case "delivered":
+        return { label: "Marcar como entregado", next, color: T.success, Icon: CheckCircle };
+      case "pending":
+        return { label: "Volver a pendiente", next, color: T.warn, Icon: RotateCcw };
+      case "cancelled":
+        return { label: "Cancelar envio", next, color: T.error, Icon: Ban };
+      default:
+        return { label: next, next, color: T.text2, Icon: Package };
+    }
+  });
 
 
 

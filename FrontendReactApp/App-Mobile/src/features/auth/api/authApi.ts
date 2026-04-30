@@ -29,7 +29,7 @@ export const authApi = {
     odooClient.post<RegisterResponse>('/api/auth/register', payload),
 
   session: () =>
-    odooClient.get<SessionResponse>('/api/auth/session', {}, { requiresAuth: true }),
+    odooClient.get<SessionResponse>('/api/auth/session', { requiresAuth: true }),
 
   logout: () =>
     odooClient.post<{ ok: boolean }>('/api/auth/logout', {}, { requiresAuth: true }),

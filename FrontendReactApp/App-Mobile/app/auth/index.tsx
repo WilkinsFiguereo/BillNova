@@ -4,9 +4,7 @@ import { useAuthContext } from '../../src/core/providers/AuthProvider';
 
 export default function AuthPage() {
   const router = useRouter();
-  const { isAuthenticated, isLoading } = useAuthContext();
-
-  if (isLoading) return null;
+  const { isAuthenticated } = useAuthContext();
 
   if (isAuthenticated) {
     return <Redirect href="/(tabs)" />;
