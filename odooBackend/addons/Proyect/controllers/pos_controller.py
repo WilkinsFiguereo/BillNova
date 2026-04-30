@@ -2,7 +2,7 @@ import os
 import logging
 import base64
 
-from odoo import http
+from odoo import http, fields
 from odoo.http import request, Response, root
 import json as json_lib
 
@@ -238,7 +238,7 @@ class PosApiController(http.Controller):
                 })
                 pos_session.action_pos_session_open()
 
-            # ====================== CREAR LÍNEAS Y POS ORDER ======================
+                        # ====================== CREAR LÍNEAS ======================
             order_lines = []
             amount_total = 0.0
             amount_tax = 0.0
@@ -248,7 +248,12 @@ class PosApiController(http.Controller):
                 qty = float(line.get('qty', 1))
                 price_unit = float(line.get('price_unit', product.lst_price or 0))
 
-                taxes = product.taxes_id
+                taxes = product.taxes_id.filtered(lambda t: t.company_id.id == company.id)
+                if not taxes:
+                    taxes = request.env['account.tax'].sudo().search([
+                        ('company_id', '=', company.id), ('type_tax_use', '=', 'sale')
+                    ], limit=1)
+
                 tax_res = taxes.compute_all(price_unit, quantity=qty, product=product)
 
                 price_subtotal = tax_res['total_excluded']
@@ -267,43 +272,55 @@ class PosApiController(http.Controller):
                     'price_subtotal_incl': price_subtotal_incl,
                 }))
 
-            pos_order = request.env['pos.order'].sudo().with_company(company).create({
+            # ====================== CREAR POS ORDER (Versión manual para evitar lock) ======================
+            # Generamos nosotros el nombre para evitar la secuencia bloqueada
+            sequence_code = f"POS/{company.id}/{fields.Date.today().strftime('%Y%m%d')}"
+            name = request.env['ir.sequence'].sudo().next_by_code('pos.order') or f"POS/{company.id}/00001"
+
+            pos_order_vals = {
+                'name': name,
                 'session_id': pos_session.id,
                 'company_id': company.id,
-                'partner_id': partner.id,
+                'partner_id': partner.id if partner and partner.exists() else False,
                 'lines': order_lines,
                 'amount_total': amount_total,
                 'amount_tax': amount_tax,
                 'amount_paid': amount_total,
                 'amount_return': 0.0,
                 'state': 'draft',
-                'user_id': current_user.id if current_user and current_user.exists() else (request.env.user.id or 2),
-            })
+                'user_id': current_user.id if current_user and current_user.exists() else 2,
+                'date_order': fields.Datetime.now(),
+            }
+
+            pos_order = request.env['pos.order'].sudo().with_company(company).create(pos_order_vals)
 
             # ====================== GENERAR FACTURA ======================
-            pos_order.action_pos_order_paid()
+            try:
+                pos_order.action_pos_order_paid()
+            except Exception as e:
+                _logger.warning("action_pos_order_paid falló: %s", e)
 
             invoice = None
             try:
-                # Método correcto en Odoo 19
                 invoice = pos_order._generate_pos_order_invoice()
-            except Exception:
+            except Exception as e1:
+                _logger.warning("_generate_pos_order_invoice falló: %s", e1)
                 try:
-                    # Método alternativo
                     invoice = pos_order.action_pos_order_invoice()
                 except Exception as e2:
-                    _logger.warning(f"No se pudo generar factura automáticamente: {e2}")
+                    _logger.error("action_pos_order_invoice también falló: %s", e2)
 
             if not invoice:
-                _logger.error("No se pudo generar factura para la orden %s", pos_order.id)
-                raise ValueError('No se pudo generar la factura para esta orden')
+                return self._json_response({
+                    'ok': False,
+                    'error': 'Pedido creado correctamente pero no se pudo generar la factura.'
+                }, 400)
 
             if invoice.state == 'draft':
                 try:
                     invoice.action_post()
                 except Exception as e_post:
-                    _logger.warning(f"No se pudo confirmar la factura: {e_post}")
-                    raise
+                    _logger.warning("No se pudo confirmar la factura: %s", e_post)
 
             return self._json_response({
                 'ok': True,
