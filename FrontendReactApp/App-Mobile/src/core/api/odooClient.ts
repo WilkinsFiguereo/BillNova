@@ -1,7 +1,8 @@
 import { tokenStorage } from '../storage/tokenStorage';
 
 const BASE_URL = (process.env.EXPO_PUBLIC_ODOO_URL ?? 'https://jwfn4vcd-8079.use2.devtunnels.ms/').replace(/\/+$/, '');
-const REQUEST_TIMEOUT_MS = 12000;
+const REQUEST_TIMEOUT_MS = Number(process.env.EXPO_PUBLIC_ODOO_TIMEOUT_MS ?? 20000);
+const GET_RETRY_LIMIT = 1;
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
@@ -18,9 +19,21 @@ interface ApiResponse<T> {
   status: number;
 }
 
+function isAbortError(err: unknown): boolean {
+  return err instanceof Error && err.name === 'AbortError';
+}
+
 async function request<T>(
   endpoint: string,
   options: RequestOptions = {},
+): Promise<ApiResponse<T>> {
+  return executeRequest<T>(endpoint, options, 0);
+}
+
+async function executeRequest<T>(
+  endpoint: string,
+  options: RequestOptions,
+  attempt: number,
 ): Promise<ApiResponse<T>> {
   const { method = 'GET', body, requiresAuth = false, accept } = options;
 
@@ -48,6 +61,7 @@ async function request<T>(
 
   try {
     const controller = new AbortController();
+    const startedAt = Date.now();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
       const response = await fetch(`${BASE_URL}${endpoint}`, {
@@ -82,6 +96,8 @@ async function request<T>(
       console.log('[mobile][odooClient] response', {
         endpoint,
         method,
+        attempt,
+        durationMs: Date.now() - startedAt,
         status: response.status,
         ok: response.ok,
         requiresAuth,
@@ -112,15 +128,26 @@ async function request<T>(
       clearTimeout(timeoutId);
     }
   } catch (err) {
+    if (method === 'GET' && isAbortError(err) && attempt < GET_RETRY_LIMIT) {
+      console.log('[mobile][odooClient] retrying aborted request', {
+        endpoint,
+        method,
+        attempt,
+        nextAttempt: attempt + 1,
+      });
+      return executeRequest<T>(endpoint, options, attempt + 1);
+    }
+
     console.log('[mobile][odooClient] request error', {
       endpoint,
       method,
       requiresAuth,
+      attempt,
       error: err instanceof Error ? err.message : String(err),
     });
     const message =
-      err instanceof Error && err.name === 'AbortError'
-        ? `Tiempo de espera agotado al conectar con ${BASE_URL}`
+      isAbortError(err)
+        ? `Tiempo de espera agotado en ${endpoint} (${REQUEST_TIMEOUT_MS} ms)`
         : err instanceof Error
           ? err.message
           : 'Network error';
