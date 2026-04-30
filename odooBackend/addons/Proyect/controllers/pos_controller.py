@@ -421,12 +421,12 @@ class PosApiController(http.Controller):
         order = request.env['pos.order'].sudo().browse(order_id)
         if not order.exists():
             return self._json_response({'ok': False, 'error': 'Orden no encontrada'}, 404)
-        allowed_domain = self._get_current_order_domain() if self._is_mobile_session_request() else None
-        if allowed_domain and not request.env['pos.order'].sudo().search_count([('id', '=', order.id)] + allowed_domain):
-            return self._json_response({'ok': False, 'error': 'No tienes permisos para facturar este pedido'}, 403)
 
-        # Check if invoice already exists
-        existing_invoice = request.env['account.move'].sudo().search([('invoice_origin', '=', order.name)], limit=1)
+        # Verificar si ya existe una factura
+        existing_invoice = request.env['account.move'].sudo().search([
+            ('invoice_origin', '=', order.name)
+        ], limit=1)
+
         if existing_invoice:
             return self._json_response({
                 'ok': True,
@@ -437,21 +437,50 @@ class PosApiController(http.Controller):
             })
 
         try:
-            # Create invoice from POS order
-            invoice = order.action_pos_order_invoice()
-            if invoice and invoice.state == 'draft':
-                invoice.action_post()  # Post the invoice
+            # Intentar crear la factura
+            invoice = None
+            try:
+                invoice = order.action_pos_order_invoice()
+            except Exception as e:
+                _logger.warning("action_pos_order_invoice falló: %s", e)
+
+            # Si no devolvió un recordset válido, intentar método alternativo
+            if not invoice or isinstance(invoice, dict):
+                _logger.info("Intentando _generate_pos_order_invoice como fallback")
+                try:
+                    invoice = order._generate_pos_order_invoice()
+                except Exception as e2:
+                    _logger.error("_generate_pos_order_invoice también falló: %s", e2)
+
+            # Validar que sea un recordset real
+            if not invoice or isinstance(invoice, dict) or not hasattr(invoice, 'state'):
+                return self._json_response({
+                    'ok': False,
+                    'error': 'No se pudo generar la factura. Intente desde el backend de Odoo.'
+                }, 400)
+
+            # Confirmar la factura si está en borrador
+            if invoice.state == 'draft':
+                try:
+                    invoice.action_post()
+                except Exception as e_post:
+                    _logger.warning("No se pudo confirmar la factura: %s", e_post)
 
             return self._json_response({
                 'ok': True,
                 'invoice_id': invoice.id,
+                'invoice_name': invoice.name,
                 'state': invoice.state,
                 'payment_state': invoice.payment_state,
-                'message': 'Factura creada y confirmada'
+                'message': 'Factura creada correctamente'
             })
+
         except Exception as e:
             _logger.exception("Error creando factura para orden %s", order_id)
-            return self._json_response({'ok': False, 'error': str(e)}, 500)
+            return self._json_response({
+                'ok': False, 
+                'error': f'Error al crear factura: {str(e)}'
+            }, 500)
 
     # =============================================================
     # SEND INVOICE BY EMAIL
@@ -738,37 +767,57 @@ class PosApiController(http.Controller):
     def download_invoice(self, order_id):
         if request.httprequest.method == 'OPTIONS':
             return self._options_response()
-        _logger.info("[invoice-pdf] request by order_id=%s user=%s", order_id, getattr(request.env.user, 'login', None))
+
+        _logger.info("[invoice-pdf] request by order_id=%s", order_id)
 
         order = request.env['pos.order'].sudo().browse(order_id)
         if not order.exists():
             return self._json_response({'ok': False, 'error': 'Orden no encontrada'}, 404)
-        allowed_domain = self._get_current_order_domain() if self._is_mobile_session_request() else None
-        if allowed_domain and not request.env['pos.order'].sudo().search_count([('id', '=', order.id)] + allowed_domain):
-            return self._json_response({'ok': False, 'error': 'No tienes permisos para descargar esta factura'}, 403)
 
-        invoice = request.env['account.move'].sudo().search([('invoice_origin', '=', order.name)], limit=1)
+        # Buscar factura existente
+        invoice = request.env['account.move'].sudo().search([
+            ('invoice_origin', '=', order.name)
+        ], limit=1)
 
+        # Si no existe, intentar crearla
         if not invoice:
+            _logger.info("No se encontró factura para la orden %s. Intentando crearla...", order_id)
             try:
+                # Intentar crear la factura
                 invoice = order.action_pos_order_invoice()
-                if invoice and invoice.state == 'draft':
+                
+                # Si devolvió un dict en lugar de recordset
+                if isinstance(invoice, dict) or not hasattr(invoice, 'id'):
+                    _logger.warning("action_pos_order_invoice devolvió dict, intentando método alternativo")
+                    invoice = order._generate_pos_order_invoice()
+
+                # Si sigue siendo dict o None, fallamos
+                if not invoice or isinstance(invoice, dict) or not hasattr(invoice, 'id'):
+                    return self._json_response({
+                        'ok': False, 
+                        'error': 'No se pudo generar la factura para esta orden.'
+                    }, 400)
+
+                # Confirmar si está en borrador
+                if invoice.state == 'draft':
                     invoice.action_post()
-            except Exception as invoice_error:
-                _logger.warning(
-                    "No se pudo crear factura al descargar orden %s: %s",
-                    order_id,
-                    invoice_error,
-                )
 
-        if not invoice:
-            return self._json_response({'ok': False, 'error': 'Factura no encontrada'}, 404)
+            except Exception as e:
+                _logger.exception("Error creando factura al descargar orden %s", order_id)
+                return self._json_response({
+                    'ok': False, 
+                    'error': f'Error al generar factura: {str(e)}'
+                }, 500)
 
+        # Ahora sí tenemos una factura real
         try:
             pdf = self._render_invoice_pdf_content(invoice)
         except Exception as e:
-            _logger.exception("Error generando PDF de factura %s", invoice.id)
-            return self._json_response({'ok': False, 'error': str(e)}, 500)
+            _logger.exception("Error generando PDF de factura %s", invoice.id if hasattr(invoice, 'id') else 'N/A')
+            return self._json_response({
+                'ok': False, 
+                'error': 'Error al generar el PDF de la factura'
+            }, 500)
 
         filename = f"factura-{invoice.name or invoice.id}.pdf"
         headers = self._cors_headers()
@@ -778,7 +827,6 @@ class PosApiController(http.Controller):
         })
 
         return Response(pdf, status=200, headers=headers)
-
     # =============================================================
     # DOWNLOAD INVOICE PDF by invoice_id directly
     # GET /api/pos/invoice/<invoice_id>/pdf
