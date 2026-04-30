@@ -50,7 +50,7 @@ export function LoginScreen({ onNavigateToRegister, onLoginSuccess }: LoginScree
 
   return (
     <View style={styles.root}>
-      <StatusBar hidden barStyle="light-content" translucent backgroundColor="transparent" />
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
       {/* Single clean gradient — no orbs */}
       <LinearGradient

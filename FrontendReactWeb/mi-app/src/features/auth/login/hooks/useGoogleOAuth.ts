@@ -193,12 +193,11 @@ export function useGoogleOAuth(options: UseGoogleOAuthOptions = {}) {
       }
 
       console.log("[Google OAuth][web] processing popup payload");
-      if (!finishGoogleLogin(event.data.payload)) {
-        if (typeof event.data.target === "string") {
-          console.warn("[Google OAuth][web] falling back to target redirect", event.data.target);
-          window.location.assign(event.data.target);
-        }
-      }
+       if (!finishGoogleLogin(event.data.payload)) {
+         console.warn("[Google OAuth][web] finishGoogleLogin failed, attempting session recovery");
+         // No redirigir a Odoo, intentar recuperar sesión desde nuestro backend
+         void recoverGoogleSession();
+       }
     };
 
     window.addEventListener("message", handleMessage);
@@ -261,11 +260,12 @@ export function useGoogleOAuth(options: UseGoogleOAuthOptions = {}) {
         "popup=yes,width=520,height=720,menubar=no,toolbar=no,location=yes,status=no,resizable=yes,scrollbars=yes",
       );
 
-      if (!popup) {
-        console.warn("[Google OAuth][web] popup blocked, redirecting current window");
-        window.location.href = response.auth_url;
-        return;
-      }
+       if (!popup) {
+         console.warn("[Google OAuth][web] popup blocked, attempting session recovery");
+         setIsLoading(false);
+         void recoverGoogleSession();
+         return;
+       }
 
       console.log("[Google OAuth][web] popup opened successfully");
       const poll = window.setInterval(() => {

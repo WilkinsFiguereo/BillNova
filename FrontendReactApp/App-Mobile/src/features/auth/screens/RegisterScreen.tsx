@@ -76,7 +76,7 @@ export function RegisterScreen({ onNavigateToLogin, onRegisterSuccess }: Registe
 
   return (
     <View style={styles.root}>
-      <StatusBar hidden barStyle="light-content" translucent backgroundColor="transparent" />
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
       <LinearGradient
         colors={['#0F1F4D', '#1E3A8A', '#2563EB']}

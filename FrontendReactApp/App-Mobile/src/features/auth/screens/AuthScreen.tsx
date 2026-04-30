@@ -1,16 +1,16 @@
-import React, { useRef, useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View, Text, ScrollView, StyleSheet,
   TouchableOpacity, KeyboardAvoidingView,
   Platform, StatusBar, Animated, TextInput,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import * as Linking from 'expo-linking';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Input } from '../../../shared/ui/Input';
 import { Button } from '../../../shared/ui/Button';
 import { AuthHeader } from '../components/AuthHeader';
 import {
-  IconWarning, IconCheck,
+  IconAt, IconLock, IconUser, IconMail,
+  IconShield, IconWarning, IconCheck,
 } from '../../../shared/ui/Icons';
 import { useAuth, useLogin, useRegister } from '../hooks/useAuth';
 import { colors } from '../../../shared/theme/colors';
@@ -21,155 +21,80 @@ interface AuthScreenProps {
 
 type Tab = 'login' | 'register';
 
-type RegisterForm = {
-  name: string;
-  login: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-};
-
-function AuthField({
-  label,
-  value,
-  onChangeText,
-  placeholder,
-  secureTextEntry = false,
-  keyboardType,
-  autoCapitalize = 'sentences',
-  error,
-}: {
-  label: string;
-  value: string;
-  onChangeText: (value: string) => void;
-  placeholder: string;
-  secureTextEntry?: boolean;
-  keyboardType?: 'default' | 'email-address';
-  autoCapitalize?: 'none' | 'sentences';
-  error?: string;
-}) {
-  return (
-    <View style={styles.fieldBlock}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <TextInput
-        style={styles.fieldInput}
-        placeholder={placeholder}
-        placeholderTextColor="#9CA3AF"
-        autoCapitalize={autoCapitalize}
-        keyboardType={keyboardType}
-        secureTextEntry={secureTextEntry}
-        value={value}
-        onChangeText={onChangeText}
-      />
-      {error ? <Text style={styles.fieldError}>{error}</Text> : null}
-    </View>
-  );
-}
-
 export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
-  const router = useRouter();
   const [tab, setTab] = useState<Tab>('login');
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const [googleLoading, setGoogleLoading] = useState(false);
   const [oauthError, setOauthError] = useState<string | null>(null);
 
-  const {
-    handleLogin,
-    isLoading: loginLoading,
-    error: loginError,
-    errorCode,
-    verificationEmail: loginVerificationEmail,
-    clearError: clearLoginError,
-  } = useLogin();
+  // ── Login state ──────────────────────────────────────────────
+  const { handleLogin, isLoading: loginLoading, error: loginError, clearError: clearLoginError } = useLogin();
   const { loginWithGoogle } = useAuth();
   const [loginForm, setLoginForm] = useState({ login: '', password: '' });
   const [loginErrors, setLoginErrors] = useState({ login: '', password: '' });
 
-  const {
-    handleRegister,
-    isLoading: registerLoading,
-    error: registerError,
-    success,
-    verificationEmail,
-    message,
-    clearError: clearRegisterError,
-  } = useRegister();
-  const [registerForm, setRegisterForm] = useState<RegisterForm>({
+  // ── Register state ───────────────────────────────────────────
+  const { handleRegister, isLoading: registerLoading, error: registerError, success, clearError: clearRegisterError } = useRegister();
+  const [registerForm, setRegisterForm] = useState({
     name: '', login: '', email: '', password: '', confirmPassword: '',
   });
   const [registerErrors, setRegisterErrors] = useState<Record<string, string>>({});
 
+  // ── Tab switch with fade animation ───────────────────────────
   const switchTab = (next: Tab) => {
     if (next === tab) return;
     Animated.sequence([
       Animated.timing(fadeAnim, { toValue: 0, duration: 120, useNativeDriver: true }),
       Animated.timing(fadeAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
     ]).start();
+    // swap mid-fade
     setTimeout(() => setTab(next), 120);
   };
 
-  const navigateToVerifyEmail = (email: string) => {
-    router.push({
-      pathname: '/auth/verify-email',
-      params: { email },
-    });
-  };
-
+  // ── Validators ───────────────────────────────────────────────
   const validateLogin = () => {
-    const next = { login: '', password: '' };
-    if (!loginForm.login.trim()) next.login = 'El usuario es requerido';
-    if (!loginForm.password) next.password = 'La contrasena es requerida';
-    setLoginErrors(next);
-    return !next.login && !next.password;
+    const e = { login: '', password: '' };
+    if (!loginForm.login.trim()) e.login = 'El usuario es requerido';
+    if (!loginForm.password)     e.password = 'La contraseña es requerida';
+    setLoginErrors(e);
+    return !e.login && !e.password;
   };
 
   const validateRegister = () => {
-    const next: Record<string, string> = {};
-    if (!registerForm.name.trim()) next.name = 'El nombre es requerido';
-    if (!registerForm.login.trim()) next.login = 'El usuario es requerido';
-    if (registerForm.login.includes(' ')) next.login = 'No puede tener espacios';
-    if (!registerForm.email.trim()) next.email = 'El email es requerido';
-    else if (!/\S+@\S+\.\S+/.test(registerForm.email)) next.email = 'Email invalido';
-    if (!registerForm.password) next.password = 'La contrasena es requerida';
-    else if (registerForm.password.length < 6) next.password = 'Minimo 6 caracteres';
-    if (registerForm.password !== registerForm.confirmPassword) next.confirmPassword = 'No coinciden';
-    setRegisterErrors(next);
-    return Object.keys(next).length === 0;
+    const e: Record<string, string> = {};
+    if (!registerForm.name.trim())  e.name = 'El nombre es requerido';
+    if (!registerForm.login.trim()) e.login = 'El usuario es requerido';
+    if (registerForm.login.includes(' ')) e.login = 'No puede tener espacios';
+    if (!registerForm.email.trim()) e.email = 'El email es requerido';
+    else if (!/\S+@\S+\.\S+/.test(registerForm.email)) e.email = 'Email inválido';
+    if (!registerForm.password)     e.password = 'La contraseña es requerida';
+    else if (registerForm.password.length < 6) e.password = 'Mínimo 6 caracteres';
+    if (registerForm.password !== registerForm.confirmPassword) e.confirmPassword = 'No coinciden';
+    setRegisterErrors(e);
+    return Object.keys(e).length === 0;
   };
 
+  // ── Submit handlers ──────────────────────────────────────────
   const handleLoginSubmit = async () => {
     setOauthError(null);
     clearLoginError();
     if (!validateLogin()) return;
-
     const result = await handleLogin(loginForm);
-    if (result.ok) {
-      onLoginSuccess();
-      return;
-    }
-
-    if (result.code === 'ACCOUNT_NOT_VERIFIED') {
-      navigateToVerifyEmail(result.email ?? loginForm.login);
-    }
+    if (result.ok) onLoginSuccess();
   };
 
   const handleRegisterSubmit = async () => {
     setOauthError(null);
     clearRegisterError();
     if (!validateRegister()) return;
-
-    const frontendBaseUrl = Linking.createURL('/auth/verify-email');
-    const result = await handleRegister({
-      name: registerForm.name.trim(),
-      login: registerForm.login.trim(),
-      email: registerForm.email.trim().toLowerCase(),
+    await handleRegister({
+      name:     registerForm.name.trim(),
+      login:    registerForm.login.trim(),
+      email:    registerForm.email.trim(),
       password: registerForm.password,
-      frontend_base_url: frontendBaseUrl,
     });
-
-    if (result.ok) {
-      navigateToVerifyEmail(result.email ?? registerForm.email.trim().toLowerCase());
-    }
+    // on success, switch to login after short delay
+    if (success) setTimeout(() => switchTab('login'), 1200);
   };
 
   const handleGoogleAuth = async (mode: 'login' | 'register') => {
@@ -181,25 +106,22 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
     else setOauthError(result.error ?? 'No se pudo completar la autenticacion con Google.');
   };
 
-  const updateLogin = (field: keyof typeof loginForm) => (value: string) => {
-    setLoginForm((prev) => ({ ...prev, [field]: value }));
-    if (loginErrors[field]) {
-      setLoginErrors((prev) => ({ ...prev, [field]: '' }));
-    }
+  // ── Field helpers ────────────────────────────────────────────
+  const updateLogin = (f: keyof typeof loginForm) => (v: string) => {
+    setLoginForm(p => ({ ...p, [f]: v }));
+    if (loginErrors[f]) setLoginErrors(p => ({ ...p, [f]: '' }));
   };
 
-  const updateRegister = (field: keyof RegisterForm) => (value: string) => {
-    setRegisterForm((prev) => ({ ...prev, [field]: value }));
-    if (registerErrors[field]) {
-      setRegisterErrors((prev) => ({ ...prev, [field]: '' }));
-    }
+  const updateRegister = (f: string) => (v: string) => {
+    setRegisterForm(p => ({ ...p, [f]: v }));
+    if (registerErrors[f]) setRegisterErrors(p => ({ ...p, [f]: '' }));
   };
 
   const isLogin = tab === 'login';
 
   return (
     <View style={styles.root}>
-      <StatusBar hidden barStyle="light-content" translucent backgroundColor="transparent" />
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
       <LinearGradient
         colors={['#0F1F4D', '#1E3A8A', '#2563EB']}
@@ -220,19 +142,22 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
+          {/* Hero — title changes with tab */}
           <View style={styles.hero}>
             <AuthHeader
               title={isLogin ? 'Bienvenido' : 'Crear cuenta'}
               titleSoft={isLogin ? 'de vuelta' : undefined}
               subtitle={isLogin
                 ? 'Tu plataforma empresarial'
-                : 'Unete y empieza a gestionar tu negocio'}
+                : 'Únete y empieza a gestionar tu negocio'}
             />
           </View>
 
+          {/* Card */}
           <View style={styles.card}>
             <View style={styles.pill} />
 
+            {/* ── Tab switcher ── */}
             <View style={styles.tabRow}>
               <TouchableOpacity
                 style={[styles.tab, isLogin && styles.tabActive]}
@@ -240,7 +165,7 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
                 activeOpacity={0.7}
               >
                 <Text style={[styles.tabText, isLogin && styles.tabTextActive]}>
-                  Iniciar sesion
+                  Iniciar sesión
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -254,7 +179,10 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
               </TouchableOpacity>
             </View>
 
+            {/* ── Animated form content ── */}
             <Animated.View style={{ opacity: fadeAnim }}>
+
+              {/* ── LOGIN FORM ── */}
               {isLogin && (
                 <View>
                   {loginError && (
@@ -269,40 +197,55 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
                       <Text style={styles.alertErrText}>{oauthError}</Text>
                     </View>
                   )}
-                  {errorCode === 'ACCOUNT_NOT_VERIFIED' && loginVerificationEmail ? (
-                    <TouchableOpacity
-                      style={styles.verifyBanner}
-                      onPress={() => navigateToVerifyEmail(loginVerificationEmail)}
-                    >
-                      <Text style={styles.verifyBannerText}>Tu cuenta no esta verificada. Toca aqui para activar tu correo.</Text>
-                    </TouchableOpacity>
-                  ) : null}
 
-                  <AuthField
-                    label="Usuario"
-                    placeholder="usuario@empresa.com"
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                    value={loginForm.login}
-                    onChangeText={updateLogin('login')}
-                    error={loginErrors.login}
-                  />
-                  <AuthField
-                    label="Contrasena"
-                    placeholder="••••••••"
-                    secureTextEntry
-                    autoCapitalize="none"
-                    value={loginForm.password}
-                    onChangeText={updateLogin('password')}
-                    error={loginErrors.password}
-                  />
+                  
+                  <Text style={{ marginBottom: 4 }}>Usuario</Text>
+                    <TextInput
+                      style={{
+                        borderWidth: 1,
+                        borderColor: '#ccc',
+                        borderRadius: 8,
+                        padding: 12,
+                        marginBottom: 10,
+                      }}
+                      placeholder="usuario@empresa.com"
+                      autoCapitalize="none"
+                      keyboardType="email-address"
+                      value={loginForm.login}
+                      onChangeText={updateLogin('login')}
+                    />
+                    {loginErrors.login ? (
+                      <Text style={{ color: 'red', marginBottom: 8 }}>
+                        {loginErrors.login}
+                      </Text>
+                    ) : null}
+
+                    <Text style={{ marginBottom: 4 }}>Contraseña</Text>
+                    <TextInput
+                      style={{
+                        borderWidth: 1,
+                        borderColor: '#ccc',
+                        borderRadius: 8,
+                        padding: 12,
+                        marginBottom: 10,
+                      }}
+                      placeholder="••••••••"
+                      secureTextEntry
+                      value={loginForm.password}
+                      onChangeText={updateLogin('password')}
+                    />
+                    {loginErrors.password ? (
+                      <Text style={{ color: 'red', marginBottom: 8 }}>
+                        {loginErrors.password}
+                      </Text>
+                    ) : null}
 
                   <TouchableOpacity style={styles.forgotRow}>
-                    <Text style={styles.forgotText}>Olvidaste tu contrasena?</Text>
+                    <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
                   </TouchableOpacity>
 
                   <Button
-                    label="Iniciar sesion"
+                    label="Iniciar sesión"
                     onPress={handleLoginSubmit}
                     isLoading={loginLoading && !googleLoading}
                     style={styles.submitBtn}
@@ -310,7 +253,7 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
 
                   <View style={styles.divider}>
                     <View style={styles.dividerLine} />
-                    <Text style={styles.dividerText}>o continua con</Text>
+                    <Text style={styles.dividerText}>o continúa con</Text>
                     <View style={styles.dividerLine} />
                   </View>
 
@@ -323,14 +266,15 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
                   />
 
                   <View style={styles.footer}>
-                    <Text style={styles.footerText}>Sin cuenta? </Text>
+                    <Text style={styles.footerText}>¿Sin cuenta? </Text>
                     <TouchableOpacity onPress={() => switchTab('register')}>
-                      <Text style={styles.footerLink}>Registrate gratis</Text>
+                      <Text style={styles.footerLink}>Regístrate gratis</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
               )}
 
+              {/* ── REGISTER FORM ── */}
               {!isLogin && (
                 <View>
                   {registerError && (
@@ -348,56 +292,51 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
                   {success && (
                     <View style={styles.alertOk}>
                       <IconCheck size={14} />
-                      <Text style={styles.alertOkText}>{message ?? 'Cuenta creada. Revisa tu correo para activarla.'}</Text>
+                      <Text style={styles.alertOkText}>¡Cuenta creada! Inicia sesión</Text>
                     </View>
                   )}
-                  {verificationEmail ? (
-                    <TouchableOpacity
-                      style={styles.verifyBanner}
-                      onPress={() => navigateToVerifyEmail(verificationEmail)}
-                    >
-                      <Text style={styles.verifyBannerText}>Abrir pantalla de verificacion para {verificationEmail}</Text>
-                    </TouchableOpacity>
-                  ) : null}
 
-                  <AuthField
+                  <Input
                     label="Nombre completo"
-                    placeholder="Juan Perez"
+                    LeftIcon={IconUser}
+                    placeholder="Juan Pérez"
                     value={registerForm.name}
                     onChangeText={updateRegister('name')}
                     error={registerErrors.name}
                   />
-                  <AuthField
+                  <Input
                     label="Email"
+                    LeftIcon={IconMail}
                     placeholder="juan@empresa.com"
-                    autoCapitalize="none"
                     keyboardType="email-address"
+                    autoCapitalize="none"
                     value={registerForm.email}
                     onChangeText={updateRegister('email')}
                     error={registerErrors.email}
                   />
-                  <AuthField
+                  <Input
                     label="Usuario"
+                    LeftIcon={IconAt}
                     placeholder="juan.perez"
                     autoCapitalize="none"
                     value={registerForm.login}
                     onChangeText={updateRegister('login')}
                     error={registerErrors.login}
                   />
-                  <AuthField
-                    label="Contrasena"
-                    placeholder="Minimo 6 caracteres"
-                    autoCapitalize="none"
-                    secureTextEntry
+                  <Input
+                    label="Contraseña"
+                    LeftIcon={IconLock}
+                    placeholder="Mínimo 6 caracteres"
+                    isPassword
                     value={registerForm.password}
                     onChangeText={updateRegister('password')}
                     error={registerErrors.password}
                   />
-                  <AuthField
-                    label="Confirmar contrasena"
+                  <Input
+                    label="Confirmar contraseña"
+                    LeftIcon={IconShield}
                     placeholder="••••••••"
-                    autoCapitalize="none"
-                    secureTextEntry
+                    isPassword
                     value={registerForm.confirmPassword}
                     onChangeText={updateRegister('confirmPassword')}
                     error={registerErrors.confirmPassword}
@@ -425,18 +364,20 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
                   />
 
                   <View style={styles.footer}>
-                    <Text style={styles.footerText}>Ya tienes cuenta? </Text>
+                    <Text style={styles.footerText}>¿Ya tienes cuenta? </Text>
                     <TouchableOpacity onPress={() => switchTab('login')}>
-                      <Text style={styles.footerLink}>Inicia sesion</Text>
+                      <Text style={styles.footerLink}>Inicia sesión</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
               )}
+
             </Animated.View>
 
+            {/* Secure strip — always visible */}
             <View style={styles.secure}>
               <View style={styles.secureDot} />
-              <Text style={styles.secureText}>Conexion cifrada · Odoo ERP</Text>
+              <Text style={styles.secureText}>Conexión cifrada · Odoo ERP</Text>
             </View>
           </View>
         </ScrollView>
@@ -447,6 +388,7 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+
   circleA: {
     position: 'absolute', width: 200, height: 200,
     top: -60, right: -40, borderRadius: 100,
@@ -457,8 +399,11 @@ const styles = StyleSheet.create({
     top: 20, right: 20, borderRadius: 50,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)',
   },
+
   scroll: { flexGrow: 1, justifyContent: 'flex-end' },
   hero: { paddingHorizontal: 28, paddingTop: 80, paddingBottom: 20 },
+
+  // ── Card ──
   card: {
     backgroundColor: '#fff',
     borderTopLeftRadius: 28,
@@ -479,6 +424,8 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginBottom: 20,
   },
+
+  // ── Tabs ──
   tabRow: {
     flexDirection: 'row',
     backgroundColor: colors.background.primary,
@@ -510,6 +457,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.brand[600],
   },
+
+  // ── Alerts ──
   alertErr: {
     flexDirection: 'row', alignItems: 'center', gap: 7,
     backgroundColor: colors.error.soft,
@@ -524,40 +473,27 @@ const styles = StyleSheet.create({
     borderLeftWidth: 2.5, borderLeftColor: colors.success.default,
   },
   alertOkText: { flex: 1, fontSize: 12.5, color: colors.success.default, fontWeight: '500' },
-  verifyBanner: {
-    backgroundColor: colors.brand[50],
-    borderWidth: 1,
-    borderColor: colors.brand[100],
-    borderRadius: 10,
-    padding: 11,
-    marginBottom: 14,
-  },
-  verifyBannerText: { color: colors.brand[600], fontSize: 12.5, fontWeight: '600' },
-  fieldBlock: { marginBottom: 12 },
-  fieldLabel: { marginBottom: 4, color: colors.text.secondary, fontSize: 12.5, fontWeight: '600' },
-  fieldInput: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 2,
-    color: colors.text.primary,
-    backgroundColor: '#fff',
-  },
-  fieldError: { color: colors.error.default, marginBottom: 8, fontSize: 12 },
+
+  // ── Fields / actions ──
   forgotRow: { alignSelf: 'flex-end', marginTop: -4, marginBottom: 18, padding: 2 },
   forgotText: { fontSize: 12, fontWeight: '500', color: colors.brand[500] },
+
   submitBtn: { marginBottom: 18 },
+
   divider: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
   dividerLine: { flex: 1, height: 1, backgroundColor: colors.border.light },
   dividerText: { fontSize: 11, color: colors.text.disabled },
+
   googleBtn: { marginBottom: 22 },
+
   footer: {
     flexDirection: 'row', justifyContent: 'center',
     alignItems: 'center', marginBottom: 20,
   },
   footerText: { fontSize: 12.5, color: colors.text.tertiary },
   footerLink: { fontSize: 12.5, fontWeight: '600', color: colors.brand[600] },
+
+  // ── Secure strip ──
   secure: {
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'center', gap: 5, marginTop: 4,

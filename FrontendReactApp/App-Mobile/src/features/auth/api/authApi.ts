@@ -4,9 +4,6 @@ import type {
   LoginResponse,
   RegisterPayload,
   RegisterResponse,
-  VerifyEmailPayload,
-  VerifyEmailResponse,
-  ResendCodeResponse,
 } from '../types/auth.types';
 
 export const authApi = {
@@ -20,18 +17,6 @@ export const authApi = {
 
   register: (payload: RegisterPayload) =>
     odooClient.post<RegisterResponse>('/api/auth/register', payload),
-
-  verifyEmail: (payload: VerifyEmailPayload) =>
-    odooClient.post<VerifyEmailResponse>('/api/auth/verify-email', payload),
-
-  resendVerificationCode: (email: string, frontendBaseUrl?: string) =>
-    odooClient.post<ResendCodeResponse>(
-      '/api/auth/resend-code',
-      { email, frontend_base_url: frontendBaseUrl },
-    ),
-
-  session: () =>
-    odooClient.get<LoginResponse>('/api/auth/session', { requiresAuth: true }),
 
   logout: () =>
     odooClient.post<{ ok: boolean }>('/api/auth/logout', {}, { requiresAuth: true }),

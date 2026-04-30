@@ -49,153 +49,130 @@ class PosApiController(http.Controller):
         if not lines:
             return self._json_response({'ok': False, 'error': 'lines required'}, 400)
 
-        company = None
+        try:
+            # Determinar compañía
+            company = None
+            for line in lines:
+                product = request.env['product.product'].sudo().browse(int(line.get('product_id')))
+                if not product.exists():
+                    return self._json_response({'ok': False, 'error': f'Product {line.get("product_id")} not found'}, 404)
+                company = company or product.company_id or request.env.company
 
-        for line in lines:
-            product = request.env['product.product'].sudo().browse(int(line['product_id']))
-            if not product.exists():
-                return self._json_response({'ok': False, 'error': f'Product {line["product_id"]} not found'}, 404)
-            if not company:
-                company = product.company_id or request.env.company
-            elif product.company_id and product.company_id.id != company.id:
-                return self._json_response({'ok': False, 'error': 'Different companies not allowed'}, 400)
+            company = company or request.env.company
 
-        company = company or request.env.company
+            # Configuración POS (journal, config, session)
+            journal = request.env['account.journal'].sudo().search([
+                ('company_id', '=', company.id), ('type', '=', 'sale')
+            ], limit=1)
 
-        journal = request.env['account.journal'].sudo().search([
-            ('company_id', '=', company.id),
-            ('type', '=', 'sale')
-        ], limit=1)
+            if not journal:
+                journal = request.env['account.journal'].sudo().with_company(company).create({
+                    'name': f'Ventas POS {company.name}',
+                    'code': f'POS{company.id}',
+                    'type': 'sale',
+                    'company_id': company.id,
+                })
 
-        if not journal:
-            journal = request.env['account.journal'].sudo().create({
-                'name': f'Sales {company.name}',
-                'code': f'SAL{company.id}',
-                'type': 'sale',
+            pos_config = request.env['pos.config'].sudo().search([('company_id', '=', company.id)], limit=1)
+            if not pos_config:
+                pos_config = request.env['pos.config'].sudo().with_company(company).create({
+                    'name': f'TPV {company.name}',
+                    'company_id': company.id,
+                    'journal_id': journal.id,
+                    'invoice_journal_id': journal.id,
+                })
+
+            pos_session = request.env['pos.session'].sudo().search([
+                ('config_id', '=', pos_config.id),
+                ('state', 'in', ['opened', 'opening_control'])
+            ], limit=1)
+
+            if not pos_session:
+                pos_session = request.env['pos.session'].sudo().with_company(company).create({
+                    'config_id': pos_config.id,
+                    'user_id': request.env.user.id or 2,
+                })
+                pos_session.action_pos_session_open()
+
+            # ====================== CREAR LÍNEAS Y POS ORDER ======================
+            order_lines = []
+            amount_total = 0.0
+            amount_tax = 0.0
+
+            for line in lines:
+                product = request.env['product.product'].sudo().browse(int(line.get('product_id')))
+                qty = float(line.get('qty', 1))
+                price_unit = float(line.get('price_unit', product.lst_price or 0))
+
+                taxes = product.taxes_id
+                tax_res = taxes.compute_all(price_unit, quantity=qty, product=product)
+
+                price_subtotal = tax_res['total_excluded']
+                price_subtotal_incl = tax_res['total_included']
+
+                amount_total += price_subtotal_incl
+                amount_tax += price_subtotal_incl - price_subtotal
+
+                order_lines.append((0, 0, {
+                    'product_id': product.id,
+                    'qty': qty,
+                    'price_unit': price_unit,
+                    'discount': 0.0,
+                    'tax_ids': [(6, 0, taxes.ids)],
+                    'price_subtotal': price_subtotal,
+                    'price_subtotal_incl': price_subtotal_incl,
+                }))
+
+            pos_order = request.env['pos.order'].sudo().with_company(company).create({
+                'session_id': pos_session.id,
                 'company_id': company.id,
-            })
-
-        payment_method = request.env['pos.payment.method'].sudo().search([
-            ('company_id', '=', company.id),
-        ], limit=1)
-
-        if not payment_method:
-            payment_method = request.env['pos.payment.method'].sudo().create({
-                'name': 'Tarjeta de Crédito',
-                'company_id': company.id,
-                'is_cash_count': False,
-            })
-
-        config = request.env['pos.config'].sudo().search([
-            ('company_id', '=', company.id)
-        ], limit=1)
-
-        if not config:
-            config = request.env['pos.config'].sudo().create({
-                'name': f'TPV {company.name}',
-                'company_id': company.id,
-                'payment_method_ids': [(6, 0, [payment_method.id])],
-                'journal_id': journal.id,
-                'invoice_journal_id': journal.id,
-            })
-
-        session = request.env['pos.session'].sudo().search([
-            ('config_id', '=', config.id),
-            ('state', 'in', ['opened', 'opening_control'])
-        ], limit=1)
-
-        if not session:
-            session = request.env['pos.session'].sudo().create({
-                'config_id': config.id,
+                'lines': order_lines,
+                'amount_total': amount_total,
+                'amount_tax': amount_tax,
+                'amount_paid': amount_total,
+                'amount_return': 0.0,
+                'state': 'draft',
                 'user_id': request.env.user.id or 2,
             })
-            session.action_pos_session_open()
 
-        order_lines = []
-        # Compute totals from lines before creating the order
-        amount_total = 0.0
-        amount_tax = 0.0
+            # ====================== GENERAR FACTURA ======================
+            pos_order.action_pos_order_paid()
 
-        order_line_vals = []
-        for line in lines:
-            product = request.env['product.product'].sudo().browse(int(line['product_id']))
-            qty = float(line.get('qty', 1))
-            price = float(line.get('price_unit', product.lst_price or 0))
-            taxes = product.taxes_id
-            tax_res = taxes.compute_all(price, quantity=qty, product=product)
+            invoice = None
+            try:
+                # Método correcto en Odoo 19
+                invoice = pos_order._generate_pos_order_invoice()
+            except Exception:
+                try:
+                    # Método alternativo
+                    invoice = pos_order.action_pos_order_invoice()
+                except Exception as e2:
+                    _logger.warning(f"No se pudo generar factura automáticamente: {e2}")
 
-            subtotal_excl = tax_res['total_excluded']
-            subtotal_incl = tax_res['total_included']
-            amount_total += subtotal_incl
-            amount_tax   += subtotal_incl - subtotal_excl
+            # Confirmar factura si está en borrador
+            if invoice and invoice.state == 'draft':
+                try:
+                    invoice.action_post()
+                except Exception as e_post:
+                    _logger.warning(f"No se pudo confirmar la factura: {e_post}")
 
-            order_line_vals.append((0, 0, {
-                'product_id': product.id,
-                'qty': qty,
-                'price_unit': price,
-                'discount': 0.0,
-                'tax_ids': [(6, 0, taxes.ids)],
-                'price_subtotal': subtotal_excl,
-                'price_subtotal_incl': subtotal_incl,
-            }))
+            return self._json_response({
+                'ok': True,
+                'order_id': pos_order.id,
+                'order_name': pos_order.name,
+                'invoice_id': invoice.id if invoice else None,
+                'invoice_name': invoice.name if invoice else None,
+                'session_id': pos_session.id,
+                'company_id': company.id,
+            }, 201)
 
-        order = request.env['pos.order'].sudo().create({
-            'session_id': session.id,
-            'company_id': company.id,
-            'lines': order_line_vals,
-            'amount_total': amount_total,
-            'amount_tax': amount_tax,
-            'amount_paid': 0.0,   # unpaid at creation time
-            'amount_return': 0.0,
-        })
-
-        partner = request.env['res.partner'].sudo().search([], limit=1)
-        invoice_lines = []
-
-        for line in lines:
-            product = request.env['product.product'].sudo().browse(int(line['product_id']))
-            qty = float(line.get('qty', 1))
-            price = float(line.get('price_unit', product.lst_price or 0))
-            account = (
-            product.property_account_income_id
-            or product.categ_id.property_account_income_categ_id
-        )
-
-        # Si aún no hay cuenta, buscar una cuenta de ingresos genérica
-        if not account:
-            account = request.env['account.account'].sudo().search([
-                ('company_id', '=', company.id),
-                ('account_type', '=', 'income'),
-                ('deprecated', '=', False),
-            ], limit=1)
-            invoice_lines.append((0, 0, {
-                'product_id': product.id,
-                'quantity': qty,
-                'price_unit': price,
-                'name': product.name,
-                'account_id': account.id,
-                'tax_ids': [(6, 0, product.taxes_id.ids)],
-            }))
-
-        invoice = request.env['account.move'].sudo().create({
-            'move_type': 'out_invoice',
-            'partner_id': partner.id,
-            'company_id': company.id,
-            'journal_id': journal.id,
-            'invoice_line_ids': invoice_lines,
-            'invoice_origin': order.name,
-        })
-
-        invoice.action_post()
-
-        return self._json_response({
-            'ok': True,
-            'order_id': order.id,
-            'invoice_id': invoice.id,
-            'session_id': session.id,
-            'company_id': company.id,
-        }, 201)
-
+        except Exception as e:
+            _logger.exception("Error creando POS Order")
+            return self._json_response({'ok': False, 'error': str(e)}, 500)
+    
+    
+    
+    
     # =============================================================
     # CANCEL ORDER
     # =============================================================
