@@ -1,6 +1,6 @@
 "use client";
 
-import { getStoredAuthState } from "@/features/auth/login/data/storage";
+import { getStoredAuthState, updateStoredAuthState } from "@/features/auth/login/data/storage";
 
 const COMPANY_KEY_PREFIX = "billnova.company_id.user";
 const BUSINESS_TYPE_KEY_PREFIX = "billnova.business_type.user";
@@ -110,10 +110,26 @@ export function syncCompanyIdWithCurrentUser(companyId?: number | null) {
 
   if (companyId && companyId > 0) {
     setStoredCompanyIdForUser(companyId, userId);
+    updateStoredAuthState((user) =>
+      user.uid === userId
+        ? {
+            ...user,
+            companyId,
+          }
+        : user,
+    );
     return;
   }
 
   clearStoredCompanyIdForUser(userId);
+  updateStoredAuthState((user) =>
+    user.uid === userId
+      ? {
+          ...user,
+          companyId: undefined,
+        }
+      : user,
+  );
 }
 
 export function syncBusinessTypeWithCurrentUser(businessType?: string | null) {

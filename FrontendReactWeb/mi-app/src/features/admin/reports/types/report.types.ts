@@ -13,6 +13,10 @@ export interface Report {
   createdAt: string;
   updatedAt: string;
   attachments?: string[];
+  targetType?: 'usuario' | 'empresa';
+  targetModel?: 'res.users' | 'billnova.user' | 'res.company';
+  targetId?: number;
+  targetLabel?: string;
 }
 
 export interface CreateReportPayload {
@@ -20,4 +24,8 @@ export interface CreateReportPayload {
   description: string;
   category: Report['category'];
   severity: Report['severity'];
+  targetType: 'usuario' | 'empresa';
+  targetModel: 'res.users' | 'billnova.user' | 'res.company';
+  targetId: number;
+  targetLabel?: string;
 }

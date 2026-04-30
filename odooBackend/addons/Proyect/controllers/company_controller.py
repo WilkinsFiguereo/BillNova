@@ -281,6 +281,9 @@ class CompanyApiController(http.Controller):
     def _can_moderate_companies(self):
         return self._current_billnova_role() in ("moderator", "moderation", "admin")
 
+    def _is_admin_user(self):
+        return self._current_billnova_role() == "admin"
+
     def _is_company_moderation_payload(self, payload):
         allowed_keys = {"moderation_status", "moderation_reason", "status"}
         payload_keys = {key for key, value in payload.items() if value is not None}
@@ -409,10 +412,56 @@ class CompanyApiController(http.Controller):
         except Exception as error:
             return self._json_response({"error": str(error)}, 500)
 
-    @http.route("/api/companies/<int:company_id>", type="http", auth="public", methods=["PUT", "OPTIONS"], csrf=False)
+    @http.route("/api/companies/<int:company_id>", type="http", auth="public", methods=["PUT", "DELETE", "OPTIONS"], csrf=False)
     def update_company(self, company_id, **kwargs):
         if request.httprequest.method == "OPTIONS":
             return self._options_response()
+
+        company = request.env["res.company"].sudo().with_context(active_test=False).browse(company_id)
+        if not company.exists():
+            return self._json_response({"ok": False, "error": "Company not found"}, 404)
+
+        if request.httprequest.method == "DELETE":
+            if not self._is_admin_user():
+                return self._forbidden_manage_response()
+
+            company_name = company.name
+            try:
+                company.unlink()
+                self._log_event(
+                    company_id,
+                    "eliminar",
+                    "Empresa",
+                    f"Empresa eliminada: {company_name}",
+                    "Eliminacion permanente desde el admin",
+                    "res.company",
+                    company_id,
+                    company_name,
+                )
+                return self._json_response({"ok": True, "deleted": True, "archived": False})
+            except Exception as error:
+                vals = {"status": "disabled", "moderation_status": "rejected"}
+                if "active" in request.env["res.company"]._fields:
+                    vals["active"] = False
+                company.write(vals)
+                self._log_event(
+                    company_id,
+                    "eliminar",
+                    "Empresa",
+                    f"Empresa archivada: {company_name}",
+                    f"Archivo preventivo por dependencias: {error}",
+                    "res.company",
+                    company_id,
+                    company_name,
+                )
+                return self._json_response(
+                    {
+                        "ok": True,
+                        "deleted": False,
+                        "archived": True,
+                        "warning": "La empresa tenia dependencias y fue archivada en lugar de eliminarse.",
+                    }
+                )
 
         payload = request.httprequest.get_json(silent=True) or {}
         is_moderation_update = self._is_company_moderation_payload(payload)
@@ -423,10 +472,7 @@ class CompanyApiController(http.Controller):
         elif not self._can_manage_company_settings():
             return self._forbidden_manage_response()
 
-        company = request.env["res.company"].sudo().browse(company_id)
-        if not company.exists():
-            return self._json_response({"ok": False, "error": "Company not found"}, 404)
-        if not is_moderation_update and not self._user_owns_company(company_id):
+        if not is_moderation_update and not self._is_admin_user() and not self._user_owns_company(company_id):
             return self._json_response({"ok": False, "error": "Company not found"}, 404)
 
         vals = {}
@@ -447,6 +493,8 @@ class CompanyApiController(http.Controller):
             "address_city",
             "address_state",
             "company_size",
+            "business_type",
+            "admin_position",
         ]
         for field_name in simple_fields:
             if field_name in payload:
@@ -465,6 +513,15 @@ class CompanyApiController(http.Controller):
                 vals["moderation_reason"] = False
         if "moderation_reason" in payload:
             vals["moderation_reason"] = payload.get("moderation_reason") or False
+        if "access_password" in payload or "password" in payload:
+            next_password = payload.get("access_password") or payload.get("password") or False
+            vals["access_password"] = next_password
+            confirm_password = (
+                payload.get("confirm_password")
+                if "confirm_password" in payload
+                else payload.get("confirmPassword")
+            )
+            vals["confirm_password"] = confirm_password or next_password or False
 
         if vals:
             company.write(vals)
@@ -886,12 +943,18 @@ class CompanyApiController(http.Controller):
             return self._json_response({"ok": True, "company_id": company.id})
         return self._json_response({"ok": False, "error": "Acceso denegado"}, 401)
 
-    @http.route("/api/company/<int:company_id>/stats", type="http", auth="user", methods=["GET", "OPTIONS"], csrf=False)
+    @http.route("/api/company/<int:company_id>/stats", type="http", auth="public", methods=["GET", "OPTIONS"], csrf=False)
     def company_stats(self, company_id):
         if request.httprequest.method == "OPTIONS":
             return self._options_response()
 
         try:
+            current_user = self._get_current_res_user()
+            if not current_user or not current_user.exists():
+                return self._json_response({"ok": False, "error": "No hay sesion activa"}, 401)
+            if not self._user_owns_company(company_id):
+                return self._forbidden_manage_response()
+
             company = request.env["res.company"].sudo().browse(company_id)
             if not company.exists():
                 return self._json_response({"ok": False, "error": "Company not found"}, 404)

@@ -15,6 +15,7 @@ interface UseEstadisticasReturn {
   empresaSeleccionada: Empresa | null;
   filtros: FiltrosEmpresas;
   globales: EstadisticasGlobales;
+  loading: boolean;
   modalAbierto: boolean;
   setFiltros: (f: Partial<FiltrosEmpresas>) => void;
   seleccionarEmpresa: (e: Empresa) => void;
@@ -34,6 +35,7 @@ export function useEstadisticas(): UseEstadisticasReturn {
   const [empresaSeleccionada, setEmpresaSeleccionada] = useState<Empresa | null>(null);
   const [filtros, setFiltrosState] = useState<FiltrosEmpresas>(filtrosIniciales);
   const [modalAbierto, setModalAbierto] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [empresasData, setEmpresasData] = useState<Empresa[]>([]);
   const [globalesData, setGlobalesData] = useState<EstadisticasGlobales>({
     totalEmpresas: 0,
@@ -48,73 +50,87 @@ export function useEstadisticas(): UseEstadisticasReturn {
     let mounted = true;
 
     (async () => {
-      const [companies, products, orders] = await Promise.all([
-        apiListModeratorCompanies(),
-        apiListModeratorProducts(),
-        apiListModeratorPosOrders(),
-      ]);
-      const reviewStats = await apiListProductReviewStats(
-        products.filter((product) => product.itemType === "product").map((product) => product.sourceId),
-      );
+      setLoading(true);
+      try {
+        const [companies, products, orders] = await Promise.all([
+          apiListModeratorCompanies(),
+          apiListModeratorProducts(),
+          apiListModeratorPosOrders(),
+        ]);
+        const reviewStats = await apiListProductReviewStats(
+          products.filter((product) => product.itemType === "product").map((product) => product.sourceId),
+        );
 
-      if (!mounted) return;
+        if (!mounted) return;
 
-      const productRows = buildProductAnalytics(products, orders, reviewStats, filtros.periodo);
-      const companyAnalytics = buildCompanyAnalytics(companies, productRows);
+        const productRows = buildProductAnalytics(products, orders, reviewStats, filtros.periodo);
+        const companyAnalytics = buildCompanyAnalytics(companies, productRows);
 
-      const rows: Empresa[] = companies.map((company) => {
-        const metrics = companyAnalytics.get(company.id);
-        const rating = averageCompanyRating(company.id, productRows);
-        const topProducts = productRows
-          .filter((row) => row.product.companyId === company.id)
-          .sort((a, b) => b.analytics.revenue - a.analytics.revenue)
-          .slice(0, 5)
-          .map((row) => ({
-            id: row.product.id,
-            nombre: row.product.name,
-            unidades: row.analytics.unitsSold,
-            ingresos: row.analytics.revenue,
-          }));
+        const rows: Empresa[] = companies.map((company) => {
+          const metrics = companyAnalytics.get(company.id);
+          const rating = averageCompanyRating(company.id, productRows);
+          const topProducts = productRows
+            .filter((row) => row.product.companyId === company.id)
+            .sort((a, b) => b.analytics.revenue - a.analytics.revenue)
+            .slice(0, 5)
+            .map((row) => ({
+              id: row.product.id,
+              nombre: row.product.name,
+              unidades: row.analytics.unitsSold,
+              ingresos: row.analytics.revenue,
+            }));
 
-        return {
-          id: company.id,
-          nombre: company.name,
-          iniciales: company.name.slice(0, 2).toUpperCase(),
-          colorAvatar: company.avatarColor,
-          categoria: "otro",
-          estado: company.status === "approved" ? "activa" : company.status === "rejected" ? "suspendida" : "inactiva",
-          totalVentas: metrics?.unitsSold ?? 0,
-          totalIngresos: metrics?.revenue ?? 0,
-          totalProductos: metrics?.productsCount ?? 0,
-          calificacion: rating.averageRating,
-          totalResenas: rating.totalReviews,
-          clientesUnicos: null,
-          tasaDevolucion: null,
-          crecimiento: metrics?.growthPercent ?? null,
-          ventasMensuales: metrics?.monthlySales ?? [],
-          productosTop: topProducts,
-          fechaRegistro: company.registeredAt,
-        };
-      });
+          return {
+            id: company.id,
+            nombre: company.name,
+            iniciales: company.name.slice(0, 2).toUpperCase(),
+            colorAvatar: company.avatarColor,
+            categoria:
+              metrics?.dominantItemType === "mixed"
+                ? "mixto"
+                : metrics?.dominantItemType === "service"
+                  ? "servicios"
+                  : metrics?.dominantItemType === "product"
+                    ? "productos"
+                    : "otro",
+            estado: company.status === "approved" ? "activa" : company.status === "rejected" ? "suspendida" : "inactiva",
+            totalVentas: metrics?.unitsSold ?? 0,
+            totalIngresos: metrics?.revenue ?? 0,
+            totalProductos: metrics?.productsCount ?? 0,
+            calificacion: rating.averageRating,
+            totalResenas: rating.totalReviews,
+            clientesUnicos: metrics?.uniqueCustomersCount ?? 0,
+            tasaDevolucion: metrics?.returnRate ?? 0,
+            crecimiento: metrics?.growthPercent ?? null,
+            ventasMensuales: metrics?.monthlySales ?? [],
+            productosTop: topProducts,
+            fechaRegistro: company.registeredAt,
+          };
+        });
 
-      const rated = rows.filter((row) => row.calificacion !== null);
-      const growthValues = rows.map((row) => row.crecimiento).filter((value): value is number => value !== null);
+        const rated = rows.filter((row) => row.calificacion !== null);
+        const growthValues = rows.map((row) => row.crecimiento).filter((value): value is number => value !== null);
 
-      setEmpresasData(rows);
-      setGlobalesData({
-        totalEmpresas: rows.length,
-        empresasActivas: rows.filter((row) => row.estado === "activa").length,
-        totalVentas: rows.reduce((acc, row) => acc + row.totalVentas, 0),
-        totalIngresos: rows.reduce((acc, row) => acc + row.totalIngresos, 0),
-        promedioCalificacion:
-          rated.length > 0
-            ? Number((rated.reduce((acc, row) => acc + (row.calificacion ?? 0), 0) / rated.length).toFixed(1))
-            : null,
-        crecimientoGeneral:
-          growthValues.length > 0
-            ? Number((growthValues.reduce((acc, value) => acc + value, 0) / growthValues.length).toFixed(1))
-            : null,
-      });
+        setEmpresasData(rows);
+        setGlobalesData({
+          totalEmpresas: rows.length,
+          empresasActivas: rows.filter((row) => row.estado === "activa").length,
+          totalVentas: rows.reduce((acc, row) => acc + row.totalVentas, 0),
+          totalIngresos: rows.reduce((acc, row) => acc + row.totalIngresos, 0),
+          promedioCalificacion:
+            rated.length > 0
+              ? Number((rated.reduce((acc, row) => acc + (row.calificacion ?? 0), 0) / rated.length).toFixed(1))
+              : null,
+          crecimientoGeneral:
+            growthValues.length > 0
+              ? Number((growthValues.reduce((acc, value) => acc + value, 0) / growthValues.length).toFixed(1))
+              : null,
+        });
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
     })();
 
     return () => {
@@ -170,6 +186,7 @@ export function useEstadisticas(): UseEstadisticasReturn {
     empresaSeleccionada,
     filtros,
     globales: globalesData,
+    loading,
     modalAbierto,
     setFiltros,
     seleccionarEmpresa,

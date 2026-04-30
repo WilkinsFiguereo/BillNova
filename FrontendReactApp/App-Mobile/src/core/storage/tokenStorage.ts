@@ -4,6 +4,12 @@ import * as SecureStore from 'expo-secure-store';
 
 const TOKEN_KEY = 'odoo_session_token';
 const USER_KEY = 'odoo_user_data';
+const SESSION_KEY = 'odoo_auth_session';
+
+type PersistedSession<T> = {
+  token: string;
+  user: T;
+};
 
 function canUseSecureStore(): boolean {
   return (
@@ -109,7 +115,48 @@ export const tokenStorage = {
     await removeItem(USER_KEY);
   },
 
+  async saveSession<T extends object>(session: PersistedSession<T>): Promise<void> {
+    const payload = JSON.stringify(session);
+    await Promise.all([
+      setItem(SESSION_KEY, payload),
+      setItem(TOKEN_KEY, session.token),
+      setItem(USER_KEY, JSON.stringify(session.user)),
+    ]);
+  },
+
+  async getSession<T>(): Promise<PersistedSession<T> | null> {
+    const raw = await getItem(SESSION_KEY);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw) as Partial<PersistedSession<T>>;
+        if (parsed?.token && parsed?.user) {
+          return {
+            token: parsed.token,
+            user: parsed.user,
+          };
+        }
+      } catch {
+        // Fallback to legacy keys below.
+      }
+    }
+
+    const [token, user] = await Promise.all([
+      this.getToken(),
+      this.getUser<T>(),
+    ]);
+
+    if (!token || !user) return null;
+
+    const session = { token, user };
+    await this.saveSession(session);
+    return session;
+  },
+
+  async clearSession(): Promise<void> {
+    await Promise.all([removeItem(SESSION_KEY), removeItem(TOKEN_KEY), removeItem(USER_KEY)]);
+  },
+
   async clearAll(): Promise<void> {
-    await Promise.all([removeItem(TOKEN_KEY), removeItem(USER_KEY)]);
+    await this.clearSession();
   },
 };

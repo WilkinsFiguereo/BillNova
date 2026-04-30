@@ -3,14 +3,34 @@ import logging
 
 from odoo import http
 from odoo.http import Response, request
+from .auth_controller import AuthApiController
 
 _logger = logging.getLogger(__name__)
 
 
 class TaxApiController(http.Controller):
-    def _get_current_billnova_user(self):
+    def _get_current_res_user(self):
+        AuthApiController()._ensure_session_from_request()
+        session_uid = getattr(request.session, 'uid', None)
+        if session_uid:
+            user = request.env['res.users'].sudo().with_context(active_test=False).browse(session_uid)
+            if user.exists():
+                return user
+
         user = request.env.user
-        if not user or user._is_public():
+        if user and getattr(user, 'id', False):
+            try:
+                if user._is_public():
+                    return request.env['res.users']
+            except Exception:
+                return request.env['res.users']
+            return user.sudo().with_context(active_test=False)
+
+        return request.env['res.users']
+
+    def _get_current_billnova_user(self):
+        user = self._get_current_res_user()
+        if not user or not user.exists():
             return request.env['billnova.user']
         return request.env['billnova.user'].sudo().search([('res_user_id', '=', user.id)], limit=1)
 
@@ -46,6 +66,19 @@ class TaxApiController(http.Controller):
 
         return current_company_id
 
+    def _get_base_company_id(self):
+        company = request.env['res.company'].sudo().search([], order='id asc', limit=1)
+        return company.id if company else None
+
+    def _get_allowed_tax_company_ids(self, company_id=None):
+        ids = []
+        if company_id:
+            ids.append(int(company_id))
+        base_company_id = self._get_base_company_id()
+        if base_company_id and base_company_id not in ids:
+            ids.append(base_company_id)
+        return ids
+
     def _log_event(self, company_id, accion, descripcion, detalle="", entidad_id=None, entidad_nombre=""):
         user = request.env.user
         ua = request.httprequest.headers.get('User-Agent', '') or ''
@@ -69,7 +102,7 @@ class TaxApiController(http.Controller):
         return {
             'Access-Control-Allow-Origin': origin or '*',
             'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept, Origin',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept, Origin, X-Auth-Session',
             'Access-Control-Allow-Credentials': 'true',
         }
 
@@ -124,9 +157,13 @@ class TaxApiController(http.Controller):
             if not company_id:
                 return self._json_response({'ok': True, 'data': []})
 
+            allowed_company_ids = self._get_allowed_tax_company_ids(company_id)
             domain = [
+                '&',
                 ('active', 'in', [True, False]),
-                ('company_id', '=', company_id),
+                '|',
+                ('company_id', '=', False),
+                ('company_id', 'in', allowed_company_ids),
             ]
             taxes = request.env['account.tax'].sudo().search(domain, order='sequence asc, name asc')
 
@@ -311,7 +348,8 @@ class TaxApiController(http.Controller):
         try:
             taxes = request.env['account.tax'].sudo().browse([int(tax_id) for tax_id in tax_ids])
             if company_id:
-                taxes = taxes.filtered(lambda tax: not tax.company_id or tax.company_id.id == int(company_id))
+                allowed_company_ids = set(self._get_allowed_tax_company_ids(company_id))
+                taxes = taxes.filtered(lambda tax: not tax.company_id or tax.company_id.id in allowed_company_ids)
             else:
                 taxes = taxes.browse([])
 

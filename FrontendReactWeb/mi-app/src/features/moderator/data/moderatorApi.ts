@@ -93,6 +93,8 @@ export interface ModeratorPosOrder {
   date: string;
   status: string;
   total: number;
+  clientName: string;
+  clientEmail: string;
   lines: ModeratorPosOrderLine[];
 }
 
@@ -228,6 +230,59 @@ export async function apiSetProductModerationStatus(
   });
 }
 
+export async function apiUpdateModeratorProduct(
+  productId: string,
+  payload: {
+    name: string;
+    sku?: string;
+    price: number;
+    cost: number;
+    description: string;
+    moderationStatus: "pending" | "approved" | "rejected";
+    moderationReason?: string;
+  },
+): Promise<void> {
+  const [itemType, rawId] = productId.includes(":") ? productId.split(":", 2) : ["product", productId];
+  const path = itemType === "service"
+    ? `/api/services/${encodeURIComponent(rawId)}`
+    : `/api/products/${encodeURIComponent(rawId)}`;
+
+  const body = itemType === "service"
+    ? {
+        name: payload.name,
+        price: payload.price,
+        cost_price: payload.cost,
+        description: payload.description,
+        moderation_status: payload.moderationStatus,
+        moderation_reason: payload.moderationReason ?? "",
+      }
+    : {
+        name: payload.name,
+        default_code: payload.sku ?? "",
+        list_price: payload.price,
+        cost_price: payload.cost,
+        description_sale: payload.description,
+        moderation_status: payload.moderationStatus,
+        moderation_reason: payload.moderationReason ?? "",
+      };
+
+  await odooRequest(path, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function apiDeleteModeratorProduct(productId: string): Promise<void> {
+  const [itemType, rawId] = productId.includes(":") ? productId.split(":", 2) : ["product", productId];
+  const path = itemType === "service"
+    ? `/api/services/${encodeURIComponent(rawId)}`
+    : `/api/products/${encodeURIComponent(rawId)}`;
+
+  await odooRequest(path, {
+    method: "DELETE",
+  });
+}
+
 export async function apiListModeratorUsers(): Promise<ModeratorUser[]> {
   const [usersPayload, bnPayload] = await Promise.all([
     odooRequest<any>("/api/users", { method: "GET" }),
@@ -354,8 +409,10 @@ export async function apiListModeratorPosOrders(): Promise<ModeratorPosOrder[]> 
     date: String(row.date ?? ""),
     status: String(row.status ?? ""),
     total: Number(row.total ?? 0),
+    clientName: String(row.client ?? row.cliente ?? ""),
+    clientEmail: String(row.clienteEmail ?? ""),
     lines: Array.isArray(row.lines)
-      ? row.lines.map((line: AnyObj) => ({
+? row.lines.map((line: AnyObj) => ({
           id: String(line.id ?? ""),
           productId: String(line.productId ?? line.product_id ?? ""),
           productName: String(line.productName ?? line.product_name ?? ""),

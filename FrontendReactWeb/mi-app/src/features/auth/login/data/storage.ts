@@ -29,6 +29,30 @@ export function persistAuthState(user: AuthUser, rememberMe: boolean) {
   localStorage.removeItem(REMEMBER_KEY);
 }
 
+export function updateStoredAuthState(updater: (user: AuthUser) => AuthUser) {
+  if (!isBrowser()) return;
+
+  const localValue = localStorage.getItem(AUTH_STORAGE_KEY);
+  const sessionValue = sessionStorage.getItem(AUTH_STORAGE_KEY);
+  const rawValue = localValue ?? sessionValue;
+  if (!rawValue) return;
+
+  try {
+    const parsed = JSON.parse(rawValue) as StoredAuthState;
+    const nextUser = updater(parsed.user);
+    const serialized = JSON.stringify({ user: nextUser } satisfies StoredAuthState);
+
+    if (localValue) {
+      localStorage.setItem(AUTH_STORAGE_KEY, serialized);
+    }
+    if (sessionValue || !localValue) {
+      sessionStorage.setItem(AUTH_STORAGE_KEY, serialized);
+    }
+  } catch {
+    clearStoredAuthState();
+  }
+}
+
 export function getStoredAuthState(): AuthUser | null {
   if (!isBrowser()) return null;
   const localValue = localStorage.getItem(AUTH_STORAGE_KEY);

@@ -28,6 +28,12 @@ const IconTrend = () => (
   </svg>
 );
 
+function formatCurrencyCompact(value: number): string {
+  if (value >= 1000000) return `RD$ ${(value / 1000000).toFixed(1)}M`;
+  if (value >= 1000) return `RD$ ${(value / 1000).toFixed(1)}k`;
+  return `RD$ ${value.toLocaleString()}`;
+}
+
 function Card({ label, value, iconColor, iconBg, icon, sub }: { label: string; value: string; iconColor: string; iconBg: string; icon: React.ReactNode; sub?: string }) {
   return (
     <div style={{ background: colors.bg.secondary, border: `1px solid ${colors.border}`, borderRadius: 12, padding: "14px 18px", display: "flex", alignItems: "center", gap: 14, flex: 1, minWidth: 150, boxShadow: `0 1px 4px ${colors.shadow}` }}>
@@ -51,7 +57,7 @@ export function EstadisticasHeader({ globales }: { globales: EstadisticasGlobale
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 22 }}>
         <Card label="Total Empresas" value={String(globales.totalEmpresas)} iconColor={colors.brand[600]} iconBg={colors.brand[100]} icon={<IconBuilding />} sub={`${globales.empresasActivas} activas`} />
         <Card label="Ventas Totales" value={globales.totalVentas.toLocaleString()} iconColor="#F59E0B" iconBg="#FEF3C7" icon={<IconShoppingBag />} />
-        <Card label="Ingresos Plataforma" value={`RD$ ${(globales.totalIngresos / 1000000).toFixed(1)}M`} iconColor="#10B981" iconBg="#D1FAE5" icon={<IconCash />} />
+        <Card label="Ingresos Plataforma" value={formatCurrencyCompact(globales.totalIngresos)} iconColor="#10B981" iconBg="#D1FAE5" icon={<IconCash />} />
         <Card label="Calif. Promedio" value={globales.promedioCalificacion === null ? "N/D" : globales.promedioCalificacion.toFixed(1)} iconColor="#F59E0B" iconBg="#FEF3C7" icon={<IconStar />} />
         <Card label="Crecimiento Gral." value={globales.crecimientoGeneral === null ? "N/D" : `${globales.crecimientoGeneral > 0 ? "+" : ""}${globales.crecimientoGeneral}%`} iconColor={colors.brand[400]} iconBg={colors.brand[100]} icon={<IconTrend />} />
       </div>

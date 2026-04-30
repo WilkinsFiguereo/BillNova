@@ -7,9 +7,11 @@ import type { Company } from '../types/company.types';
 
 interface EmpresaCardProps {
   company: Company;
+  onEdit: (company: Company) => void;
+  onDelete: (company: Company) => void;
 }
 
-export function EmpresaCard({ company }: EmpresaCardProps) {
+export function EmpresaCard({ company, onEdit, onDelete }: EmpresaCardProps) {
   return (
     <tr>
       <td
@@ -79,28 +81,37 @@ export function EmpresaCard({ company }: EmpresaCardProps) {
           textAlign: 'right',
         }}
       >
-        <button
-          style={{
-            padding: '5px 12px',
-            background: 'transparent',
-            border: `1px solid ${colors.border}`,
-            borderRadius: radius.md,
-            color: colors.text.secondary,
-            fontSize: font.sizes.sm,
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.borderColor = colors.accent;
-            e.currentTarget.style.color = colors.accent;
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.borderColor = colors.border;
-            e.currentTarget.style.color = colors.text.secondary;
-          }}
-        >
-          Ver detalles
-        </button>
+        <div style={{ display: 'inline-flex', gap: 8 }}>
+          <button
+            style={{
+              padding: '5px 12px',
+              background: 'transparent',
+              border: `1px solid ${colors.border}`,
+              borderRadius: radius.md,
+              color: colors.text.secondary,
+              fontSize: font.sizes.sm,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+            onClick={() => onEdit(company)}
+          >
+            Editar
+          </button>
+          <button
+            style={{
+              padding: '5px 12px',
+              background: colors.errorSoft,
+              border: `1px solid #FECACA`,
+              borderRadius: radius.md,
+              color: colors.error,
+              fontSize: font.sizes.sm,
+              cursor: 'pointer',
+            }}
+            onClick={() => onDelete(company)}
+          >
+            Eliminar
+          </button>
+        </div>
       </td>
     </tr>
   );

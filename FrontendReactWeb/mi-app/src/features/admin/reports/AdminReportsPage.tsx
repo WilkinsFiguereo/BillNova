@@ -60,11 +60,22 @@ export function AdminReportsPage() {
 
   const userOptions = useMemo(
     () =>
-      [...resUsers, ...billnovaUsers].map((user) => ({
-        id: `usuario-${user.id}`,
-        label: `${user.name} (${user.email})`,
-        metadata: `Rol: ${user.role}`,
-      })),
+      [
+        ...resUsers.map((user) => ({
+          id: `usuario-res-${user.id}`,
+          entityId: user.id,
+          targetModel: "res.users" as const,
+          label: `${user.name} (${user.email})`,
+          metadata: `Rol: ${user.role}`,
+        })),
+        ...billnovaUsers.map((user) => ({
+          id: `usuario-billnova-${user.id}`,
+          entityId: user.id,
+          targetModel: "billnova.user" as const,
+          label: `${user.name} (${user.email})`,
+          metadata: `Rol: ${user.role}`,
+        })),
+      ],
     [billnovaUsers, resUsers],
   );
 
@@ -72,6 +83,8 @@ export function AdminReportsPage() {
     () =>
       companies.map((company) => ({
         id: `empresa-${company.id}`,
+        entityId: company.id,
+        targetModel: "res.company" as const,
         label: company.name,
         metadata: company.contact_email || company.ruc || "Sin dato adicional",
       })),
@@ -114,6 +127,10 @@ export function AdminReportsPage() {
         description: composedDescription,
         category,
         severity,
+        targetType,
+        targetModel: selectedTarget?.targetModel || (targetType === "usuario" ? "res.users" : "res.company"),
+        targetId: selectedTarget?.entityId || 0,
+        targetLabel: selectedTarget?.label || "",
       });
 
       setTitle("");

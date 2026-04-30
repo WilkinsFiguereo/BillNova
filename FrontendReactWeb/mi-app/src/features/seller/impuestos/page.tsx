@@ -83,6 +83,7 @@ export default function ImpuestosPage() {
 
         <ImpuestosCalculadorSection
           impuestos={impuestos}
+          loading={loading}
           calcBase={calcBase}
           setCalcBase={setCalcBase}
           calcSelected={calcSelected}

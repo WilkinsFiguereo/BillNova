@@ -34,6 +34,7 @@ interface UseProductosReturn {
   productoSeleccionado: Producto | null;
   filtros: FiltrosProductos;
   globales: EstadisticasGlobales;
+  loading: boolean;
   modalAbierto: boolean;
   top3: Producto[];
   setFiltros: (f: Partial<FiltrosProductos>) => void;
@@ -53,6 +54,7 @@ export function useProductos(): UseProductosReturn {
   const [productoSeleccionado, setProductoSeleccionado] = useState<Producto | null>(null);
   const [filtros, setFiltrosState] = useState<FiltrosProductos>(filtrosIniciales);
   const [modalAbierto, setModalAbierto] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [productosData, setProductosData] = useState<Producto[]>([]);
   const [globalesData, setGlobalesData] = useState<EstadisticasGlobales>({
     totalProductos: 0,
@@ -68,55 +70,62 @@ export function useProductos(): UseProductosReturn {
     let mounted = true;
 
     (async () => {
-      const [products, orders] = await Promise.all([
-        apiListModeratorProducts(),
-        apiListModeratorPosOrders(),
-      ]);
-      const reviewStats = await apiListProductReviewStats(
-        products.filter((product) => product.itemType === "product").map((product) => product.sourceId),
-      );
-      if (!mounted) return;
+      setLoading(true);
+      try {
+        const [products, orders] = await Promise.all([
+          apiListModeratorProducts(),
+          apiListModeratorPosOrders(),
+        ]);
+        const reviewStats = await apiListProductReviewStats(
+          products.filter((product) => product.itemType === "product").map((product) => product.sourceId),
+        );
+        if (!mounted) return;
 
-      const rows = buildProductAnalytics(products, orders, reviewStats, filtros.periodo);
-      const mapped: Producto[] = rows.map(({ product, analytics, reviewStats: stats }) => ({
-        id: product.id,
-        nombre: product.name,
-        empresa: product.companyName,
-        empresaColor: colorFromId(product.companyId || product.id),
-        categoria: normalizeCategory(product.categoryName),
-        estado: product.moderationStatus === "rejected" ? "suspendido" : product.stock <= 0 ? "agotado" : "activo",
-        precio: product.price,
-        totalVentas: analytics.unitsSold,
-        totalIngresos: analytics.revenue,
-        totalVistas: null,
-        calificacion: stats?.averageRating ?? null,
-        totalResenas: stats?.totalReviews ?? 0,
-        stock: product.stock,
-        tasaConversion: null,
-        tasaDevolucion: null,
-        crecimiento: analytics.growthPercent,
-        ventasMensuales: analytics.monthlySales,
-        resenasDist: stats?.distribution ?? [],
-        fechaLanzamiento: product.updatedAt,
-      }));
+        const rows = buildProductAnalytics(products, orders, reviewStats, filtros.periodo);
+        const mapped: Producto[] = rows.map(({ product, analytics, reviewStats: stats }) => ({
+          id: product.id,
+          nombre: product.name,
+          empresa: product.companyName,
+          empresaColor: colorFromId(product.companyId || product.id),
+          categoria: product.itemType === "service" ? "tecnologia" : normalizeCategory(product.categoryName),
+          estado: product.moderationStatus === "rejected" ? "suspendido" : product.stock <= 0 ? "agotado" : "activo",
+          precio: product.price,
+          totalVentas: analytics.unitsSold,
+          totalIngresos: analytics.revenue,
+          totalVistas: analytics.ordersCount,
+          calificacion: stats?.averageRating ?? null,
+          totalResenas: stats?.totalReviews ?? 0,
+          stock: product.stock,
+          tasaConversion: null,
+          tasaDevolucion: analytics.returnRate ?? 0,
+          crecimiento: analytics.growthPercent,
+          ventasMensuales: analytics.monthlySales,
+          resenasDist: stats?.distribution ?? [],
+          fechaLanzamiento: product.updatedAt,
+        }));
 
-      const totalReviews = mapped.reduce((acc, item) => acc + item.totalResenas, 0);
-      const weightedRating = mapped.reduce((acc, item) => acc + ((item.calificacion ?? 0) * item.totalResenas), 0);
-      const growthValues = mapped.map((item) => item.crecimiento).filter((value): value is number => value !== null);
+        const totalReviews = mapped.reduce((acc, item) => acc + item.totalResenas, 0);
+        const weightedRating = mapped.reduce((acc, item) => acc + ((item.calificacion ?? 0) * item.totalResenas), 0);
+        const growthValues = mapped.map((item) => item.crecimiento).filter((value): value is number => value !== null);
 
-      setProductosData(mapped);
-      setGlobalesData({
-        totalProductos: mapped.length,
-        productosActivos: mapped.filter((item) => item.estado === "activo").length,
-        totalVentas: mapped.reduce((acc, item) => acc + item.totalVentas, 0),
-        totalIngresos: mapped.reduce((acc, item) => acc + item.totalIngresos, 0),
-        promedioCalificacion: totalReviews > 0 ? Number((weightedRating / totalReviews).toFixed(1)) : null,
-        totalVistas: null,
-        crecimientoGeneral:
-          growthValues.length > 0
-            ? Number((growthValues.reduce((acc, value) => acc + value, 0) / growthValues.length).toFixed(1))
-            : null,
-      });
+        setProductosData(mapped);
+        setGlobalesData({
+          totalProductos: mapped.length,
+          productosActivos: mapped.filter((item) => item.estado === "activo").length,
+          totalVentas: mapped.reduce((acc, item) => acc + item.totalVentas, 0),
+          totalIngresos: mapped.reduce((acc, item) => acc + item.totalIngresos, 0),
+          promedioCalificacion: totalReviews > 0 ? Number((weightedRating / totalReviews).toFixed(1)) : null,
+          totalVistas: mapped.reduce((acc, item) => acc + (item.totalVistas ?? 0), 0),
+          crecimientoGeneral:
+            growthValues.length > 0
+              ? Number((growthValues.reduce((acc, value) => acc + value, 0) / growthValues.length).toFixed(1))
+              : null,
+        });
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
     })();
 
     return () => {
@@ -174,6 +183,7 @@ export function useProductos(): UseProductosReturn {
     productoSeleccionado,
     filtros,
     globales: globalesData,
+    loading,
     modalAbierto,
     top3,
     setFiltros,

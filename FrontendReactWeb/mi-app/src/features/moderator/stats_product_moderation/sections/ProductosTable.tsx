@@ -7,7 +7,13 @@ import { CategoriaBadge, CrecimientoBadge, EstadoBadge, MiniSparkline, StarRatin
 
 const cols = ["#", "Producto", "Empresa", "Ventas", "Ingresos", "Tendencia", "Precio", "Stock", "Calif.", "Conversión", "Devol.", "Estado"];
 
-export function ProductosTable({ productos, onSelect }: { productos: Producto[]; onSelect: (p: Producto) => void }) {
+function formatCurrencyCompact(value: number): string {
+  if (value >= 1000000) return `RD$ ${(value / 1000000).toFixed(1)}M`;
+  if (value >= 1000) return `RD$ ${(value / 1000).toFixed(1)}k`;
+  return `RD$ ${value.toLocaleString()}`;
+}
+
+export function ProductosTable({ productos, loading = false, onSelect }: { productos: Producto[]; loading?: boolean; onSelect: (p: Producto) => void }) {
   return (
     <div style={{ background: colors.bg.secondary, border: `1px solid ${colors.border}`, borderRadius: 12, overflow: "hidden", boxShadow: `0 1px 4px ${colors.shadow}` }}>
       <div style={{ overflowX: "auto" }}>
@@ -24,7 +30,7 @@ export function ProductosTable({ productos, onSelect }: { productos: Producto[];
           <tbody>
             {productos.length === 0 ? (
               <tr>
-                <td colSpan={12} style={{ padding: 48, textAlign: "center", color: colors.text.disabled, fontSize: 14 }}>No se encontraron productos</td>
+                <td colSpan={12} style={{ padding: 48, textAlign: "center", color: colors.text.disabled, fontSize: 14 }}>{loading ? "Cargando productos..." : "No se encontraron productos"}</td>
               </tr>
             ) : (
               productos.map((producto, index) => <ProductoRow key={producto.id} producto={producto} rank={index + 1} onClick={onSelect} />)
@@ -66,7 +72,7 @@ function ProductoRow({ producto: p, rank, onClick }: { producto: Producto; rank:
       </td>
       <td style={{ padding: "12px 13px", whiteSpace: "nowrap" }}>
         <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#10B981" }}>
-          RD$ {p.totalIngresos >= 1000000 ? `${(p.totalIngresos / 1000000).toFixed(1)}M` : `${(p.totalIngresos / 1000).toFixed(0)}k`}
+          {formatCurrencyCompact(p.totalIngresos)}
         </p>
       </td>
       <td style={{ padding: "12px 13px" }}>

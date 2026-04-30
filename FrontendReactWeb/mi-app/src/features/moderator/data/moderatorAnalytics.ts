@@ -15,8 +15,12 @@ export interface ProductAnalytics {
   revenue: number;
   ordersCount: number;
   uniqueOrderIds: string[];
+  uniqueCustomerKeys: string[];
+  uniqueCustomersCount: number;
   monthlySales: Array<{ mes: string; ventas: number; ingresos: number; vistas: number }>;
   growthPercent: number | null;
+  returnRate: number | null;
+  itemType: "product" | "service";
 }
 
 export interface CompanyAnalytics {
@@ -24,8 +28,11 @@ export interface CompanyAnalytics {
   unitsSold: number;
   revenue: number;
   productsCount: number;
+  uniqueCustomersCount: number;
   monthlySales: Array<{ mes: string; ventas: number; ingresos: number }>;
   growthPercent: number | null;
+  returnRate: number | null;
+  dominantItemType: "product" | "service" | "mixed" | "unknown";
 }
 
 type PeriodWindow = { start: Date; previousStart: Date; previousEnd: Date };
@@ -123,8 +130,11 @@ function aggregateOrdersByProduct(
   const periodWindow = buildPeriodWindow(period);
   const monthlyBuckets = buildMonthlyBuckets(period);
   const analyticsByProduct = new Map<string, ProductAnalytics>();
+  const customerSets = new Map<string, Set<string>>();
+  const returnTotals = new Map<string, number>();
+  const soldTotals = new Map<string, number>();
 
-  function ensure(productId: string): ProductAnalytics {
+  function ensure(productId: string, itemType: "product" | "service"): ProductAnalytics {
     const existing = analyticsByProduct.get(productId);
     if (existing) return existing;
     const created: ProductAnalytics = {
@@ -133,6 +143,8 @@ function aggregateOrdersByProduct(
       revenue: 0,
       ordersCount: 0,
       uniqueOrderIds: [],
+      uniqueCustomerKeys: [],
+      uniqueCustomersCount: 0,
       monthlySales: monthlyBuckets.map((bucket) => ({
         mes: bucket.mes,
         ventas: 0,
@@ -140,31 +152,50 @@ function aggregateOrdersByProduct(
         vistas: 0,
       })),
       growthPercent: null,
+      returnRate: null,
+      itemType,
     };
     analyticsByProduct.set(productId, created);
+    customerSets.set(productId, new Set<string>());
     return created;
   }
 
   const previousTotals = new Map<string, number>();
 
-  for (const order of orders) {
+for (const order of orders) {
     const orderDate = safeDate(order.date);
     if (!orderDate) continue;
 
     for (const line of order.lines) {
-      const product = productsById.get(line.productId);
+      const resolvedProductId = String((line as { productId?: string; product_id?: string }).productId ?? (line as { productId?: string; product_id?: string }).product_id ?? "");
+      const product = productsById.get(resolvedProductId);
       if (!product) continue;
 
       const quantity = Number(line.quantity ?? 0);
       const lineRevenue = Number(line.priceUnit ?? 0) * quantity;
+      const customerKey = String(order.clientEmail || order.clientName || order.id).trim().toLowerCase();
+
+      soldTotals.set(product.id, (soldTotals.get(product.id) ?? 0) + quantity);
+
+      if (order.status === "cancelada") {
+        returnTotals.set(product.id, (returnTotals.get(product.id) ?? 0) + quantity);
+        continue;
+      }
+
+      if (order.status === "borrador") {
+        continue;
+      }
 
       if (orderDate >= periodWindow.start) {
-        const analytics = ensure(product.id);
+        const analytics = ensure(product.id, product.itemType);
         analytics.unitsSold += quantity;
         analytics.revenue += lineRevenue;
         if (!analytics.uniqueOrderIds.includes(order.id)) {
           analytics.uniqueOrderIds.push(order.id);
           analytics.ordersCount += 1;
+        }
+        if (customerKey) {
+          customerSets.get(product.id)?.add(customerKey);
         }
 
         const bucketIndex = monthlyBuckets.findIndex(
@@ -182,6 +213,11 @@ function aggregateOrdersByProduct(
 
   for (const [productId, analytics] of analyticsByProduct.entries()) {
     analytics.growthPercent = computeGrowth(analytics.unitsSold, previousTotals.get(productId) ?? 0);
+    analytics.uniqueCustomerKeys = Array.from(customerSets.get(productId) ?? []);
+    analytics.uniqueCustomersCount = customerSets.get(productId)?.size ?? 0;
+    const soldTotal = soldTotals.get(productId) ?? 0;
+    const returnedTotal = returnTotals.get(productId) ?? 0;
+    analytics.returnRate = soldTotal > 0 ? Number(((returnedTotal / soldTotal) * 100).toFixed(1)) : 0;
   }
 
   return analyticsByProduct;
@@ -194,9 +230,7 @@ export function buildProductAnalytics(
   period: PeriodKey,
 ) {
   const productsById = new Map(
-    products
-      .filter((product) => product.itemType === "product")
-      .map((product) => [product.sourceId, product]),
+    products.map((product) => [product.sourceId, product]),
   );
   const orderAnalytics = aggregateOrdersByProduct(orders, productsById, period);
 
@@ -212,6 +246,8 @@ export function buildProductAnalytics(
         revenue: 0,
         ordersCount: 0,
         uniqueOrderIds: [],
+        uniqueCustomerKeys: [],
+        uniqueCustomersCount: 0,
         monthlySales: buildMonthlyBuckets(period).map((bucket) => ({
           mes: bucket.mes,
           ventas: 0,
@@ -219,6 +255,8 @@ export function buildProductAnalytics(
           vistas: 0,
         })),
         growthPercent: null,
+        returnRate: 0,
+        itemType: product.itemType,
       },
     };
   });
@@ -230,6 +268,9 @@ export function buildCompanyAnalytics(
 ) {
   const companyMap = new Map<string, CompanyAnalytics>();
   const previousTotals = new Map<string, number>();
+  const customerSets = new Map<string, Set<string>>();
+  const itemTypeCounts = new Map<string, { product: number; service: number }>();
+  const returnRates = new Map<string, number[]>();
 
   function ensure(companyId: string): CompanyAnalytics {
     const existing = companyMap.get(companyId);
@@ -239,10 +280,16 @@ export function buildCompanyAnalytics(
       unitsSold: 0,
       revenue: 0,
       productsCount: 0,
+      uniqueCustomersCount: 0,
       monthlySales: [],
       growthPercent: null,
+      returnRate: null,
+      dominantItemType: "unknown",
     };
     companyMap.set(companyId, created);
+    customerSets.set(companyId, new Set<string>());
+    itemTypeCounts.set(companyId, { product: 0, service: 0 });
+    returnRates.set(companyId, []);
     return created;
   }
 
@@ -253,11 +300,18 @@ export function buildCompanyAnalytics(
     company.unitsSold += row.analytics.unitsSold;
     company.revenue += row.analytics.revenue;
     company.productsCount += 1;
+    company.uniqueCustomersCount += 0;
     previousTotals.set(
       companyId,
       (previousTotals.get(companyId) ?? 0) +
         row.analytics.monthlySales.slice(0, Math.max(0, row.analytics.monthlySales.length - 1)).reduce((acc, item) => acc + item.ventas, 0),
     );
+    const typeCounter = itemTypeCounts.get(companyId);
+    if (typeCounter) {
+      typeCounter[row.product.itemType] += 1;
+    }
+    row.analytics.uniqueCustomerKeys.forEach((customerKey) => customerSets.get(companyId)?.add(customerKey));
+    returnRates.get(companyId)?.push(row.analytics.returnRate ?? 0);
 
     if (company.monthlySales.length === 0) {
       company.monthlySales = row.analytics.monthlySales.map((item) => ({
@@ -280,6 +334,20 @@ export function buildCompanyAnalytics(
   for (const entry of companyMap.values()) {
     const currentTotal = entry.monthlySales.reduce((acc, item) => acc + item.ventas, 0);
     entry.growthPercent = computeGrowth(currentTotal, previousTotals.get(entry.companyId) ?? 0);
+    entry.uniqueCustomersCount = customerSets.get(entry.companyId)?.size ?? 0;
+    const companyReturnRates = returnRates.get(entry.companyId) ?? [];
+    entry.returnRate = companyReturnRates.length > 0
+      ? Number((companyReturnRates.reduce((acc, value) => acc + value, 0) / companyReturnRates.length).toFixed(1))
+      : 0;
+    const typeCounter = itemTypeCounts.get(entry.companyId) ?? { product: 0, service: 0 };
+    entry.dominantItemType =
+      typeCounter.product > 0 && typeCounter.service > 0
+        ? "mixed"
+        : typeCounter.service > 0
+          ? "service"
+          : typeCounter.product > 0
+            ? "product"
+            : "unknown";
   }
 
   return companyMap;

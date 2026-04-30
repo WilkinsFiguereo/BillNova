@@ -7,7 +7,13 @@ import { CrecimientoBadge, EmpresaAvatar, EstadoBadge, MiniBarChart, StarRating 
 
 const cols = ["#", "Empresa", "Categoría", "Ventas", "Ingresos", "Tendencia", "Calif.", "Clientes", "Devol.", "Estado"];
 
-export function EmpresasTable({ empresas, onSelect }: { empresas: Empresa[]; onSelect: (e: Empresa) => void }) {
+function formatCurrencyCompact(value: number): string {
+  if (value >= 1000000) return `RD$ ${(value / 1000000).toFixed(1)}M`;
+  if (value >= 1000) return `RD$ ${(value / 1000).toFixed(1)}k`;
+  return `RD$ ${value.toLocaleString()}`;
+}
+
+export function EmpresasTable({ empresas, loading = false, onSelect }: { empresas: Empresa[]; loading?: boolean; onSelect: (e: Empresa) => void }) {
   return (
     <div style={{ background: colors.bg.secondary, border: `1px solid ${colors.border}`, borderRadius: 12, overflow: "hidden", boxShadow: `0 1px 4px ${colors.shadow}` }}>
       <div style={{ overflowX: "auto" }}>
@@ -19,7 +25,7 @@ export function EmpresasTable({ empresas, onSelect }: { empresas: Empresa[]; onS
           </thead>
           <tbody>
             {empresas.length === 0 ? (
-              <tr><td colSpan={10} style={{ padding: 48, textAlign: "center", color: colors.text.disabled, fontSize: 14 }}>No se encontraron empresas</td></tr>
+              <tr><td colSpan={10} style={{ padding: 48, textAlign: "center", color: colors.text.disabled, fontSize: 14 }}>{loading ? "Cargando empresas..." : "No se encontraron empresas"}</td></tr>
             ) : (
               empresas.map((empresa, index) => <EmpresaRow key={empresa.id} empresa={empresa} rank={index + 1} onClick={onSelect} />)
             )}
@@ -56,7 +62,7 @@ function EmpresaRow({ empresa: e, rank, onClick }: { empresa: Empresa; rank: num
         <CrecimientoBadge valor={e.crecimiento} />
       </td>
       <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
-        <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#10B981" }}>RD$ {(e.totalIngresos / 1000000).toFixed(2)}M</p>
+        <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#10B981" }}>{formatCurrencyCompact(e.totalIngresos)}</p>
       </td>
       <td style={{ padding: "12px 14px", width: 80 }}>
         <MiniBarChart data={miniData} color={barColor} />

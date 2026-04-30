@@ -87,7 +87,12 @@ export function useCompany() {
     setError(null);
 
     try {
-      const res = await companyApi.getConfig(getActiveCompanyId() ?? undefined);
+      const activeCompanyId = getActiveCompanyId() ?? undefined;
+      let res = await companyApi.getConfig(activeCompanyId);
+
+      if ((!res.ok || !res.company) && activeCompanyId) {
+        res = await companyApi.getConfig();
+      }
 
       if (res.ok && res.company) {
         setCompany(mapCompanyFromApi(res.company));

@@ -36,6 +36,12 @@ const IconTrend = () => (
   </svg>
 );
 
+function formatCurrencyCompact(value: number): string {
+  if (value >= 1000000) return `RD$ ${(value / 1000000).toFixed(1)}M`;
+  if (value >= 1000) return `RD$ ${(value / 1000).toFixed(1)}k`;
+  return `RD$ ${value.toLocaleString()}`;
+}
+
 function StatCard({ label, value, sub, iconColor, iconBg, icon }: { label: string; value: string; sub?: string; iconColor: string; iconBg: string; icon: React.ReactNode }) {
   return (
     <div style={{ background: colors.bg.secondary, border: `1px solid ${colors.border}`, borderRadius: 12, padding: "14px 18px", display: "flex", alignItems: "center", gap: 13, flex: 1, minWidth: 148, boxShadow: `0 1px 4px ${colors.shadow}` }}>
@@ -50,7 +56,7 @@ function StatCard({ label, value, sub, iconColor, iconBg, icon }: { label: strin
 }
 
 export function ProductosHeader({ globales }: { globales: EstadisticasGlobales }) {
-  const ingresos = `RD$ ${(globales.totalIngresos / 1000000).toFixed(1)}M`;
+  const ingresos = formatCurrencyCompact(globales.totalIngresos);
   const vistas = globales.totalVistas === null ? "N/D" : globales.totalVistas >= 1000 ? `${(globales.totalVistas / 1000).toFixed(0)}k` : globales.totalVistas.toLocaleString();
 
   return (

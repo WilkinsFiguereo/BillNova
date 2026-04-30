@@ -14,6 +14,7 @@ import { ProductoDetailModal } from './sections/ProductoDetailModal';
 export function EstadisticasProductosPage() {
   const {
     productos, productoSeleccionado, filtros, globales,
+    loading,
     modalAbierto, top3,
     setFiltros, seleccionarProducto, cerrarModal,
   } = useProductos();
@@ -34,7 +35,7 @@ export function EstadisticasProductosPage() {
           <ProductosHeader globales={globales} />
           <Top3Podio productos={top3} onClick={seleccionarProducto} />
           <ProductosFilters filtros={filtros} onChange={setFiltros} total={productos.length} />
-          <ProductosTable productos={productos} onSelect={seleccionarProducto} />
+          <ProductosTable productos={productos} loading={loading} onSelect={seleccionarProducto} />
         </div>
       </main>
 

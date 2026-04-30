@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
-  Animated,
   LayoutAnimation,
   UIManager,
   Platform,
@@ -16,8 +15,12 @@ import { productDetailTheme as t } from '../theme/productDetail.theme';
 import { IconStar, IconStarEmpty } from '../../../shared/ui/Icons';
 import { useReviews, Review } from '../hooks/useReviews';
 
-// Enable layout animation on Android
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+// This API is ignored under the New Architecture and only needed on old Android setups.
+if (
+  Platform.OS === 'android' &&
+  !global.nativeFabricUIManager &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 

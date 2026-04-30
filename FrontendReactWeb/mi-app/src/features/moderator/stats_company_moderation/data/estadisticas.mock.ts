@@ -23,7 +23,7 @@ function genMeses(base: number, crecimiento: number) {
 export const empresasMock: Empresa[] = [
   {
     id: '1', nombre: 'TechZone RD', iniciales: 'TZ', colorAvatar: '#1E3A8A',
-    categoria: 'electronica', estado: 'activa',
+    categoria: 'productos', estado: 'activa',
     totalVentas: 14820, totalIngresos: 8450000, totalProductos: 342,
     calificacion: 4.8, totalResenas: 2341, clientesUnicos: 6720, tasaDevolucion: 1.2, crecimiento: 34.5,
     ventasMensuales: genMeses(1850, 34.5),
@@ -37,7 +37,7 @@ export const empresasMock: Empresa[] = [
   },
   {
     id: '2', nombre: 'Moda Élite', iniciales: 'ME', colorAvatar: '#7C3AED',
-    categoria: 'moda', estado: 'activa',
+    categoria: 'productos', estado: 'activa',
     totalVentas: 11340, totalIngresos: 4920000, totalProductos: 890,
     calificacion: 4.6, totalResenas: 1876, clientesUnicos: 5430, tasaDevolucion: 3.8, crecimiento: 22.1,
     ventasMensuales: genMeses(1400, 22.1),
@@ -51,7 +51,7 @@ export const empresasMock: Empresa[] = [
   },
   {
     id: '3', nombre: 'HogarPlus', iniciales: 'HP', colorAvatar: '#10B981',
-    categoria: 'hogar', estado: 'activa',
+    categoria: 'productos', estado: 'activa',
     totalVentas: 9870, totalIngresos: 3210000, totalProductos: 654,
     calificacion: 4.5, totalResenas: 1432, clientesUnicos: 4890, tasaDevolucion: 2.1, crecimiento: 18.7,
     ventasMensuales: genMeses(1230, 18.7),
@@ -65,7 +65,7 @@ export const empresasMock: Empresa[] = [
   },
   {
     id: '4', nombre: 'SportMax', iniciales: 'SM', colorAvatar: '#F59E0B',
-    categoria: 'deportes', estado: 'activa',
+    categoria: 'productos', estado: 'activa',
     totalVentas: 8230, totalIngresos: 2780000, totalProductos: 421,
     calificacion: 4.3, totalResenas: 987, clientesUnicos: 3920, tasaDevolucion: 4.5, crecimiento: 12.4,
     ventasMensuales: genMeses(1028, 12.4),
@@ -79,7 +79,7 @@ export const empresasMock: Empresa[] = [
   },
   {
     id: '5', nombre: 'SaludVital', iniciales: 'SV', colorAvatar: '#EC4899',
-    categoria: 'salud', estado: 'activa',
+    categoria: 'productos', estado: 'activa',
     totalVentas: 6540, totalIngresos: 1960000, totalProductos: 238,
     calificacion: 4.7, totalResenas: 1123, clientesUnicos: 3210, tasaDevolucion: 1.8, crecimiento: 28.9,
     ventasMensuales: genMeses(817, 28.9),
@@ -93,7 +93,7 @@ export const empresasMock: Empresa[] = [
   },
   {
     id: '6', nombre: 'FoodExpress', iniciales: 'FE', colorAvatar: '#EF4444',
-    categoria: 'alimentos', estado: 'activa',
+    categoria: 'productos', estado: 'activa',
     totalVentas: 5890, totalIngresos: 1240000, totalProductos: 185,
     calificacion: 4.2, totalResenas: 743, clientesUnicos: 2870, tasaDevolucion: 5.2, crecimiento: 8.3,
     ventasMensuales: genMeses(736, 8.3),
@@ -107,7 +107,7 @@ export const empresasMock: Empresa[] = [
   },
   {
     id: '7', nombre: 'TechGadgets', iniciales: 'TG', colorAvatar: '#0EA5E9',
-    categoria: 'tecnologia', estado: 'inactiva',
+    categoria: 'productos', estado: 'inactiva',
     totalVentas: 3210, totalIngresos: 890000, totalProductos: 156,
     calificacion: 3.9, totalResenas: 412, clientesUnicos: 1540, tasaDevolucion: 7.1, crecimiento: -4.2,
     ventasMensuales: genMeses(401, -4.2),
@@ -119,7 +119,7 @@ export const empresasMock: Empresa[] = [
   },
   {
     id: '8', nombre: 'ModaUrbana', iniciales: 'MU', colorAvatar: '#14B8A6',
-    categoria: 'moda', estado: 'suspendida',
+    categoria: 'productos', estado: 'suspendida',
     totalVentas: 1890, totalIngresos: 430000, totalProductos: 98,
     calificacion: 2.8, totalResenas: 234, clientesUnicos: 890, tasaDevolucion: 14.3, crecimiento: -18.6,
     ventasMensuales: genMeses(236, -18.6),

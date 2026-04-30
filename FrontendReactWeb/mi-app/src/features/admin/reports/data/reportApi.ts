@@ -1,11 +1,14 @@
 import { ODOO_URL } from '@/lib/odooApi';
+import { getStoredAuthState } from '@/features/auth/login/data/storage';
 import type { CreateReportPayload, Report } from '../types/report.types';
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const sessionToken = getStoredAuthState()?.sessionToken;
   const response = await fetch(url, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
+      ...(sessionToken ? { 'X-Auth-Session': sessionToken } : {}),
       ...(init?.headers ?? {}),
     },
     credentials: 'include',

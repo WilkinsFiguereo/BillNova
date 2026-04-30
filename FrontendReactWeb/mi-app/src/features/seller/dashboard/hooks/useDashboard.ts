@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiListProductos } from "../../product/data/productApi";
 import { fetchOrders } from "../../orders/data/orderService";
+import { getActiveCompanyId } from "../../shared/companySession";
+import { getStoredAuthState } from "@/features/auth/login/data/storage";
+import { ODOO_URL } from "@/lib/odooApi";
 import type { Producto } from "../../product/types/productos.types";
 import type { Order } from "../../orders/types/order.types";
 import { Product } from "../types/dashboard.types";
@@ -160,6 +163,31 @@ function buildMeta(productos: Producto[], orders: Order[]): DashboardMeta {
   };
 }
 
+async function fetchCompanyStats(companyId: number): Promise<CompanyStats | null> {
+  const sessionToken = getStoredAuthState()?.sessionToken;
+  const response = await fetch(`${ODOO_URL}/api/company/${companyId}/stats`, {
+    credentials: "include",
+    headers: sessionToken ? { "X-Auth-Session": sessionToken } : undefined,
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const payload = await response.json();
+  if (!payload?.ok) {
+    return null;
+  }
+
+  return {
+    totalGanado: Number(payload.total_ganado ?? 0),
+    totalPerdido: Number(payload.total_perdido ?? 0),
+    porMes: Number(payload.por_mes ?? 0),
+    stockCritico: Number(payload.stock_critico ?? 0),
+  };
+}
+
 export function useDashboard(): UseDashboardReturn {
   const [search, setSearch] = useState("");
   const [activeNav, setActiveNav] = useState("dashboard");
@@ -169,6 +197,7 @@ export function useDashboard(): UseDashboardReturn {
   const [error, setError] = useState<string | null>(null);
   const [productos, setProductos] = useState<Producto[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [remoteStats, setRemoteStats] = useState<CompanyStats | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -178,15 +207,18 @@ export function useDashboard(): UseDashboardReturn {
       setError(null);
 
       try {
-        const [productosData, ordersData] = await Promise.all([
+        const companyId = getActiveCompanyId();
+        const [productosData, ordersData, statsData] = await Promise.all([
           apiListProductos(),
           fetchOrders(),
+          companyId ? fetchCompanyStats(companyId) : Promise.resolve(null),
         ]);
 
         if (!active) return;
 
         setProductos(productosData);
         setOrders(ordersData);
+        setRemoteStats(statsData);
       } catch (e: any) {
         if (!active) return;
         setError(e?.message ?? "No se pudo cargar el dashboard");
@@ -215,7 +247,17 @@ export function useDashboard(): UseDashboardReturn {
     );
   }, [allProducts, search]);
 
-  const stats = useMemo(() => buildStats(productos, orders), [productos, orders]);
+  const computedStats = useMemo(() => buildStats(productos, orders), [productos, orders]);
+  const stats = useMemo<CompanyStats>(() => {
+    if (!remoteStats) return computedStats;
+
+    return {
+      totalGanado: remoteStats.totalGanado || computedStats.totalGanado,
+      totalPerdido: remoteStats.totalPerdido || computedStats.totalPerdido,
+      porMes: remoteStats.porMes || computedStats.porMes,
+      stockCritico: remoteStats.stockCritico || computedStats.stockCritico,
+    };
+  }, [computedStats, remoteStats]);
   const meta = useMemo(() => buildMeta(productos, orders), [productos, orders]);
 
   const showToast = useCallback((msg: string) => {

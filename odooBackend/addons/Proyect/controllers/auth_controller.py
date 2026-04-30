@@ -239,49 +239,65 @@ class AuthApiController(http.Controller):
         return None
 
     def _get_google_oauth_config(self):
+        _logger.info(">>> _GET_GOOGLE_OAUTH_CONFIG START <<<")
         provider = None
         provider_model = None
         try:
             provider_model = request.env['auth.oauth.provider'].sudo().with_context(active_test=False)
+            _logger.info("auth.oauth.provider model found, count: %s", provider_model.search_count([]))
         except Exception as error:
             _logger.warning("No se pudo acceder a auth.oauth.provider: %s", error)
 
         if provider_model is not None:
             try:
-                for candidate in provider_model.search([], order='id asc'):
+                all_providers = provider_model.search([], order='id asc')
+                _logger.info("All OAuth providers found: %s", [(p.name, p.auth_endpoint) for p in all_providers])
+                for candidate in all_providers:
                     name = (getattr(candidate, 'name', '') or '').lower()
                     auth_endpoint = (getattr(candidate, 'auth_endpoint', '') or '').lower()
+                    _logger.info("Checking provider: name=%s, auth_endpoint=%s", name, auth_endpoint)
                     if 'google' in name or 'google' in auth_endpoint or 'accounts.google.com' in auth_endpoint:
                         provider = candidate
+                        _logger.info("Found Google provider: %s", candidate.name)
                         break
             except Exception as error:
                 _logger.warning("No se pudo leer la configuracion OAuth de Google: %s", error)
 
         config = request.env['ir.config_parameter'].sudo()
+        
+        param_client_id = config.get_param('billnova.google_oauth_client_id') or config.get_param('auth_oauth.google_client_id')
+        param_client_secret = config.get_param('billnova.google_oauth_client_secret') or config.get_param('auth_oauth.google_client_secret')
+        param_token_endpoint = config.get_param('billnova.google_oauth_token_endpoint') or GOOGLE_TOKEN_ENDPOINT
+        param_userinfo_endpoint = config.get_param('billnova.google_oauth_userinfo_endpoint') or GOOGLE_USERINFO_ENDPOINT
+        
+        _logger.info("Parameters from ir.config_parameter: client_id=%s, client_secret=%s",
+            "PRESENT" if param_client_id else "MISSING",
+            "PRESENT" if param_client_secret else "MISSING",
+        )
+        
         oauth_config = {
             'client_id': (
                 getattr(provider, 'client_id', None)
-                or config.get_param('billnova.google_oauth_client_id')
-                or config.get_param('auth_oauth.google_client_id')
+                or param_client_id
             ),
             'client_secret': (
                 getattr(provider, 'client_secret', None)
-                or config.get_param('billnova.google_oauth_client_secret')
-                or config.get_param('auth_oauth.google_client_secret')
+                or param_client_secret
             ),
             'auth_endpoint': getattr(provider, 'auth_endpoint', None) or GOOGLE_AUTH_ENDPOINT,
             'scope': getattr(provider, 'scope', None) or 'openid email profile',
-            'token_endpoint': config.get_param('billnova.google_oauth_token_endpoint') or GOOGLE_TOKEN_ENDPOINT,
-            'userinfo_endpoint': config.get_param('billnova.google_oauth_userinfo_endpoint') or GOOGLE_USERINFO_ENDPOINT,
+            'token_endpoint': param_token_endpoint,
+            'userinfo_endpoint': param_userinfo_endpoint,
         }
         _logger.info(
             "GOOGLE OAUTH CONFIG provider=%s has_client_id=%s has_client_secret=%s auth_endpoint=%s callback_base=%s",
-            getattr(provider, 'name', None) if provider else None,
+            getattr(provider, 'name', None) if provider else "None",
             bool(oauth_config.get('client_id')),
             bool(oauth_config.get('client_secret')),
             oauth_config.get('auth_endpoint'),
             request.env['ir.config_parameter'].sudo().get_param('web.base.url'),
         )
+        _logger.info(">>> _GET_GOOGLE_OAUTH_CONFIG END <<<")
         return oauth_config
 
     def _append_query_to_url(self, base_url, params):
@@ -296,65 +312,15 @@ class AuthApiController(http.Controller):
         final_target = target or redirect_uri or '/'
         parsed = urlparse(final_target)
 
-        # Deep links like exp:// or appmobile:// should be handed back to the mobile OS,
-        # not treated as regular browser redirects by Odoo/Werkzeug.
+        # Native auth sessions expect a direct redirect back to the app.
+        # An intermediate HTML page can leave openAuthSessionAsync hanging on Android.
         if parsed.scheme and parsed.scheme not in ('http', 'https'):
-            html = f"""
-                <!doctype html>
-                <html lang="en">
-                  <head>
-                    <meta charset="utf-8" />
-                    <meta name="viewport" content="width=device-width, initial-scale=1" />
-                    <title>Returning to app...</title>
-                    <style>
-                      body {{
-                        font-family: Arial, sans-serif;
-                        background: #0f172a;
-                        color: #e2e8f0;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        min-height: 100vh;
-                        margin: 0;
-                        padding: 24px;
-                        text-align: center;
-                      }}
-                      .card {{
-                        max-width: 420px;
-                        background: rgba(15, 23, 42, 0.92);
-                        border: 1px solid rgba(148, 163, 184, 0.22);
-                        border-radius: 16px;
-                        padding: 24px;
-                      }}
-                      a {{
-                        color: #93c5fd;
-                        word-break: break-all;
-                      }}
-                    </style>
-                  </head>
-                  <body>
-                    <div class="card">
-                      <h1 style="margin-top:0;">Volviendo a la app</h1>
-                      <p>Si no se abre automaticamente, toca el enlace de abajo.</p>
-                      <p><a href="{final_target}">Abrir app</a></p>
-                    </div>
-                    <script>
-                      console.log("[Google OAuth][mobile bridge] opening deep link", {json_lib.dumps(final_target)});
-                      window.location.replace({json_lib.dumps(final_target)});
-                      setTimeout(function () {{
-                        console.log("[Google OAuth][mobile bridge] retrying deep link navigation");
-                        window.location.href = {json_lib.dumps(final_target)};
-                      }}, 500);
-                    </script>
-                  </body>
-                </html>
-            """
             _logger.info(
-                "GOOGLE MOBILE redirecting via bridge page target=%s params=%s",
+                "GOOGLE MOBILE redirecting directly to deep link target=%s params=%s",
                 final_target,
                 params,
             )
-            return Response(html, status=200, content_type='text/html')
+            return request.redirect(final_target)
 
         if parsed.scheme in ('http', 'https'):
             target_origin = f"{parsed.scheme}://{parsed.netloc}"
@@ -589,16 +555,15 @@ class AuthApiController(http.Controller):
             [('res_user_id', '=', current_user.id)], limit=1
         )
 
-    def _get_effective_company_id(self, user=None, mobile_user=None):
+    def _get_effective_billnova_company(self, user=None, mobile_user=None):
         current_mobile_user = mobile_user or self._get_current_billnova_user(user)
-        if current_mobile_user and current_mobile_user.exists() and current_mobile_user.company_id:
-            return current_mobile_user.company_id.id
+        if current_mobile_user and current_mobile_user.exists():
+            return current_mobile_user.company_id or request.env['res.company']
+        return request.env['res.company']
 
-        current_user = user or self._get_current_res_user()
-        if current_user and current_user.exists() and current_user.company_id:
-            return current_user.company_id.id
-
-        return None
+    def _get_effective_company_id(self, user=None, mobile_user=None):
+        company = self._get_effective_billnova_company(user=user, mobile_user=mobile_user)
+        return company.id if company else None
 
     def _log_session_snapshot(self, label, user, mobile_user, role, company_id, session_id=None, session_token=None):
         _logger.info("=== AUTH DEBUG: %s ===", label)
@@ -991,7 +956,13 @@ class AuthApiController(http.Controller):
 
     @http.route('/api/auth/google/mobile/authorize-url', type='http', auth='public', methods=['GET', 'OPTIONS'], csrf=False)
     def google_mobile_authorize_url(self):
+        _logger.info(">>> GOOGLE MOBILE AUTHORIZE URL START <<<")
+        _logger.info("Request URL: %s", request.httprequest.url)
+        _logger.info("Request method: %s", request.httprequest.method)
+        _logger.info("Request args: %s", request.httprequest.args.to_dict())
+        
         if request.httprequest.method == 'OPTIONS':
+            _logger.info(">>> OPTIONS REQUEST - returning CORS <<<")
             return self._options_response()
 
         redirect_uri = request.httprequest.args.get('redirect_uri') or 'appmobile://auth'
@@ -1001,13 +972,24 @@ class AuthApiController(http.Controller):
             request.httprequest.headers.get('Origin'),
             request.httprequest.headers.get('User-Agent'),
         )
+        
         oauth_config = self._get_google_oauth_config()
+        _logger.info(
+            "GOOGLE OAUTH CONFIG result: client_id=%s, client_secret=%s, auth_endpoint=%s, scope=%s, token_endpoint=%s",
+            "PRESENT" if oauth_config.get('client_id') else "MISSING",
+            "PRESENT" if oauth_config.get('client_secret') else "MISSING",
+            oauth_config.get('auth_endpoint'),
+            oauth_config.get('scope'),
+            oauth_config.get('token_endpoint'),
+        )
+        
         if not oauth_config.get('client_id') or not oauth_config.get('client_secret'):
             _logger.warning(
                 "GOOGLE AUTHORIZE URL missing config has_client_id=%s has_client_secret=%s",
                 bool(oauth_config.get('client_id')),
                 bool(oauth_config.get('client_secret')),
             )
+            _logger.info(">>> GOOGLE MOBILE AUTHORIZE URL END - returning 503 <<<")
             return self._json_response(
                 {'ok': False, 'error': 'Google OAuth no esta configurado en Odoo.'},
                 status=503,
@@ -1027,6 +1009,7 @@ class AuthApiController(http.Controller):
         )
 
         _logger.info("GOOGLE AUTHORIZE URL generated auth_url=%s", auth_url)
+        _logger.info(">>> GOOGLE MOBILE AUTHORIZE URL END - returning 200 with auth_url <<<")
         return self._json_response({'ok': True, 'auth_url': auth_url}, status=200)
 
     @http.route('/api/auth/google/mobile/callback', type='http', auth='public', methods=['GET'], csrf=False)

@@ -1,6 +1,5 @@
 export type CategoriaEmpresa =
-  | 'tecnologia' | 'moda' | 'hogar' | 'alimentos'
-  | 'deportes'   | 'electronica' | 'salud' | 'otro';
+  | 'productos' | 'servicios' | 'mixto' | 'otro';
 
 export type EstadoEmpresa = 'activa' | 'inactiva' | 'suspendida';
 

@@ -1,8 +1,12 @@
 import React, { createContext, useContext, useEffect, useReducer, useCallback } from 'react';
 import * as Linking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
+import { Platform } from 'react-native';
 import { authApi } from '../../features/auth/api/authApi';
 import { tokenStorage } from '../storage/tokenStorage';
 import type { AuthState, AuthUser, LoginPayload, RegisterPayload } from '../../features/auth/types/auth.types';
+
+WebBrowser.maybeCompleteAuthSession();
 
 
 // ─── State & Actions ─────────────────────────────────────────────────────────
@@ -60,6 +64,20 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
+
+  const buildGoogleRedirectUri = useCallback(() => {
+    const generatedUrl = Linking.createURL('/auth');
+
+    if (generatedUrl) {
+      return generatedUrl;
+    }
+
+    if (Platform.OS === 'android' || Platform.OS === 'ios') {
+      return 'appmobile://auth';
+    }
+
+    return '/auth';
+  }, []);
 
   // Restore session on mount
   useEffect(() => {
@@ -147,14 +165,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       company_id: data.company_id ?? null,
     };
 
-    const sessionHandle = data.session_id ?? data.session_token;
+    const sessionHandle = data.session_token ?? data.session_id;
     if (!sessionHandle) {
       dispatch({ type: 'SET_LOADING', payload: false });
       return { ok: false, error: 'El servidor no devolvió session_token.' };
     }
 
-    await tokenStorage.saveToken(sessionHandle);
-    await tokenStorage.saveUser(user);
+    await tokenStorage.saveSession({ token: sessionHandle, user });
     dispatch({
       type: 'SET_SESSION',
       payload: { user, token: sessionHandle },
@@ -162,119 +179,81 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { ok: true };
   }, []);
 
+  // En AuthProvider o useAuth
   const loginWithGoogle = useCallback(async (_mode: 'login' | 'register' = 'login') => {
-    dispatch({ type: 'SET_LOADING', payload: true });
-
     try {
-      const redirectUri = Linking.createURL('/auth');
-      console.log('[Google OAuth] redirectUri:', redirectUri);
-      const { data, error: authUrlError } = await authApi.googleAuthorizeUrl(redirectUri);
-      console.log('[Google OAuth] authorize-url response:', {
-        hasData: !!data,
-        ok: data?.ok,
-        hasAuthUrl: !!data?.auth_url,
-        error: authUrlError ?? data?.error ?? null,
-      });
+      // 1. Obtener auth_url de Odoo
+      const redirectUri = 'appmobile://auth';
+      const { data, error } = await authApi.googleAuthorizeUrl(redirectUri);
 
-      if (!data?.ok || !data.auth_url || authUrlError) {
-        dispatch({ type: 'SET_LOADING', payload: false });
-        return {
-          ok: false,
-          error: data?.error ?? authUrlError ?? 'No se pudo iniciar Google OAuth.',
-        };
+      if (!data?.ok || !data.auth_url) {
+        return { ok: false, error: error ?? 'No se pudo obtener la URL de Google' };
       }
 
-      const callbackUrl = await new Promise<string>((resolve, reject) => {
-        let settled = false;
+      // 2. Abrir browser con openAuthSessionAsync
+      //    Esto maneja el retorno del deep link automáticamente en iOS y Android
+      const result = await WebBrowser.openAuthSessionAsync(
+        data.auth_url,
+        redirectUri
+      );
 
-        const timeoutId = setTimeout(() => {
-          if (settled) return;
-          settled = true;
-          subscription.remove();
-          reject(new Error('Google no respondio a tiempo.'));
-        }, 90000);
+      console.log('[mobile][auth] google webBrowser result', result);
 
-        const subscription = Linking.addEventListener('url', ({ url }) => {
-          console.log('[Google OAuth] deep link received:', url);
-          if (settled || !url.startsWith(redirectUri)) return;
-          settled = true;
-          clearTimeout(timeoutId);
-          subscription.remove();
-          resolve(url);
-        });
+      if (result.type !== 'success') {
+        return { ok: false, error: 'Autenticación cancelada o cerrada' };
+      }
 
-        Linking.openURL(data.auth_url).catch((openError) => {
-          console.error('[Google OAuth] failed opening auth URL:', openError);
-          if (settled) return;
-          settled = true;
-          clearTimeout(timeoutId);
-          subscription.remove();
-          reject(openError);
-        });
-      });
-      console.log('[Google OAuth] callbackUrl parsed:', callbackUrl);
+      // 3. Parsear el deep link de retorno
+      //    result.url = "appmobile://auth?ok=1&uid=2&session_token=xxx&..."
+      const returnUrl = result.url;
 
-      const { queryParams } = Linking.parse(callbackUrl);
-      const getParam = (value: string | string[] | undefined) =>
-        Array.isArray(value) ? value[0] : value;
+      // Extraer query params sin URL() porque puede fallar con custom schemes en algunos entornos
+      const queryStart = returnUrl.indexOf('?');
+      if (queryStart === -1) {
+        return { ok: false, error: 'Respuesta inválida de Google' };
+      }
 
-      const ok = getParam(queryParams?.ok);
-      const sessionId = getParam(queryParams?.session_id);
-      const sessionToken = getParam(queryParams?.session_token);
-      const uid = getParam(queryParams?.uid);
-      const login = getParam(queryParams?.login);
-      const name = getParam(queryParams?.name);
-      const email = getParam(queryParams?.email);
-      const role = getParam(queryParams?.role);
-      const companyId = getParam(queryParams?.company_id);
-      const error = getParam(queryParams?.error);
+      const params = new URLSearchParams(returnUrl.slice(queryStart + 1));
+      const ok = params.get('ok') === '1';
 
-      const sessionHandle = sessionId ?? sessionToken;
+      if (!ok) {
+        const errMsg = params.get('error') ?? 'Error en autenticación con Google';
+        return { ok: false, error: decodeURIComponent(errMsg) };
+      }
 
-      if (ok !== '1' || !sessionHandle || !uid || !login) {
-        console.warn('[Google OAuth] invalid callback payload:', {
-          ok,
-          hasSessionId: !!sessionId,
-          hasSessionToken: !!sessionToken,
-          uid,
-          login,
-          error,
-        });
-        dispatch({ type: 'SET_LOADING', payload: false });
-        return {
-          ok: false,
-          error: error ?? 'No se pudo completar la autenticación con Google.',
-        };
+      const sessionToken = params.get('session_token');
+      const sessionId    = params.get('session_id');
+      const uid          = params.get('uid');
+      const name         = params.get('name');
+      const email        = params.get('email');
+      const role         = params.get('role');
+      const company_id   = params.get('company_id');
+
+      const token = sessionToken ?? sessionId;
+      if (!token) {
+        return { ok: false, error: 'No se recibió token de sesión' };
       }
 
       const user: AuthUser = {
-        uid: Number(uid),
-        login,
-        name: name ?? login,
-        email: email ?? undefined,
-        role: role ?? undefined,
-        company_id: companyId ? Number(companyId) : null,
+        uid:        Number(uid),
+        login:      email ?? '',
+        name:       name ? decodeURIComponent(name) : (email ?? ''),
+        email:      email ?? undefined,
+        role:       role ?? 'seller',
+        company_id: company_id ? Number(company_id) : null,
       };
 
-      await tokenStorage.saveToken(sessionHandle);
-      await tokenStorage.saveUser(user);
-      dispatch({
-        type: 'SET_SESSION',
-        payload: { user, token: sessionHandle },
-      });
-      console.log('[Google OAuth] login success:', {
-        uid: user.uid,
-        login: user.login,
-        role: user.role ?? null,
-        company_id: user.company_id ?? null,
-      });
+      // 4. Guardar sesión Y actualizar estado
+      await tokenStorage.saveSession({ token, user });
+      dispatch({ type: 'SET_SESSION', payload: { user, token } });
+
       return { ok: true };
-    } catch (error) {
-      console.error('[Google OAuth] flow failed:', error);
-      dispatch({ type: 'SET_LOADING', payload: false });
+
+    } catch (err) {
+      console.error('[mobile][auth] loginWithGoogle error', err);
       return {
         ok: false,
-        error: error instanceof Error ? error.message : 'Google OAuth failed',
+        error: err instanceof Error ? err.message : 'Error inesperado con Google',
       };
     }
   }, []);

@@ -12,7 +12,7 @@ import { ODOO_URL } from "@/lib/odooApi";
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
 interface VentasMesResult {
-  mes: string;
+  periodo: string;
   totalFacturado: number;
   totalBase: number;
   totalImpuestos: number;
@@ -22,6 +22,7 @@ interface VentasMesResult {
 
 interface ImpuestosCalculadorSectionProps {
   impuestos: Impuesto[];
+  loading?: boolean;
   calcBase: number;
   setCalcBase: (v: number) => void;
   calcSelected: string[];
@@ -35,8 +36,21 @@ interface ImpuestosCalculadorSectionProps {
 const fmt = (n: number) =>
   n.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-function mesActualLabel(): string {
-  return new Date().toLocaleString("es-DO", { month: "long", year: "numeric" });
+function formatearPeriodoLabel(desde: string, hasta: string): string {
+  const desdeDate = new Date(`${desde}T00:00:00`);
+  const hastaDate = new Date(`${hasta}T00:00:00`);
+  const desdeLabel = desdeDate.toLocaleDateString("es-DO", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+  const hastaLabel = hastaDate.toLocaleDateString("es-DO", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+
+  return desde === hasta ? desdeLabel : `${desdeLabel} - ${hastaLabel}`;
 }
 
 function rangoMesActual() {
@@ -45,8 +59,8 @@ function rangoMesActual() {
   const m = String(now.getMonth() + 1).padStart(2, "0");
   const lastDay = new Date(y, now.getMonth() + 1, 0).getDate();
   return {
-    desde: new Date(`${y}-${m}-01`),
-    hasta: new Date(`${y}-${m}-${String(lastDay).padStart(2, "0")}T23:59:59`),
+    desde: `${y}-${m}-01`,
+    hasta: `${y}-${m}-${String(lastDay).padStart(2, "0")}`,
   };
 }
 
@@ -54,6 +68,7 @@ function rangoMesActual() {
 
 export function ImpuestosCalculadorSection({
   impuestos,
+  loading = false,
   calcBase,
   setCalcBase,
   calcSelected,
@@ -66,6 +81,7 @@ export function ImpuestosCalculadorSection({
   const [cargando, setCargando] = useState(false);
   const [ventasMes, setVentasMes] = useState<VentasMesResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [rangoFechas, setRangoFechas] = useState(() => rangoMesActual());
 
   // ── Fetch facturas del mes desde Odoo ─────────────────────────────────────
   const calcularVentasMes = useCallback(async () => {
@@ -74,6 +90,10 @@ export function ImpuestosCalculadorSection({
     setVentasMes(null);
 
     try {
+      if (rangoFechas.desde > rangoFechas.hasta) {
+        throw new Error("La fecha 'desde' no puede ser mayor que 'hasta'");
+      }
+
       const qs = companyId ? `?company_id=${companyId}` : "";
       const res = await fetch(`${ODOO_URL}/api/pos/orders${qs}`, {
         credentials: "include",
@@ -83,8 +103,9 @@ export function ImpuestosCalculadorSection({
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || "Error obteniendo facturas");
 
-      // Filtrar por mes actual
-      const { desde, hasta } = rangoMesActual();
+      // Filtrar por rango seleccionado
+      const desde = new Date(`${rangoFechas.desde}T00:00:00`);
+      const hasta = new Date(`${rangoFechas.hasta}T23:59:59.999`);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const facturasMes = (data.data as any[]).filter((f: any) => {
         if (!f.date) return false;
@@ -94,7 +115,7 @@ export function ImpuestosCalculadorSection({
 
       if (facturasMes.length === 0) {
         setVentasMes({
-          mes: mesActualLabel(),
+          periodo: formatearPeriodoLabel(rangoFechas.desde, rangoFechas.hasta),
           totalFacturado: 0,
           totalBase: 0,
           totalImpuestos: 0,
@@ -134,7 +155,7 @@ export function ImpuestosCalculadorSection({
       }
 
       const resultado: VentasMesResult = {
-        mes: mesActualLabel(),
+        periodo: formatearPeriodoLabel(rangoFechas.desde, rangoFechas.hasta),
         totalFacturado: +totalFacturado.toFixed(2),
         totalBase:      +totalBase.toFixed(2),
         totalImpuestos: +totalImpuestos.toFixed(2),
@@ -154,7 +175,7 @@ export function ImpuestosCalculadorSection({
     } finally {
       setCargando(false);
     }
-  }, [companyId, activos, setCalcBase, setCalcSelected]);
+  }, [companyId, activos, rangoFechas.desde, rangoFechas.hasta, setCalcBase, setCalcSelected]);
 
   function toggleTax(id: string) {
     setCalcSelected(
@@ -226,7 +247,7 @@ export function ImpuestosCalculadorSection({
           >
             {cargando
               ? <><Loader2 size={14} style={{ animation: "calcSpin 1s linear infinite" }} /> Calculando...</>
-              : <><TrendingUp size={14} /> Calcular Ventas del Mes</>
+              : <><TrendingUp size={14} /> Calcular Ventas</>
             }
           </button>
 
@@ -267,6 +288,50 @@ export function ImpuestosCalculadorSection({
 
         {/* Izquierda */}
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+          <div>
+            <label style={labelStyle}>Rango de fechas</label>
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "1fr auto 1fr",
+              gap: 10,
+              alignItems: "center",
+            }}>
+              <input
+                type="date"
+                value={rangoFechas.desde}
+                max={rangoFechas.hasta}
+                onChange={e => setRangoFechas(prev => ({ ...prev, desde: e.target.value }))}
+                style={dateInputStyle}
+              />
+              <span style={{
+                fontSize: 12,
+                fontWeight: 700,
+                color: t.textSecondary,
+                textAlign: "center",
+              }}>
+                hasta
+              </span>
+              <input
+                type="date"
+                value={rangoFechas.hasta}
+                min={rangoFechas.desde}
+                onChange={e => setRangoFechas(prev => ({ ...prev, hasta: e.target.value }))}
+                style={dateInputStyle}
+              />
+            </div>
+            <div style={{
+              fontSize: 11,
+              color: t.textSecondary,
+              marginTop: 6,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+            }}>
+              <Calendar size={11} />
+              {formatearPeriodoLabel(rangoFechas.desde, rangoFechas.hasta)}
+            </div>
+          </div>
 
           {/* Base imponible */}
           <div>
@@ -311,7 +376,7 @@ export function ImpuestosCalculadorSection({
                 display: "flex", alignItems: "center", gap: 4,
               }}>
                 <Calendar size={10} />
-                {ventasMes.facturas} factura{ventasMes.facturas !== 1 ? "s" : ""} en {ventasMes.mes}
+                {ventasMes.facturas} factura{ventasMes.facturas !== 1 ? "s" : ""} en {ventasMes.periodo}
               </div>
             )}
           </div>
@@ -327,7 +392,7 @@ export function ImpuestosCalculadorSection({
             }}>
               {activos.length === 0
                 ? <div style={{ padding: 16, textAlign: "center", fontSize: 13, color: t.textSecondary }}>
-                    Cargando impuestos...
+                    {loading ? "Cargando impuestos..." : "No hay impuestos disponibles"}
                   </div>
                 : activos.map((imp, idx) => {
                     const sel = calcSelected.includes(imp.id);
@@ -441,7 +506,7 @@ function VentasMesBanner({ ventasMes }: { ventasMes: VentasMesResult }) {
         fontSize: 13, color: "#92400E",
       }}>
         <AlertCircle size={15} />
-        No hay facturas en {ventasMes.mes}
+        No hay facturas en {ventasMes.periodo}
       </div>
     );
   }
@@ -462,7 +527,7 @@ function VentasMesBanner({ ventasMes }: { ventasMes: VentasMesResult }) {
           fontSize: 12, fontWeight: 800, color: "#1D4ED8",
           textTransform: "uppercase", letterSpacing: "0.06em",
         }}>
-          Ventas de {ventasMes.mes}
+          Ventas de {ventasMes.periodo}
         </span>
         <span style={{
           marginLeft: "auto",
@@ -545,6 +610,18 @@ const labelStyle: React.CSSProperties = {
   fontSize: 11, fontWeight: 700, color: "#6B7280",
   display: "block", marginBottom: 6,
   textTransform: "uppercase", letterSpacing: "0.05em",
+};
+
+const dateInputStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "11px 14px",
+  borderRadius: 10,
+  border: `1.5px solid ${t.border}`,
+  fontSize: 14,
+  color: t.textPrimary,
+  outline: "none",
+  boxSizing: "border-box",
+  background: "white",
 };
 
 function Row({ label, value, color, big }: {

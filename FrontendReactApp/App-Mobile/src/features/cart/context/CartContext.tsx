@@ -91,7 +91,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [appliedPromo, setAppliedPromo] = useState<null | PromoCode>(null);
   const [promoError, setPromoError] = useState('');
   const [removingId, setRemovingId] = useState<string | null>(null);
-  console.log('🏗️ [CartProvider] NUEVA INSTANCIA CREADA', new Error().stack?.split('\n')[2]);
+  if (__DEV__) {
+    console.log('[CartProvider] mounted', new Error().stack?.split('\n')[2]);
+  }
   const increment = useCallback((id: string) => {
     setItems((prev) =>
       prev.map((item) =>

@@ -18,10 +18,7 @@ export default function RootLayout() {
     if (Platform.OS !== 'android') return;
 
     await Promise.allSettled([
-      NavigationBar.setBehaviorAsync('overlay-swipe'),
       NavigationBar.setVisibilityAsync('hidden'),
-      NavigationBar.setPositionAsync('absolute'),
-      NavigationBar.setBackgroundColorAsync('#00000000'),
     ]);
   }, []);
 

@@ -14,6 +14,7 @@ import { EmpresaDetailModal } from './sections/EmpresaDetailModal';
 export function EstadisticasEmpresasPage() {
   const {
     empresas, empresaSeleccionada, filtros, globales,
+    loading,
     modalAbierto, top3,
     setFiltros, seleccionarEmpresa, cerrarModal,
   } = useEstadisticas();
@@ -34,7 +35,7 @@ export function EstadisticasEmpresasPage() {
           <EstadisticasHeader globales={globales} />
           <Top3Podio empresas={top3} onClick={seleccionarEmpresa} />
           <EmpresasFilters filtros={filtros} onChange={setFiltros} total={empresas.length} />
-          <EmpresasTable empresas={empresas} onSelect={seleccionarEmpresa} />
+          <EmpresasTable empresas={empresas} loading={loading} onSelect={seleccionarEmpresa} />
         </div>
       </main>
 

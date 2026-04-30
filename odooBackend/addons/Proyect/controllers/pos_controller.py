@@ -20,7 +20,7 @@ class PosApiController(http.Controller):
         return {
             'Access-Control-Allow-Origin': origin or '*',
             'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept, Origin',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept, Origin, X-Auth-Session',
             'Access-Control-Allow-Credentials': 'true',
         }
 
@@ -440,9 +440,13 @@ class PosApiController(http.Controller):
                         ),
                         'lines': [{
                             'id': str(l.id),
+                            'productId': str(l.product_id.id) if l.product_id else '',
+                            'product_id': str(l.product_id.id) if l.product_id else '',
                             'productName': l.product_id.name,
+                            'product_name': l.product_id.name,
                             'quantity': l.qty,
                             'priceUnit': l.price_unit,
+                            'price_unit': l.price_unit,
                         } for l in o.lines],
                         'invoice': None,
                     }

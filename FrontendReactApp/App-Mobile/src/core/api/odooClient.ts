@@ -9,6 +9,7 @@ interface RequestOptions {
   method?: HttpMethod;
   body?: object;
   requiresAuth?: boolean;
+  accept?: string | false;
 }
 
 interface ApiResponse<T> {
@@ -21,13 +22,15 @@ async function request<T>(
   endpoint: string,
   options: RequestOptions = {},
 ): Promise<ApiResponse<T>> {
-  const { method = 'GET', body, requiresAuth = false } = options;
+  const { method = 'GET', body, requiresAuth = false, accept } = options;
 
   const headers: Record<string, string> = {};
   if (body) {
     headers['Content-Type'] = 'application/json';
   }
-  headers.Accept = 'application/json';
+  if (accept) {
+    headers.Accept = accept;
+  }
 
   if (requiresAuth) {
     const token = await tokenStorage.getToken();

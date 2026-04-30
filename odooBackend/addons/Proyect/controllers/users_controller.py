@@ -57,8 +57,13 @@ class UserApiController(http.Controller):
             return request.env['billnova.user']
         return request.env['billnova.user'].sudo().search([('res_user_id', '=', user.id)], limit=1)
 
+    def _get_effective_billnova_company(self, billnova_user):
+        if billnova_user and billnova_user.exists():
+            return billnova_user.company_id or request.env['res.company']
+        return request.env['res.company']
+
     def _serialize_mobile_profile(self, billnova_user, res_user):
-        company = billnova_user.company_id if billnova_user and billnova_user.exists() else res_user.company_id
+        company = self._get_effective_billnova_company(billnova_user)
         role = billnova_user.role if billnova_user and billnova_user.exists() else getattr(res_user, 'billnova_role', None)
         return {
             'uid': res_user.id if res_user and res_user.exists() else None,

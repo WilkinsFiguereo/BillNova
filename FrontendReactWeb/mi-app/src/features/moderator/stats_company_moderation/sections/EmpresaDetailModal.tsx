@@ -19,6 +19,12 @@ const tabs: { id: TabId; label: string }[] = [
   { id: "productos", label: "Top Productos" },
 ];
 
+function formatCurrencyCompact(value: number): string {
+  if (value >= 1000000) return `RD$ ${(value / 1000000).toFixed(1)}M`;
+  if (value >= 1000) return `RD$ ${(value / 1000).toFixed(1)}k`;
+  return `RD$ ${value.toLocaleString()}`;
+}
+
 function MetricRow({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 13px", background: colors.bg.secondary, borderRadius: 8, border: `1px solid ${colors.border}`, marginBottom: 6 }}>
@@ -62,7 +68,7 @@ export function EmpresaDetailModal({ empresa, isOpen, onClose }: { empresa: Empr
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
             {[
               { label: "Ventas", val: e.totalVentas.toLocaleString(), color: colors.brand[600] },
-              { label: "Ingresos", val: `RD$ ${(e.totalIngresos / 1000000).toFixed(2)}M`, color: "#10B981" },
+              { label: "Ingresos", val: formatCurrencyCompact(e.totalIngresos), color: "#10B981" },
               { label: "Clientes", val: e.clientesUnicos === null ? "N/D" : e.clientesUnicos.toLocaleString(), color: colors.brand[400] },
               { label: "Productos", val: String(e.totalProductos), color: "#F59E0B" },
             ].map((item) => (

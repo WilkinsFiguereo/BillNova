@@ -27,27 +27,23 @@ export const estadoEmpresaConfig: Record<
 };
 
 export const categoriaConfig: Record<CategoriaEmpresa, { label: string }> = {
-  tecnologia: { label: "Tecnología" },
-  moda: { label: "Moda" },
-  hogar: { label: "Hogar" },
-  alimentos: { label: "Alimentos" },
-  deportes: { label: "Deportes" },
-  electronica: { label: "Electrónica" },
-  salud: { label: "Salud" },
+  productos: { label: "Productos" },
+  servicios: { label: "Servicios" },
+  mixto: { label: "Mixto" },
   otro: { label: "Otro" },
 };
 
 export const ordenConfig = {
   ventas: "Total Ventas",
   ingresos: "Ingresos",
-  calificacion: "Calificación",
+  calificacion: "Calificacion",
   crecimiento: "Crecimiento",
   clientes: "Clientes",
 } as const;
 
 export const periodoConfig = {
-  "7d": "Últimos 7 días",
-  "30d": "Últimos 30 días",
-  "90d": "Últimos 90 días",
-  "1y": "Último año",
+  "7d": "Ultimos 7 dias",
+  "30d": "Ultimos 30 dias",
+  "90d": "Ultimos 90 dias",
+  "1y": "Ultimo ano",
 } as const;
