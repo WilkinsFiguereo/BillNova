@@ -175,10 +175,10 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
   const handleGoogleAuth = async (mode: 'login' | 'register') => {
     setOauthError(null);
     setGoogleLoading(true);
-    const result = await loginWithGoogle(mode);  // ← esto probablemente resuelve antes
-    setGoogleLoading(false);                      //   de que el deep link llegue
+    const result = await loginWithGoogle(mode);
+    setGoogleLoading(false);
     if (result.ok) onLoginSuccess();
-    else setOauthError(result.error ?? '...');
+    else setOauthError(result.error ?? 'No se pudo completar la autenticacion con Google.');
   };
 
   const updateLogin = (field: keyof typeof loginForm) => (value: string) => {
