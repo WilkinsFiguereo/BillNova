@@ -6,6 +6,16 @@ import type {
   RegisterResponse,
 } from '../types/auth.types';
 
+export interface SessionResponse {
+  ok: boolean;
+  uid?: number;
+  name?: string;
+  email?: string;
+  role?: string;
+  company_id?: number | null;
+  error?: string;
+}
+
 export const authApi = {
   login: (payload: LoginPayload) =>
     odooClient.post<LoginResponse>('/api/auth/login', payload),
@@ -17,6 +27,9 @@ export const authApi = {
 
   register: (payload: RegisterPayload) =>
     odooClient.post<RegisterResponse>('/api/auth/register', payload),
+
+  session: () =>
+    odooClient.get<SessionResponse>('/api/auth/session', {}, { requiresAuth: true }),
 
   logout: () =>
     odooClient.post<{ ok: boolean }>('/api/auth/logout', {}, { requiresAuth: true }),

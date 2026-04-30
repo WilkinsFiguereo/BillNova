@@ -116,6 +116,7 @@ export default function FacturasPage() {
     toggleOrden,
     refetch,
     changeInvoiceState,
+    createInvoiceFromOrder,
     sendInvoiceEmail,
     downloadInvoicePDF,
     exportFacturasPDF,
@@ -162,6 +163,7 @@ export default function FacturasPage() {
           onVistaModeChange={setVistaMode}
           onToggleOrden={toggleOrden}
           onChangeState={changeInvoiceState}
+          onCreateInvoice={createInvoiceFromOrder}
           onSendEmail={sendInvoiceEmail}
           onDownloadPDF={downloadInvoicePDF}
         />

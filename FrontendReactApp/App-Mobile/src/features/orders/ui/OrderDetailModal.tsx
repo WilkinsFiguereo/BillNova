@@ -85,13 +85,11 @@ export function OrderDetailModal({
             <TouchableOpacity
               style={[
                 styles.actionBtn,
-                !order.invoice && styles.actionDisabled,
                 styles.actionRight,
               ]}
               onPress={onDownloadInvoice}
-              disabled={!order.invoice}
             >
-              <Text style={[styles.actionText, !order.invoice && styles.disabledText]}>
+              <Text style={styles.actionText}>
                 Descargar factura
               </Text>
             </TouchableOpacity>

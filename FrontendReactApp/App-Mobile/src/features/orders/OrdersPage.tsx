@@ -145,11 +145,27 @@ export function OrdersPage({
 
   const handleDownloadInvoice = useCallback(async () => {
     if (!selectedOrder) return;
-    if (!selectedOrder.invoice) {
-      Alert.alert('Factura no disponible', 'Este pedido aún no tiene factura asociada.');
-      return;
-    }
+
     const invoiceUrl = `${BASE_URL}/api/pos/order/${selectedOrder.id}/invoice`;
+
+    // If no invoice, try to create it first
+    if (!selectedOrder.invoice) {
+      try {
+        const createResponse = await fetch(invoiceUrl, {
+          method: 'POST',
+          credentials: 'include',
+        });
+        if (!createResponse.ok) {
+          throw new Error('No se pudo crear la factura');
+        }
+        Alert.alert('Factura creada', 'La factura ha sido creada exitosamente.');
+      } catch (err) {
+        console.error('Error creating invoice:', err);
+        Alert.alert('Error', 'No se pudo crear la factura.');
+        return;
+      }
+    }
+
     try {
       const response = await fetch(invoiceUrl, { credentials: 'include' });
       if (!response.ok) {

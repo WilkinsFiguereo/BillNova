@@ -44,7 +44,7 @@ export const MODERATOR_NAV_ITEMS: NavItemData[] = [
     id: "reportes",
     Icon: FileText,
     label: "Reportes",
-    href: "/navigation/moderator/report/page",
+    href: "/navigation/moderation/reports/page",
   },
   {
     id: "config",

@@ -29,14 +29,14 @@ export function useProductList(products: Product[]) {
   const results = useMemo(() => {
     let list = [...products];
 
-    // 1. Search
-    const q = query.trim().toLowerCase();
-    if (q) {
-      list = list.filter(p =>
-        p.name.toLowerCase().includes(q) ||
-        (p.default_code ?? '').toLowerCase().includes(q)
-      );
-    }
+     // 1. Search
+     const q = query.trim().toLowerCase();
+     if (q) {
+       list = list.filter(p =>
+         (p.name ?? '').toLowerCase().includes(q) ||
+         String(p.default_code ?? '').toLowerCase().includes(q)
+       );
+     }
 
     // 2. Category
     if (filter.category !== 'all') {

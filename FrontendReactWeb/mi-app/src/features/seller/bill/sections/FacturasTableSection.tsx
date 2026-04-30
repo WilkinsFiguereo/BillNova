@@ -48,26 +48,33 @@ function OrdenIcon({ campo, activo, dir }: { campo: OrdenCampo; activo: OrdenCam
 
 // ─── Modal: Cambiar Estado ────────────────────────────────────────────────
 function ChangeStateModal({
-  factura, onClose, onConfirm,
+  factura, onClose, onConfirmInvoice, onCreateInvoice,
 }: {
   factura: OdooFactura;
   onClose: () => void;
-  onConfirm: (id: string, state: "posted" | "cancel" | "draft") => Promise<void>;
+  onConfirmInvoice: (id: string, state: "posted" | "cancel" | "draft") => Promise<void>;
+  onCreateInvoice: (orderId: string) => Promise<{ invoiceId: string } | null>;
 }) {
   const [loading, setLoading] = useState(false);
 
   const options: {
     label: string; value: "posted" | "cancel" | "draft";
     desc: string; color: string; Icon: React.ElementType;
-  }[] = [
+  }[] = factura.invoice ? [
     { label: "Confirmar", value: "posted",  desc: "Publicar y confirmar la factura",              color: "#059669", Icon: CheckCircle },
     { label: "Cancelar",  value: "cancel",  desc: "Anular esta factura",                           color: "#DC2626", Icon: XCircle    },
     { label: "Borrador",  value: "draft",   desc: "Regresar a borrador (solo desde cancelada)",    color: "#6B7280", Icon: RotateCcw  },
+  ] : [
+    { label: "Confirmar", value: "posted",  desc: "Crear y confirmar la factura",                  color: "#059669", Icon: CheckCircle },
   ];
 
   const handle = async (val: "posted" | "cancel" | "draft") => {
     setLoading(true);
-    await onConfirm(factura.invoice!.id, val);
+    if (factura.invoice) {
+      await onConfirmInvoice(factura.invoice.id, val);
+    } else if (val === "posted") {
+      await onCreateInvoice(factura.id);
+    }
     setLoading(false);
     onClose();
   };
@@ -317,8 +324,8 @@ function InvoiceDetailPanel({
           <div style={{ display: "flex", gap: 7, marginTop: 12 }}>
             {[
               { label: "Descargar PDF", Icon: Download, color: "#7C3AED", hover: "#F5F3FF", action: () => onDownloadPDF(factura) },
+              { label: "Cambiar estado", Icon: ChevronDown, color: "#059669", hover: "#F0FDF4", action: () => onChangeState(factura) },
               ...(factura.invoice ? [
-                { label: "Cambiar estado", Icon: ChevronDown, color: "#059669", hover: "#F0FDF4", action: () => onChangeState(factura) },
                 { label: "Compartir correo", Icon: Send,      color: "#2563EB", hover: "#EFF6FF", action: () => onSendEmail(factura)   },
               ] : []),
             ].map(({ label, Icon, color, hover, action }) => (
@@ -565,15 +572,13 @@ function VistaTabla({
                   <ActionBtn title="Descargar PDF"  onClick={() => onDownloadPDF(f)} color="#7C3AED"  hoverBg="#F5F3FF">
                     <Download size={13} />
                   </ActionBtn>
+                  <ActionBtn title="Cambiar estado" onClick={() => onChangeState(f)} color="#059669" hoverBg="#F0FDF4">
+                    <ChevronDown size={13} />
+                  </ActionBtn>
                   {f.invoice && (
-                    <>
-                      <ActionBtn title="Cambiar estado" onClick={() => onChangeState(f)} color="#059669" hoverBg="#F0FDF4">
-                        <ChevronDown size={13} />
-                      </ActionBtn>
-                      <ActionBtn title="Compartir por correo" onClick={() => onSendEmail(f)} color="#2563EB" hoverBg="#EFF6FF">
-                        <Send size={13} />
-                      </ActionBtn>
-                    </>
+                    <ActionBtn title="Compartir por correo" onClick={() => onSendEmail(f)} color="#2563EB" hoverBg="#EFF6FF">
+                      <Send size={13} />
+                    </ActionBtn>
                   )}
                 </div>
               </td>
@@ -682,6 +687,7 @@ interface FacturasTableSectionProps {
   onVistaModeChange: (v: VistaMode) => void;
   onToggleOrden: (campo: OrdenCampo) => void;
   onChangeState: (invoiceId: string, state: "posted" | "cancel" | "draft") => Promise<void>;
+  onCreateInvoice: (orderId: string) => Promise<{ invoiceId: string } | null>;
   onSendEmail: (invoiceId: string, email?: string) => Promise<void>;
   onDownloadPDF: (params: { orderId?: string; invoiceId?: string; invoiceName?: string }) => Promise<void>;
 }
@@ -691,7 +697,7 @@ export function FacturasTableSection({
   facturas, search, filtroActivo, vistaMode,
   ordenCampo, ordenDir, totalCount, loading = false,
   onSearchChange, onFiltroChange, onVistaModeChange,
-  onToggleOrden, onChangeState, onSendEmail, onDownloadPDF,
+  onToggleOrden, onChangeState, onCreateInvoice, onSendEmail, onDownloadPDF,
 }: FacturasTableSectionProps) {
   const [panelFactura,      setPanelFactura]      = useState<OdooFactura | null>(null);
   const [changeStateTarget, setChangeStateTarget] = useState<OdooFactura | null>(null);
@@ -717,7 +723,8 @@ export function FacturasTableSection({
         <ChangeStateModal
           factura={changeStateTarget}
           onClose={() => setChangeStateTarget(null)}
-          onConfirm={onChangeState}
+          onConfirmInvoice={onChangeState}
+          onCreateInvoice={onCreateInvoice}
         />
       )}
 

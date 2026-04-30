@@ -72,6 +72,7 @@ interface UseFacturasOdooReturn {
   refetch: () => void;
   // Invoice actions
   changeInvoiceState: (invoiceId: string, newState: "posted" | "cancel" | "draft") => Promise<void>;
+  createInvoiceFromOrder: (orderId: string) => Promise<{ invoiceId: string } | null>;
   sendInvoiceEmail: (invoiceId: string, email?: string) => Promise<void>;
   downloadInvoicePDF: (params: { orderId?: string; invoiceId?: string; invoiceName?: string }) => Promise<void>;
   exportFacturasPDF: () => void;
@@ -206,6 +207,25 @@ export function useFacturasOdoo(companyId?: number): UseFacturasOdooReturn {
       await fetchFacturas(); // Refrescar lista
     } catch (err: any) {
       showToast(err?.message || "Error cambiando estado", "error");
+    }
+  }, [fetchFacturas, showToast]);
+
+  // ── Crear factura desde orden ────────────────────────────────────
+  const createInvoiceFromOrder = useCallback(async (orderId: string) => {
+    try {
+      const res = await fetch(`${ODOO_BASE_URL}/api/pos/order/${orderId}/invoice`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error || "Error creando factura");
+
+      showToast("Factura creada y confirmada", "success");
+      await fetchFacturas(); // Refrescar lista
+      return { invoiceId: json.invoice_id };
+    } catch (err: any) {
+      showToast(err?.message || "Error creando factura", "error");
+      return null;
     }
   }, [fetchFacturas, showToast]);
 
@@ -397,6 +417,7 @@ export function useFacturasOdoo(companyId?: number): UseFacturasOdooReturn {
     showToast,
     refetch: fetchFacturas,
     changeInvoiceState,
+    createInvoiceFromOrder,
     sendInvoiceEmail,
     downloadInvoicePDF,
     exportFacturasPDF,

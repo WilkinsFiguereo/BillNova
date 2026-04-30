@@ -242,6 +242,46 @@ class PosApiController(http.Controller):
         })
 
     # =============================================================
+    # CREATE INVOICE FROM POS ORDER
+    # =============================================================
+    @http.route('/api/pos/order/<int:order_id>/invoice', type='http', auth='public', methods=['POST', 'OPTIONS'], csrf=False)
+    def create_invoice_from_order(self, order_id):
+        if request.httprequest.method == 'OPTIONS':
+            return self._options_response()
+
+        order = request.env['pos.order'].sudo().browse(order_id)
+        if not order.exists():
+            return self._json_response({'ok': False, 'error': 'Orden no encontrada'}, 404)
+
+        # Check if invoice already exists
+        existing_invoice = request.env['account.move'].sudo().search([('invoice_origin', '=', order.name)], limit=1)
+        if existing_invoice:
+            return self._json_response({
+                'ok': True,
+                'invoice_id': existing_invoice.id,
+                'state': existing_invoice.state,
+                'payment_state': existing_invoice.payment_state,
+                'message': 'Factura ya existe'
+            })
+
+        try:
+            # Create invoice from POS order
+            invoice = order.action_pos_order_invoice()
+            if invoice and invoice.state == 'draft':
+                invoice.action_post()  # Post the invoice
+
+            return self._json_response({
+                'ok': True,
+                'invoice_id': invoice.id,
+                'state': invoice.state,
+                'payment_state': invoice.payment_state,
+                'message': 'Factura creada y confirmada'
+            })
+        except Exception as e:
+            _logger.exception("Error creando factura para orden %s", order_id)
+            return self._json_response({'ok': False, 'error': str(e)}, 500)
+
+    # =============================================================
     # SEND INVOICE BY EMAIL
     # POST /api/pos/invoice/<invoice_id>/send-email
     # Body: { "email": "cliente@ejemplo.com" }  (opcional, usa partner si no viene)
