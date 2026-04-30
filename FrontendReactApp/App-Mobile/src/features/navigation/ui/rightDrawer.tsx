@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import {
-  View, Text, TouchableOpacity, ScrollView,
+  View, Text, TouchableOpacity, ScrollView, Image,
   StyleSheet, Animated, Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -35,11 +35,12 @@ interface RightDrawerProps {
   userName?: string;
   userEmail?: string;
   userInitials?: string;
+  userAvatarUrl?: string | null;
 }
 
 export function RightDrawer({
   open, onClose, onNavigate, onLogout,
-  userName = 'Usuario', userEmail = '', userInitials = 'U',
+  userName = 'Usuario', userEmail = '', userInitials = 'U', userAvatarUrl = null,
 }: RightDrawerProps) {
   const translateX = useRef(new Animated.Value(300)).current;
 
@@ -69,7 +70,11 @@ export function RightDrawer({
           <IconX size={14} color="#fff" strokeWidth={2} />
         </TouchableOpacity>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{userInitials}</Text>
+          {userAvatarUrl ? (
+            <Image source={{ uri: userAvatarUrl }} style={styles.avatarImage} resizeMode="cover" />
+          ) : (
+            <Text style={styles.avatarText}>{userInitials}</Text>
+          )}
         </View>
         <Text style={styles.name}>{userName}</Text>
         <Text style={styles.email}>{userEmail}</Text>
@@ -133,8 +138,9 @@ const styles = StyleSheet.create({
     width: 62, height: 62, borderRadius: 31,
     backgroundColor: 'rgba(255,255,255,0.15)',
     borderWidth: 2, borderColor: 'rgba(255,255,255,0.25)',
-    alignItems: 'center', justifyContent: 'center', marginBottom: 10,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 10, overflow: 'hidden',
   },
+  avatarImage: { width: '100%', height: '100%' },
   avatarText: { fontSize: 22, fontWeight: '700', color: '#fff' },
   name:  { fontSize: 15, fontWeight: '700', color: '#fff', marginBottom: 3 },
   email: { fontSize: 11, color: 'rgba(255,255,255,0.45)' },

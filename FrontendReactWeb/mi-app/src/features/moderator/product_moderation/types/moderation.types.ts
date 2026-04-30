@@ -28,6 +28,13 @@ export interface ModerationStatCard {
   bg: string;
 }
 
+export interface ModerationCounters {
+  todos: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+}
+
 export type FiltroStatus = "todos" | "pending" | "approved" | "rejected";
 
 export interface AccionModeration {

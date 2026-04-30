@@ -5,6 +5,7 @@ import { apiListModeratorProducts, apiSetProductModerationStatus } from "../../d
 import {
   AccionModeration,
   FiltroStatus,
+  ModerationCounters,
   ProductoPendiente,
   ProductoStatus,
 } from "../types/moderation.types";
@@ -27,7 +28,7 @@ interface UseModerationReturn {
   toastMsg: string;
   toastTipo: "success" | "error";
   productosFiltrados: ProductoPendiente[];
-  contadores: Record<ProductoStatus | "todos", number>;
+  contadores: ModerationCounters;
   setSearch: (v: string) => void;
   setFiltroActivo: (v: FiltroStatus) => void;
   setMotivoRechazo: (v: string) => void;
@@ -150,7 +151,7 @@ export function useModeration(): UseModerationReturn {
     })();
   }, [productoARechazar, motivoRechazo, cambiarStatus, cerrarModalRechazar, showToast]);
 
-  const contadores = useMemo(
+  const contadores = useMemo<ModerationCounters>(
     () => ({
       todos: productos.length,
       pending: productos.filter((product) => product.status === "pending").length,

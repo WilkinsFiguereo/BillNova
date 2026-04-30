@@ -10,6 +10,13 @@ import { dashboardTheme as t } from "./theme/dashboard.theme";
 import { getActiveBusinessType, hasCompanyForCurrentUser } from "@/features/seller/shared/companySession";
 import { getStoredAuthState } from "@/features/auth/login/data/storage";
 
+const AVATAR_STORAGE_KEY = "billnova.user.avatar";
+
+function getStoredAvatar(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  return window.localStorage.getItem(AVATAR_STORAGE_KEY) || undefined;
+}
+
 // ─── Stock Badge ────────────────────────────────────────────────────
 interface StockBadgeProps {
   status: StockStatus;
@@ -84,6 +91,7 @@ export function Sidebar({ navItems }: SidebarProps) {
   const hasCompany = hasCompanyForCurrentUser();
   const businessType = getActiveBusinessType();
   const currentUser = getStoredAuthState();
+  const userAvatar = getStoredAvatar();
   const userInitials = currentUser?.name
     ? currentUser.name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
     : 'US';
@@ -179,11 +187,16 @@ export function Sidebar({ navItems }: SidebarProps) {
           }}>
             <div style={{
               width: 32, height: 32, borderRadius: "50%",
-              background: `linear-gradient(135deg, ${t.brand600}, ${t.brand400})`,
+              backgroundColor: userAvatar ? t.bgAlt : t.brand600,
+              backgroundImage: userAvatar ? `url(${userAvatar})` : `linear-gradient(135deg, ${t.brand600}, ${t.brand400})`,
+              backgroundRepeat: "no-repeat",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
               display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: 13, color: "white", fontWeight: 700,
+              overflow: "hidden",
             }}>
-              {userInitials}
+              {!userAvatar ? userInitials : null}
             </div>
             <div>
               <div style={{ fontSize: 12, fontWeight: 600, color: t.textPrimary }}>{userName}</div>

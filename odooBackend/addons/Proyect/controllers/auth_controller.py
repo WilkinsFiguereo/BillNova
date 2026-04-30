@@ -1422,6 +1422,127 @@ class AuthApiController(http.Controller):
             'session_token': session_token,
         }, status=200)
 
+    @http.route('/api/auth/forgot-password', type='http', auth='public', methods=['POST', 'OPTIONS'], csrf=False)
+    def forgot_password(self):
+        if request.httprequest.method == 'OPTIONS':
+            return self._options_response()
+
+        payload = request.httprequest.get_json(silent=True) or {}
+        email = (payload.get('email') or '').strip().lower()
+        method = (payload.get('method') or 'link').strip().lower()
+        frontend_base_url = payload.get('frontend_base_url') or self._get_frontend_base_url()
+
+        if not email:
+            return self._json_response({'ok': False, 'error': 'email requerido'}, status=400)
+        if method not in ('link', 'otp'):
+            return self._json_response({'ok': False, 'error': 'method invalido'}, status=400)
+
+        mobile_user = request.env['billnova.user'].sudo().with_context(active_test=False).search(
+            [('email', '=', email)],
+            limit=1,
+        )
+
+        if not mobile_user:
+            res_user = request.env['res.users'].sudo().with_context(active_test=False).search([
+                '|',
+                ('email', '=', email),
+                ('login', '=', email),
+            ], limit=1)
+            if res_user:
+                mobile_user = request.env['billnova.user'].sudo().with_context(active_test=False).search(
+                    [('res_user_id', '=', res_user.id)],
+                    limit=1,
+                )
+
+        if not mobile_user:
+            return self._json_response({'ok': False, 'error': 'No existe una cuenta con ese correo.'}, status=404)
+
+        sent = mobile_user.action_send_password_reset_email(
+            method=method,
+            frontend_base_url=frontend_base_url,
+        )
+        if not sent:
+            return self._json_response(
+                {'ok': False, 'error': 'No se pudo enviar el correo de recuperacion.'},
+                status=422,
+            )
+
+        response_payload = {
+            'ok': True,
+            'message': 'Te enviamos las instrucciones para recuperar tu contrasena.',
+            'method': method,
+            'delivery': 'email',
+        }
+
+        # Helper values for local/dev flows.
+        if method == 'otp':
+            response_payload['dev_otp'] = mobile_user.password_reset_otp
+        else:
+            response_payload['dev_token'] = mobile_user.password_reset_token
+
+        return self._json_response(response_payload, status=200)
+
+    @http.route('/api/auth/reset-password', type='http', auth='public', methods=['POST', 'OPTIONS'], csrf=False)
+    def reset_password(self):
+        if request.httprequest.method == 'OPTIONS':
+            return self._options_response()
+
+        payload = request.httprequest.get_json(silent=True) or {}
+        email = (payload.get('email') or '').strip().lower()
+        token = (payload.get('token') or '').strip()
+        otp = (payload.get('otp') or '').strip()
+        new_password = payload.get('newPassword') or payload.get('new_password') or ''
+        confirm_password = payload.get('confirmPassword') or payload.get('confirm_password') or ''
+
+        if not email:
+            return self._json_response({'ok': False, 'error': 'email requerido'}, status=400)
+        if not new_password or not confirm_password:
+            return self._json_response({'ok': False, 'error': 'Debes indicar la nueva contrasena y su confirmacion.'}, status=400)
+        if new_password != confirm_password:
+            return self._json_response({'ok': False, 'error': 'Las contrasenas no coinciden.'}, status=400)
+        if len(new_password) < 6:
+            return self._json_response({'ok': False, 'error': 'La contrasena debe tener al menos 6 caracteres.'}, status=400)
+        if not token and not otp:
+            return self._json_response({'ok': False, 'error': 'token u otp requerido'}, status=400)
+
+        mobile_user = request.env['billnova.user'].sudo().with_context(active_test=False).search(
+            [('email', '=', email)],
+            limit=1,
+        )
+        if not mobile_user:
+            return self._json_response({'ok': False, 'error': 'No existe una cuenta con ese correo.'}, status=404)
+
+        now = fields.Datetime.now()
+
+        if token:
+            if mobile_user.password_reset_token != token:
+                return self._json_response({'ok': False, 'error': 'El token de recuperacion no es valido.'}, status=401)
+            if mobile_user.password_reset_token_expiry and mobile_user.password_reset_token_expiry < now:
+                return self._json_response({'ok': False, 'error': 'El token de recuperacion ya expiro.'}, status=410)
+
+        if otp:
+            if mobile_user.password_reset_otp != otp:
+                return self._json_response({'ok': False, 'error': 'El codigo OTP no es valido.'}, status=401)
+            if mobile_user.password_reset_otp_expiry and mobile_user.password_reset_otp_expiry < now:
+                return self._json_response({'ok': False, 'error': 'El codigo OTP ya expiro.'}, status=410)
+
+        res_user = mobile_user._get_res_user_including_inactive()
+        if not res_user or not res_user.exists():
+            return self._json_response({'ok': False, 'error': 'No se encontro el usuario asociado.'}, status=404)
+
+        try:
+            res_user.sudo().write({
+                'password': new_password,
+                'active': True,
+            })
+            mobile_user.sudo().write({'active': True})
+            mobile_user.action_clear_password_reset()
+        except Exception as error:
+            _logger.exception("No se pudo restablecer la contrasena para %s", email)
+            return self._json_response({'ok': False, 'error': str(error) or 'No se pudo restablecer la contrasena.'}, status=422)
+
+        return self._json_response({'ok': True, 'message': 'Contrasena actualizada correctamente.'}, status=200)
+
     @http.route('/api/auth/verify-email', type='http', auth='public', methods=['POST', 'OPTIONS'], csrf=False)
     def verify_email(self):
         if request.httprequest.method == 'OPTIONS':

@@ -23,17 +23,8 @@ const PUBLIC_ONLY_ROUTE_PREFIXES = [
 export default function NavigationLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-
-  const [allowed, setAllowed] = useState(() => {
-    if (
-      AUTH_OPTIONAL_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix)) ||
-      PUBLIC_ONLY_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix))
-    ) {
-      return true;
-    }
-    const stored = getStoredAuthState();
-    return Boolean(stored?.uid && stored?.sessionToken);
-  });
+  const [allowed, setAllowed] = useState(true);
+  const [resolved, setResolved] = useState(false);
 
   useEffect(() => {
     const isAuthOptional = AUTH_OPTIONAL_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix));
@@ -45,23 +36,28 @@ export default function NavigationLayout({ children }: { children: ReactNode }) 
     if (hasSession) {
       if (isPublicOnly) {
         setAllowed(false);
+        setResolved(true);
         router.replace(getUserRoleRoute(stored?.role));
         return;
       }
 
       setAllowed(true);
+      setResolved(true);
       return;
     }
 
     if (isAuthOptional || isPublicOnly) {
       setAllowed(true);
+      setResolved(true);
       return;
     }
 
     setAllowed(false);
+    setResolved(true);
     router.replace("/navigation/welcome");
   }, [pathname, router]);
 
+  if (!resolved) return null;
   if (!allowed) return null;
   return children;
 }

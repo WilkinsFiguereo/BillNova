@@ -9,6 +9,7 @@ export interface MobileProfile {
   role?: string;
   company_id?: number | null;
   company_name?: string | null;
+  avatar_url?: string | null;
 }
 
 export interface MobileProfileResponse {
@@ -19,8 +20,8 @@ export interface MobileProfileResponse {
 
 export interface UpdateMobileProfilePayload {
   name: string;
-  email: string;
   phone?: string;
   address?: string;
   password?: string;
+  avatar?: string;
 }

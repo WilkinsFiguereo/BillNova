@@ -128,6 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             role: data.role ?? user?.role,
             company_id: data.company_id ?? user?.company_id ?? null,
             company_name: user?.company_name,
+            avatar_url: user?.avatar_url ?? null,
           };
 
           await tokenStorage.saveSession({ token, user: restoredUser });
@@ -176,6 +177,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email: data.email,
       role: data.role,
       company_id: data.company_id ?? null,
+      avatar_url: null,
     };
 
     const sessionHandle = data.session_token ?? data.session_id;
@@ -246,6 +248,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: params.get('email') ?? undefined,
         role: params.get('role') ?? undefined,
         company_id: params.get('company_id') ? Number(params.get('company_id')) : null,
+        avatar_url: null,
       };
 
       await tokenStorage.saveSession({ token, user });

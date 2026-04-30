@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 
 import { profileApi } from '../../src/features/profile/api/profileApi';
 import { tokenStorage } from '../../src/core/storage/tokenStorage';
@@ -23,6 +25,7 @@ type FormState = {
   phone: string;
   address: string;
   password: string;
+  avatar_url?: string | null;
 };
 
 function Field({
@@ -66,6 +69,7 @@ function emptyForm(profile?: MobileProfile | null): FormState {
     phone: profile?.phone ?? '',
     address: profile?.address ?? '',
     password: '',
+    avatar_url: profile?.avatar_url ?? null,
   };
 }
 
@@ -79,6 +83,7 @@ export default function ProfileTab() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [avatarDataUrl, setAvatarDataUrl] = useState<string | null>(null);
 
   const loadProfile = useCallback(async () => {
     const [token, storedUser] = await Promise.all([
@@ -120,6 +125,7 @@ export default function ProfileTab() {
     });
     setProfile(data.data);
     setForm(emptyForm(data.data));
+    setAvatarDataUrl(null);
     setLoading(false);
   }, [user]);
 
@@ -141,25 +147,51 @@ export default function ProfileTab() {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  const handlePickImage = useCallback(async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permiso requerido', 'Permite acceso a tus fotos para cambiar la imagen de perfil.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+      base64: true,
+    });
+
+    if (result.canceled || !result.assets?.[0]) {
+      return;
+    }
+
+    const asset = result.assets[0];
+    if (!asset.base64) {
+      Alert.alert('Error', 'No se pudo leer la imagen seleccionada.');
+      return;
+    }
+
+    const mimeType = asset.mimeType || 'image/jpeg';
+    const dataUrl = `data:${mimeType};base64,${asset.base64}`;
+    setAvatarDataUrl(dataUrl);
+    setForm((prev) => ({ ...prev, avatar_url: dataUrl }));
+  }, []);
+
   const handleSave = useCallback(async () => {
     if (!form.name.trim()) {
       Alert.alert('Nombre requerido', 'Ingresa tu nombre para guardar los cambios.');
       return;
     }
-    if (!form.email.trim()) {
-      Alert.alert('Correo requerido', 'Ingresa tu correo para guardar los cambios.');
-      return;
-    }
-
     setSaving(true);
     setError(null);
 
     const payload = {
       name: form.name.trim(),
-      email: form.email.trim().toLowerCase(),
       phone: form.phone.trim(),
       address: form.address.trim(),
       password: form.password.trim() || undefined,
+      avatar: avatarDataUrl ?? undefined,
     };
 
     console.log('[mobile][profile] handleSave start', {
@@ -186,6 +218,7 @@ export default function ProfileTab() {
     });
     setProfile(data.data);
     setForm(emptyForm(data.data));
+    setAvatarDataUrl(null);
     await updateUser({
       uid: data.data.uid,
       login: data.data.login,
@@ -196,10 +229,11 @@ export default function ProfileTab() {
       role: data.data.role,
       company_id: data.data.company_id ?? null,
       company_name: data.data.company_name ?? null,
+      avatar_url: data.data.avatar_url ?? null,
     });
     setSaving(false);
     Alert.alert('Perfil actualizado', 'Tus datos se guardaron correctamente.');
-  }, [form, updateUser]);
+  }, [avatarDataUrl, form, updateUser]);
 
   const handleLogout = useCallback(() => {
     Alert.alert('Cerrar sesion', 'Estas seguro de que quieres salir?', [
@@ -239,9 +273,20 @@ export default function ProfileTab() {
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <View style={styles.hero}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initials}</Text>
-        </View>
+        <TouchableOpacity style={styles.avatar} activeOpacity={0.85} onPress={() => void handlePickImage()}>
+          {form.avatar_url || profile?.avatar_url || user?.avatar_url ? (
+            <Image
+              source={{ uri: form.avatar_url || profile?.avatar_url || user?.avatar_url || '' }}
+              style={styles.avatarImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <Text style={styles.avatarText}>{initials}</Text>
+          )}
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => void handlePickImage()} activeOpacity={0.8}>
+          <Text style={styles.changePhotoText}>Cambiar foto</Text>
+        </TouchableOpacity>
         <Text style={styles.heroTitle}>{form.name || user?.name || 'Mi perfil'}</Text>
         <Text style={styles.heroSubtitle}>Administra tu cuenta y tu informacion personal</Text>
 
@@ -256,7 +301,7 @@ export default function ProfileTab() {
         <Text style={styles.sectionTitle}>Datos de la cuenta</Text>
         <Field label="Usuario" value={profile?.login ?? user?.login ?? ''} editable={false} />
         <Field label="Nombre completo" value={form.name} onChangeText={updateField('name')} placeholder="Tu nombre" />
-        <Field label="Correo" value={form.email} onChangeText={updateField('email')} placeholder="correo@empresa.com" />
+        <Field label="Correo" value={form.email} placeholder="correo@empresa.com" editable={false} />
         <Field label="Telefono" value={form.phone} onChangeText={updateField('phone')} placeholder="Tu telefono" />
         <Field
           label="Direccion"
@@ -318,8 +363,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 14,
+    overflow: 'hidden',
   },
+  avatarImage: { width: '100%', height: '100%' },
   avatarText: { color: '#fff', fontSize: 30, fontWeight: '800' },
+  changePhotoText: { color: '#D6E4FF', fontSize: 12.5, fontWeight: '700', marginBottom: 12 },
   heroTitle: { color: '#fff', fontSize: 22, fontWeight: '800', marginBottom: 4 },
   heroSubtitle: {
     color: 'rgba(255,255,255,0.75)',

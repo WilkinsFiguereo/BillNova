@@ -10,7 +10,7 @@ import type {
   VerifyEmailPayload,
   VerifyEmailResponse,
 } from "../types/auth.types";
-import { authPath, odooGet, odooPost } from "@/lib/odooApi";
+import { authPath, odooGet, odooPost, odooPut } from "@/lib/odooApi";
 
 export const authApi = {
   login: async (payload: LoginPayload): Promise<LoginResponse> =>
@@ -89,4 +89,79 @@ export const authApi = {
       sessionToken,
       allowedStatuses: [401, 403],
     }),
+
+  getProfile: async (
+    sessionToken?: string,
+  ): Promise<{
+    ok: boolean;
+    user?: {
+      id: number;
+      name: string;
+      email: string;
+      role?: string;
+      phone?: string;
+      avatar_url?: string | null;
+      company_name?: string | null;
+    };
+    error?: string;
+  }> => {
+    const response = await odooGet<{
+      ok: boolean;
+      data?: {
+        uid: number;
+        name: string;
+        email: string;
+        role?: string;
+        phone?: string;
+        avatar_url?: string | null;
+        company_name?: string | null;
+      };
+      error?: string;
+    }>("/api/mobile/profile", {
+      sessionToken,
+      allowedStatuses: [400, 401, 403, 404, 409],
+    });
+
+    return {
+      ok: response.ok,
+      error: response.error ?? response.data?.error,
+      user: response.data?.data
+        ? {
+            id: response.data.data.uid,
+            name: response.data.data.name,
+            email: response.data.data.email,
+            role: response.data.data.role,
+            phone: response.data.data.phone,
+            avatar_url: response.data.data.avatar_url,
+            company_name: response.data.data.company_name,
+          }
+        : undefined,
+    };
+  },
+
+  updateProfile: async (
+    sessionToken: string | undefined,
+    payload: { name?: string; email?: string; phone?: string; address?: string; password?: string; avatar?: string },
+  ): Promise<{ ok: boolean; error?: string; avatar_url?: string | null }> => {
+    const response = await odooPut<{
+      ok: boolean;
+      data?: { avatar_url?: string | null };
+      error?: string;
+    }>("/api/mobile/profile", payload, {
+      sessionToken,
+      allowedStatuses: [400, 401, 403, 404, 409],
+    });
+
+    return {
+      ok: response.data?.ok ?? response.ok,
+      error: response.error ?? response.data?.error,
+      avatar_url: response.data?.data?.avatar_url,
+    };
+  },
+
+  updateAvatar: async (
+    sessionToken: string | undefined,
+    avatar: string,
+  ): Promise<{ ok: boolean; error?: string; avatar_url?: string | null }> =>
+    authApi.updateProfile(sessionToken, { avatar }),
 };

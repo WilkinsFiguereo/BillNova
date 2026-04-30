@@ -1,11 +1,47 @@
 "use client";
 
 import React from "react";
+import { CheckCircle, Clock, Package, XCircle } from "lucide-react";
 import { moderationTheme as t } from "../theme/moderation.theme";
 import { ModerationStatCardUI } from "../ui/ModerationUI";
-import { MODERACION_STATS } from "../data/moderation.data";
+import { ModerationCounters, ModerationStatCard } from "../types/moderation.types";
 
-export function ModerationHeaderSection() {
+export function ModerationHeaderSection({ contadores }: { contadores: ModerationCounters }) {
+  const stats: ModerationStatCard[] = [
+    {
+      label: "Pendientes",
+      value: String(contadores.pending),
+      Icon: Clock,
+      delta: "Requieren revision",
+      color: t.warning,
+      bg: t.warningBg,
+    },
+    {
+      label: "Aprobados",
+      value: String(contadores.approved),
+      Icon: CheckCircle,
+      delta: "Publicados correctamente",
+      color: t.success,
+      bg: t.successBg,
+    },
+    {
+      label: "Rechazados",
+      value: String(contadores.rejected),
+      Icon: XCircle,
+      delta: "Con observaciones",
+      color: t.error,
+      bg: t.errorBg,
+    },
+    {
+      label: "Total revisados",
+      value: String(contadores.todos),
+      Icon: Package,
+      delta: "Catalogo moderado",
+      color: t.brand400,
+      bg: t.brand100,
+    },
+  ];
+
   return (
     <div style={{ marginBottom: 28, animation: "slideIn 0.4s ease" }}>
       <div style={{ marginBottom: 24 }}>
@@ -34,7 +70,7 @@ export function ModerationHeaderSection() {
           animation: "slideIn 0.5s ease 0.1s both",
         }}
       >
-        {MODERACION_STATS.map((stat) => (
+        {stats.map((stat) => (
           <ModerationStatCardUI key={stat.label} stat={stat} />
         ))}
       </div>

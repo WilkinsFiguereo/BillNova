@@ -3,7 +3,13 @@
 import React from 'react';
 import { Empresa, FiltrosEmpresas, CategoriaEmpresa, EstadoEmpresa, OrdenPor, PeriodoFiltro } from '../types/estadisticas.types';
 import { colors, categoriaConfig, ordenConfig, periodoConfig } from '../theme/estadisticas.theme';
-import { EmpresaAvatar, StarRating, CrecimientoBadge, RankBadge } from '../ui/EmpresaUI';
+import { EmpresaAvatar, CrecimientoBadge, RankBadge } from '../ui/EmpresaUI';
+
+function formatCurrencyCompact(value: number): string {
+  if (value >= 1000000) return `RD$ ${(value / 1000000).toFixed(2)}M`;
+  if (value >= 1000) return `RD$ ${(value / 1000).toFixed(1)}k`;
+  return `RD$ ${value.toLocaleString()}`;
+}
 
 // ─── Top 3 Podio ──────────────────────────────────────────────────────────────
 export function Top3Podio({ empresas, onClick }: { empresas: Empresa[]; onClick: (e: Empresa) => void }) {
@@ -36,7 +42,7 @@ export function Top3Podio({ empresas, onClick }: { empresas: Empresa[]; onClick:
                 <p style={{ margin: '1px 0 0', fontSize: 10.5, color: colors.text.secondary }}>Ventas totales</p>
               </div>
               <div>
-                <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#10B981' }}>RD$ {(e.totalIngresos / 1000000).toFixed(2)}M</p>
+                <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#10B981' }}>{formatCurrencyCompact(e.totalIngresos)}</p>
                 <p style={{ margin: '1px 0 0', fontSize: 10.5, color: colors.text.secondary }}>Ingresos</p>
               </div>
             </div>

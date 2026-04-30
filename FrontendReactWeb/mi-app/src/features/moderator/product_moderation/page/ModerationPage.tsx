@@ -57,7 +57,7 @@ export default function ModerationPage() {
           transition: "margin-right 0.25s ease",
         }}
       >
-        <ModerationHeaderSection />
+        <ModerationHeaderSection contadores={contadores} />
 
         <ModerationListaSection
           productos={productosFiltrados}

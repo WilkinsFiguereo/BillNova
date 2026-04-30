@@ -176,7 +176,22 @@ export function HomeScreen({
       {/* 📂 Drawers */}
       <DrawerOverlay visible={leftOpen || rightOpen} onPress={closeAll} />
       <LeftDrawer open={leftOpen} onClose={closeAll} onNavigate={handleNavigate} onLogout={handleLogout} />
-      <RightDrawer open={rightOpen} onClose={closeAll} onNavigate={handleNavigate} onLogout={handleLogout} />
+      <RightDrawer
+        open={rightOpen}
+        onClose={closeAll}
+        onNavigate={handleNavigate}
+        onLogout={handleLogout}
+        userName={user?.name ?? 'Usuario'}
+        userEmail={user?.email ?? user?.login ?? ''}
+        userInitials={(user?.name ?? user?.login ?? 'U')
+          .split(' ')
+          .filter(Boolean)
+          .map((word) => word[0])
+          .slice(0, 2)
+          .join('')
+          .toUpperCase()}
+        userAvatarUrl={user?.avatar_url ?? null}
+      />
 
       {/* 🌑 Overlay */}
       <DrawerOverlay visible={leftOpen || rightOpen} onPress={closeAll} />

@@ -15,7 +15,6 @@ import { useProductDetail } from './hooks/useProductDetail';
 import { productDetailTheme as t } from './theme/productDetail.theme';
 
 import { AddToCartBar } from './ui/AddToCartBar';
-import { ColorSizeSelector } from './sections/ColorSizeSelector';
 import { ImageGallery } from './sections/ImageGallery';
 import { ProductInfo } from './sections/ProductInfo';
 import { ReviewsSection } from './sections/ReviewsSection';
@@ -96,41 +95,27 @@ export function ProductDetailPage({ productId = null, navigation }: Props) {
         </TouchableOpacity>
       </View>
 
-      {error ? (
-        <View style={s.errorBanner}>
-          <Text style={s.errorBannerText}>{error}</Text>
-        </View>
-      ) : null}
+       {error ? (
+         <View style={s.errorBanner}>
+           <Text style={s.errorBannerText}>{error}</Text>
+         </View>
+       ) : null}
 
-      <ScrollView style={s.scroll} showsVerticalScrollIndicator={false} bounces>
-        <ImageGallery
-          images={product.images}
-          selectedIndex={selectedImage}
-          onSelect={setSelectedImage}
-        />
-        <ProductInfo
-          product={product}
-          isWishlisted={isWishlisted}
-          onToggleWishlist={toggleWishlist}
-          liveRating={stats.avg}
-          liveReviewCount={stats.total}
-        />
-        <View style={s.divider} />
-        {!isService ? (
-          <>
-            <ColorSizeSelector
-              colors={product.colors}
-              sizes={product.sizes}
-              selectedColor={selectedColor}
-              selectedSize={selectedSize}
-              onColorSelect={setSelectedColor}
-              onSizeSelect={setSelectedSize}
-            />
-            <View style={s.divider} />
-          </>
-        ) : null}
-        <ReviewsSection productId={productId} />
-      </ScrollView>
+       <ScrollView style={s.scroll} showsVerticalScrollIndicator={false} bounces>
+         <ImageGallery
+           images={product.images}
+           selectedIndex={selectedImage}
+           onSelect={setSelectedImage}
+         />
+         <ProductInfo
+           product={product}
+           isWishlisted={isWishlisted}
+           onToggleWishlist={toggleWishlist}
+           liveRating={stats.avg}
+           liveReviewCount={stats.total}
+         />
+         <ReviewsSection productId={productId} />
+       </ScrollView>
 
       <AddToCartBar
         quantity={quantity}

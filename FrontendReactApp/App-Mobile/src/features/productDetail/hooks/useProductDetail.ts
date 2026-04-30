@@ -95,13 +95,11 @@ export function useProductDetail(productId: number | null) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [selectedImage, setSelectedImage] = useState(0);
-  const [selectedColor, setSelectedColor] = useState(mockProduct.colors[0]);
-  const [selectedSize, setSelectedSize] = useState(mockProduct.sizes[1] ?? mockProduct.sizes[0]);
-  const [quantity, setQuantity] = useState(1);
-  const [isWishlisted, setIsWishlisted] = useState(false);
-  const [cartAdded, setCartAdded] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+   const [selectedImage, setSelectedImage] = useState(0);
+   const [quantity, setQuantity] = useState(1);
+   const [isWishlisted, setIsWishlisted] = useState(false);
+   const [cartAdded, setCartAdded] = useState(false);
+   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -158,12 +156,10 @@ export function useProductDetail(productId: number | null) {
     };
   }, [productId]);
 
-  useEffect(() => {
-    setSelectedImage(0);
-    setSelectedColor(product.colors[0] ?? '#111827');
-    setSelectedSize(product.sizes[1] ?? product.sizes[0] ?? 'M');
-    setQuantity(1);
-  }, [product]);
+   useEffect(() => {
+     setSelectedImage(0);
+     setQuantity(1);
+   }, [product]);
 
   useEffect(() => {
     return () => {
@@ -175,40 +171,35 @@ export function useProductDetail(productId: number | null) {
   const decrementQty = useCallback(() => setQuantity((q) => Math.max(q - 1, 1)), []);
   const toggleWishlist = useCallback(() => setIsWishlisted((w) => !w), []);
 
-  const addToCart = useCallback((): CartItem => {
-    setCartAdded(true);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setCartAdded(false), 1800);
+   const addToCart = useCallback((): CartItem => {
+     setCartAdded(true);
+     if (timerRef.current) clearTimeout(timerRef.current);
+     timerRef.current = setTimeout(() => setCartAdded(false), 1800);
 
-    return {
-      product,
-      quantity,
-      selectedColor,
-      selectedSize,
-    };
-  }, [product, quantity, selectedColor, selectedSize]);
+     return {
+       product,
+       quantity,
+       // Removed color and size as they are no longer used
+     };
+   }, [product, quantity]);
 
-  const discountedPrice = useMemo(() => product.price, [product.price]);
-  const isService = product.detailType === 'service';
+   const discountedPrice = useMemo(() => product.price, [product.price]);
+   const isService = product.detailType === 'service';
 
-  return {
-    product,
-    isService,
-    loading,
-    error,
-    selectedImage,
-    setSelectedImage,
-    selectedColor,
-    setSelectedColor,
-    selectedSize,
-    setSelectedSize,
-    quantity,
-    incrementQty,
-    decrementQty,
-    isWishlisted,
-    toggleWishlist,
-    addToCart,
-    cartAdded,
-    discountedPrice,
-  };
+   return {
+     product,
+     isService,
+     loading,
+     error,
+     selectedImage,
+     setSelectedImage,
+     quantity,
+     incrementQty,
+     decrementQty,
+     isWishlisted,
+     toggleWishlist,
+     addToCart,
+     cartAdded,
+     discountedPrice,
+   };
 }

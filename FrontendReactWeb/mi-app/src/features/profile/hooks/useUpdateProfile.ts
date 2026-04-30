@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { authApi } from '@/features/auth/login/data/api';
+import { getStoredAuthState } from '@/features/auth/login/data/storage';
 
 export interface UpdateProfileData {
   name?: string;
@@ -26,26 +27,22 @@ export function useUpdateProfile() {
     setError(null);
 
     try {
-      if (data.avatar) {
-        const avatarResult = await authApi.updateAvatar(undefined, data.avatar);
-        if (!avatarResult.ok) {
-          setError(avatarResult.error ?? 'Error al actualizar avatar');
-          setLoading(false);
-          return { ok: false, error: avatarResult.error };
-        }
-      }
+      const sessionToken = getStoredAuthState()?.sessionToken;
 
-      const apiData: { name?: string; phone?: string } = {};
+      const apiData: { name?: string; phone?: string; avatar?: string } = {};
       if (data.name) apiData.name = data.name;
       if (data.phone) apiData.phone = data.phone;
+      if (data.avatar) apiData.avatar = data.avatar;
 
       if (Object.keys(apiData).length > 0) {
-        const result = await authApi.updateProfile(undefined, apiData);
+        const result = await authApi.updateProfile(sessionToken, apiData);
         if (!result.ok) {
           setError(result.error ?? 'Error al actualizar perfil');
           setLoading(false);
           return { ok: false, error: result.error };
         }
+
+        return { ok: true, avatar_url: result.avatar_url };
       }
 
       return { ok: true };

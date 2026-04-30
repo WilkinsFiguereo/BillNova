@@ -65,7 +65,11 @@ export function ProfilePage() {
       if (result.ok) {
         setSaveSuccess(true);
         setIsEditing(false);
-        setAvatarPreview(null);
+        if (result.avatar_url) {
+          setAvatarPreview(result.avatar_url);
+        } else {
+          setAvatarPreview(null);
+        }
         setTimeout(() => {
           refreshUser();
         }, 100);
@@ -235,9 +239,11 @@ export function ProfilePage() {
             height: 120,
             margin: '0 auto 16px',
             borderRadius: '50%',
-            background: avatarPreview || user?.avatar 
-              ? `url(${avatarPreview || user?.avatar})` 
+            backgroundColor: avatarPreview || user?.avatar ? colors.bg.alt : colors.primary,
+            backgroundImage: avatarPreview || user?.avatar
+              ? `url(${avatarPreview || user?.avatar})`
               : `linear-gradient(135deg, ${colors.primary}, #818cf8)`,
+            backgroundRepeat: 'no-repeat',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             display: 'flex',

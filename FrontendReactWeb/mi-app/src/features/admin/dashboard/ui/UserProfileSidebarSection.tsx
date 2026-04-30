@@ -40,7 +40,11 @@ export function UserProfileSidebarSection() {
               width: 32,
               height: 32,
               borderRadius: '50%',
-              background: `linear-gradient(135deg, ${colors.accent}, #818cf8)`,
+              backgroundColor: user?.avatar ? colors.bg.alt : colors.accent,
+              backgroundImage: user?.avatar ? `url(${user.avatar})` : `linear-gradient(135deg, ${colors.accent}, #818cf8)`,
+              backgroundRepeat: 'no-repeat',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -48,9 +52,10 @@ export function UserProfileSidebarSection() {
               color: 'white',
               fontWeight: 700,
               flexShrink: 0,
+              overflow: 'hidden',
             }}
           >
-            {initials}
+            {!user?.avatar ? initials : null}
           </div>
           <div>
             <div style={{ fontSize: 12, fontWeight: 600, color: colors.text.primary }}>

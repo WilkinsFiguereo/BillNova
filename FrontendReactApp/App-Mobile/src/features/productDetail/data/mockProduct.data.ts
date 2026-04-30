@@ -17,8 +17,7 @@ export const mockProduct: Product = {
     { id: 'img-2', uri: 'https://images.unsplash.com/photo-1484704849700-f032a568e944?w=600' },
     { id: 'img-3', uri: 'https://images.unsplash.com/photo-1524678606370-a47ad25cb82a?w=600' },
   ],
-  colors: ['#1F2937', '#1E3A8A', '#DC2626', '#F8FAFC'],
-  sizes: ['S', 'M', 'L', 'XL'],
+  // Removed colors and sizes as they are no longer used in product detail
   reviews: [
     {
       id: 'rev-1',

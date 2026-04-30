@@ -33,6 +33,7 @@ export const profileApi = {
       payload: {
         ...payload,
         password: payload.password ? '***' : undefined,
+        avatar: payload.avatar ? '[base64-image]' : undefined,
       },
     });
 

@@ -1,505 +1,326 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
-import { colors } from "@/features/moderator/report_moderation/theme/reportes.theme";
+import React from "react";
 import { dashboardTheme as t, globalStyles } from "@/features/seller/dashboard/theme/dashboard.theme";
-import { useReportes } from "@/features/moderator/report_moderation/hooks/useReportes";
-import { ReportesHeader } from "@/features/moderator/report_moderation/sections/ReportesHeader";
-import { ReportesFilters } from "@/features/moderator/report_moderation/sections/ReportesFilters";
-import { ReportesTable } from "@/features/moderator/report_moderation/sections/ReportesTable";
-import { ReporteDetailModal } from "@/features/moderator/report_moderation/sections/ReporteDetailModal";
-import { exportAdminReportsToExcel, exportAdminReportsToPdf } from "./adminReportExport";
-import { useReports } from "./hooks/useReports";
-import { useUsers } from "../users/hooks/useUsers";
-import { useDashboard as useCompaniesDashboard } from "../companies/hooks/useDashboard";
 import { AdminSidebar } from "../dashboard/ui/AdminSidebar";
 import { ADMIN_NAV_ITEMS } from "../dashboard/data/adminNavigation.data";
+import { useAnalyticsReports } from "@/features/moderator/report_moderation/hooks/useAnalyticsReports";
+import {
+  exportModeratorDatasetToExcel,
+  exportModeratorDatasetToPdf,
+} from "@/features/moderator/report_moderation/reportExport";
 
-type ReportTargetType = "usuario" | "empresa";
+const colors = {
+  bg: "#F6F8FC",
+  card: "#FFFFFF",
+  text: "#0F172A",
+  subtext: "#64748B",
+  border: "#DCE6F2",
+  brand: "#0F172A",
+};
 
-const categoryOptions = [
-  { value: "bug", label: "Incidencia" },
-  { value: "ui", label: "Comportamiento inusual" },
-  { value: "performance", label: "Rendimiento" },
-  { value: "security", label: "Seguridad" },
-  { value: "other", label: "Otro" },
-] as const;
+function formatCurrencyCompact(value: number): string {
+  if (value >= 1000000) return `RD$ ${(value / 1000000).toFixed(2)}M`;
+  if (value >= 1000) return `RD$ ${(value / 1000).toFixed(1)}k`;
+  return `RD$ ${value.toLocaleString()}`;
+}
 
-const severityOptions = [
-  { value: "low", label: "Baja" },
-  { value: "medium", label: "Media" },
-  { value: "high", label: "Alta" },
-  { value: "critical", label: "Crítica" },
-] as const;
+function cardStyle(accent?: string): React.CSSProperties {
+  return {
+    background: colors.card,
+    border: `1px solid ${colors.border}`,
+    borderRadius: 18,
+    padding: 20,
+    boxShadow: "0 10px 30px rgba(15, 23, 42, 0.05)",
+    ...(accent
+      ? {
+          backgroundImage: `linear-gradient(135deg, ${accent}14, transparent 60%)`,
+        }
+      : {}),
+  };
+}
+
+function DataTable({ columns, rows }: { columns: string[]; rows: string[][] }) {
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 760 }}>
+        <thead>
+          <tr style={{ background: "#F8FAFC" }}>
+            {columns.map((column) => (
+              <th
+                key={column}
+                style={{
+                  textAlign: "left",
+                  padding: "12px 14px",
+                  fontSize: 11,
+                  letterSpacing: ".06em",
+                  textTransform: "uppercase",
+                  color: colors.subtext,
+                  borderBottom: `1px solid ${colors.border}`,
+                }}
+              >
+                {column}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.length === 0 ? (
+            <tr>
+              <td colSpan={columns.length} style={{ padding: 28, textAlign: "center", color: colors.subtext }}>
+                No hay datos disponibles
+              </td>
+            </tr>
+          ) : (
+            rows.map((row, rowIndex) => (
+              <tr key={`${row.join("-")}-${rowIndex}`} style={{ borderBottom: `1px solid ${colors.border}` }}>
+                {row.map((cell, cellIndex) => (
+                  <td key={`${cell}-${cellIndex}`} style={{ padding: "13px 14px", fontSize: 13, color: colors.text }}>
+                    {cell}
+                  </td>
+                ))}
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function ExportPanel({
+  title,
+  description,
+  rows,
+}: {
+  title: string;
+  description: string;
+  rows: Array<Record<string, unknown>>;
+}) {
+  const safeName = title.toLowerCase().replace(/\s+/g, "-");
+
+  return (
+    <div style={cardStyle()}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
+        <div>
+          <h3 style={{ margin: 0, fontSize: 18, color: colors.text }}>{title}</h3>
+          <p style={{ margin: "6px 0 0", color: colors.subtext, fontSize: 13 }}>{description}</p>
+        </div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() => exportModeratorDatasetToPdf(title, `${safeName}.pdf`, rows)}
+            style={{
+              border: `1px solid ${colors.border}`,
+              background: colors.card,
+              color: colors.text,
+              borderRadius: 10,
+              padding: "10px 14px",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            Exportar PDF
+          </button>
+          <button
+            type="button"
+            onClick={() => exportModeratorDatasetToExcel(title, `${safeName}.xlsx`, rows)}
+            style={{
+              border: "none",
+              background: colors.brand,
+              color: "#fff",
+              borderRadius: 10,
+              padding: "10px 14px",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            Exportar Excel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function AdminReportsPage() {
-  const {
-    reportes,
-    reporteSeleccionado,
-    filtros,
-    estadisticas,
-    isLoading,
-    modalAbierto,
-    setFiltros,
-    seleccionarReporte,
-    cerrarModal,
-    cambiarEstado,
-    guardarNota,
-  } = useReportes();
-  const { reports: adminReports, creating, submitReport } = useReports();
-  const { resUsers, billnovaUsers, loading: usersLoading } = useUsers();
-  const { companies, isLoading: companiesLoading } = useCompaniesDashboard();
-  const [targetType, setTargetType] = useState<ReportTargetType>("usuario");
-  const [targetId, setTargetId] = useState("");
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [category, setCategory] = useState<(typeof categoryOptions)[number]["value"]>("other");
-  const [severity, setSeverity] = useState<(typeof severityOptions)[number]["value"]>("medium");
-  const [formError, setFormError] = useState<string | null>(null);
-  const [formSuccess, setFormSuccess] = useState<string | null>(null);
+  const { companies, products, users, sales, summary, loading, period, setPeriod } = useAnalyticsReports();
 
-  const userOptions = useMemo(
-    () =>
-      [
-        ...resUsers.map((user) => ({
-          id: `usuario-res-${user.id}`,
-          entityId: user.id,
-          targetModel: "res.users" as const,
-          label: `${user.name} (${user.email})`,
-          metadata: `Rol: ${user.role}`,
-        })),
-        ...billnovaUsers.map((user) => ({
-          id: `usuario-billnova-${user.id}`,
-          entityId: user.id,
-          targetModel: "billnova.user" as const,
-          label: `${user.name} (${user.email})`,
-          metadata: `Rol: ${user.role}`,
-        })),
-      ],
-    [billnovaUsers, resUsers],
-  );
+  const companyExportRows = companies.map((row) => ({
+    Empresa: row.nombre,
+    Estado: row.estado,
+    Categoria: row.categoria,
+    Productos: row.productos,
+    Ventas: row.ventas,
+    Ingresos: row.ingresos,
+    Clientes: row.clientes,
+    Calificacion: row.calificacion ?? "N/D",
+  }));
 
-  const companyOptions = useMemo(
-    () =>
-      companies.map((company) => ({
-        id: `empresa-${company.id}`,
-        entityId: company.id,
-        targetModel: "res.company" as const,
-        label: company.name,
-        metadata: company.contact_email || company.ruc || "Sin dato adicional",
-      })),
-    [companies],
-  );
+  const productExportRows = products.map((row) => ({
+    Producto: row.nombre,
+    Empresa: row.empresa,
+    Tipo: row.tipo === "service" ? "Servicio" : "Producto",
+    Estado: row.estado,
+    Precio: row.precio,
+    Ventas: row.ventas,
+    Ingresos: row.ingresos,
+    Resenas: row.resenas,
+    Calificacion: row.calificacion ?? "N/D",
+  }));
 
-  const targetOptions = targetType === "usuario" ? userOptions : companyOptions;
-  const selectedTarget = targetOptions.find((option) => option.id === targetId);
-  const recentAdminReports = adminReports.slice(0, 5);
+  const userExportRows = users.map((row) => ({
+    Usuario: row.nombre,
+    Email: row.email,
+    Rol: row.rol,
+    Compras: row.compras,
+    Gasto: row.gasto,
+  }));
 
-  const handleCreateAdminReport = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setFormError(null);
-    setFormSuccess(null);
-
-    if (!targetId) {
-      setFormError(`Selecciona ${targetType === "usuario" ? "un usuario" : "una empresa"}.`);
-      return;
-    }
-
-    if (!title.trim() || !description.trim()) {
-      setFormError("Completa el título y la descripción del reporte.");
-      return;
-    }
-
-    const entityLabel = targetType === "usuario" ? "Usuario" : "Empresa";
-    const composedTitle = `[${entityLabel}] ${selectedTarget?.label || targetId} - ${title.trim()}`;
-    const composedDescription = [
-      `${entityLabel} relacionado: ${selectedTarget?.label || targetId}`,
-      selectedTarget?.metadata ? `Referencia: ${selectedTarget.metadata}` : null,
-      "",
-      description.trim(),
-    ]
-      .filter(Boolean)
-      .join("\n");
-
-    try {
-      await submitReport({
-        title: composedTitle,
-        description: composedDescription,
-        category,
-        severity,
-        targetType,
-        targetModel: selectedTarget?.targetModel || (targetType === "usuario" ? "res.users" : "res.company"),
-        targetId: selectedTarget?.entityId || 0,
-        targetLabel: selectedTarget?.label || "",
-      });
-
-      setTitle("");
-      setDescription("");
-      setTargetId("");
-      setCategory("other");
-      setSeverity("medium");
-      setFormSuccess(`Reporte de ${targetType} creado correctamente.`);
-    } catch (error) {
-      setFormError(error instanceof Error ? error.message : "No se pudo crear el reporte.");
-    }
-  };
+  const salesExportRows = sales.map((row) => ({
+    Referencia: row.referencia,
+    Fecha: row.fecha,
+    Estado: row.estado,
+    Cliente: row.cliente,
+    Items: row.items,
+    Total: row.total,
+  }));
 
   return (
     <div
       style={{
         display: "flex",
         minHeight: "100vh",
-        fontFamily:
-          "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        backgroundColor: colors.background.primary,
+        backgroundColor: colors.bg,
+        fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
       }}
     >
       <style>{globalStyles(t)}</style>
-
       <AdminSidebar navItems={ADMIN_NAV_ITEMS} />
 
       <main style={{ flex: 1, overflow: "auto", padding: "32px 28px" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-          <ReportesHeader estadisticas={estadisticas} />
-          <section
-            style={{
-              display: "grid",
-              gridTemplateColumns: "minmax(320px, 1.3fr) minmax(280px, 0.9fr)",
-              gap: 20,
-              marginBottom: 24,
-            }}
-          >
-            <div
-              style={{
-                background: colors.background.secondary,
-                border: `1px solid ${colors.border}`,
-                borderRadius: 18,
-                padding: 22,
-                boxShadow: `0 8px 24px ${colors.shadow}`,
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                <div>
-                  <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: colors.text.primary }}>
-                    Crear reportes de usuarios y empresas
-                  </h2>
-                  <p style={{ margin: "6px 0 0", fontSize: 14, color: colors.text.secondary }}>
-                    Registra incidencias administrativas asociadas a usuarios o empresas desde este panel.
-                  </p>
-                </div>
+        <div style={{ maxWidth: 1320, margin: "0 auto", display: "grid", gap: 18 }}>
+          <section style={{ ...cardStyle("#0F172A"), padding: 26 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 18, flexWrap: "wrap", alignItems: "center" }}>
+              <div>
+                <p style={{ margin: 0, color: "#334155", fontSize: 12, fontWeight: 800, letterSpacing: ".08em", textTransform: "uppercase" }}>
+                  Panel administrativo
+                </p>
+                <h1 style={{ margin: "8px 0 6px", color: colors.text, fontSize: 32, lineHeight: 1.1 }}>
+                  Reportes de Aplicacion
+                </h1>
+                <p style={{ margin: 0, maxWidth: 760, color: colors.subtext, fontSize: 14 }}>
+                  Exporta reportes PDF y Excel de empresas, productos, ventas y usuarios desde la vista administrativa.
+                </p>
               </div>
 
-              <div style={{ display: "flex", gap: 10, marginTop: 18, flexWrap: "wrap" }}>
-                {(["usuario", "empresa"] as const).map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => {
-                      setTargetType(option);
-                      setTargetId("");
-                      setFormError(null);
-                      setFormSuccess(null);
-                    }}
-                    style={{
-                      borderRadius: 999,
-                      border: `1px solid ${targetType === option ? colors.brand[600] : colors.border}`,
-                      background: targetType === option ? colors.brand[100] : "#fff",
-                      color: targetType === option ? colors.brand[600] : colors.text.secondary,
-                      padding: "10px 16px",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                  >
-                    {option === "usuario" ? "Reporte de usuario" : "Reporte de empresa"}
-                  </button>
-                ))}
-              </div>
-
-              <form onSubmit={handleCreateAdminReport} style={{ display: "grid", gap: 14, marginTop: 18 }}>
-                <select
-                  value={targetId}
-                  onChange={(event) => setTargetId(event.target.value)}
-                  disabled={usersLoading || companiesLoading}
-                  style={{
-                    padding: "12px 14px",
-                    borderRadius: 12,
-                    border: `1px solid ${colors.border}`,
-                    background: "#fff",
-                    color: colors.text.primary,
-                  }}
-                >
-                  <option value="">
-                    {usersLoading || companiesLoading
-                      ? "Cargando opciones..."
-                      : targetType === "usuario"
-                        ? "Selecciona un usuario"
-                        : "Selecciona una empresa"}
-                  </option>
-                  {targetOptions.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
-                  <select
-                    value={category}
-                    onChange={(event) => setCategory(event.target.value as (typeof categoryOptions)[number]["value"])}
-                    style={{
-                      padding: "12px 14px",
-                      borderRadius: 12,
-                      border: `1px solid ${colors.border}`,
-                      background: "#fff",
-                      color: colors.text.primary,
-                    }}
-                  >
-                    {categoryOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-
-                  <select
-                    value={severity}
-                    onChange={(event) => setSeverity(event.target.value as (typeof severityOptions)[number]["value"])}
-                    style={{
-                      padding: "12px 14px",
-                      borderRadius: 12,
-                      border: `1px solid ${colors.border}`,
-                      background: "#fff",
-                      color: colors.text.primary,
-                    }}
-                  >
-                    {severityOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        Severidad {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <input
-                  value={title}
-                  onChange={(event) => setTitle(event.target.value)}
-                  placeholder={`Título del reporte de ${targetType}`}
-                  style={{
-                    padding: "12px 14px",
-                    borderRadius: 12,
-                    border: `1px solid ${colors.border}`,
-                    background: "#fff",
-                    color: colors.text.primary,
-                  }}
-                />
-
-                <textarea
-                  value={description}
-                  onChange={(event) => setDescription(event.target.value)}
-                  placeholder="Describe el motivo del reporte y las acciones sugeridas."
-                  rows={5}
-                  style={{
-                    padding: "12px 14px",
-                    borderRadius: 12,
-                    border: `1px solid ${colors.border}`,
-                    background: "#fff",
-                    color: colors.text.primary,
-                    resize: "vertical",
-                  }}
-                />
-
-                {formError ? (
-                  <div
-                    style={{
-                      padding: "12px 14px",
-                      borderRadius: 12,
-                      border: `1px solid ${colors.estado.error.main}`,
-                      background: colors.estado.error.bg,
-                      color: colors.estado.error.text,
-                      fontSize: 14,
-                    }}
-                  >
-                    {formError}
-                  </div>
-                ) : null}
-
-                {formSuccess ? (
-                  <div
-                    style={{
-                      padding: "12px 14px",
-                      borderRadius: 12,
-                      border: `1px solid ${colors.estado.success.main}`,
-                      background: colors.estado.success.bg,
-                      color: colors.estado.success.text,
-                      fontSize: 14,
-                    }}
-                  >
-                    {formSuccess}
-                  </div>
-                ) : null}
-
-                <button
-                  type="submit"
-                  disabled={creating}
-                  style={{
-                    border: "none",
-                    borderRadius: 12,
-                    padding: "13px 18px",
-                    background: colors.brand[600],
-                    color: "#fff",
-                    fontWeight: 700,
-                    cursor: creating ? "wait" : "pointer",
-                    opacity: creating ? 0.75 : 1,
-                  }}
-                >
-                  {creating ? "Creando reporte..." : `Crear reporte de ${targetType}`}
-                </button>
-              </form>
-            </div>
-
-            <aside
-              style={{
-                background: colors.background.secondary,
-                border: `1px solid ${colors.border}`,
-                borderRadius: 18,
-                padding: 22,
-                boxShadow: `0 8px 24px ${colors.shadow}`,
-              }}
-            >
-              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: colors.text.primary }}>
-                Reportes administrativos recientes
-              </h2>
-              <p style={{ margin: "6px 0 18px", fontSize: 14, color: colors.text.secondary }}>
-                Últimos reportes creados para usuarios y empresas.
-              </p>
-
-              <div style={{ display: "grid", gap: 12 }}>
-                {recentAdminReports.length === 0 ? (
-                  <div
-                    style={{
-                      padding: "16px 14px",
-                      borderRadius: 12,
-                      border: `1px dashed ${colors.border}`,
-                      color: colors.text.secondary,
-                      fontSize: 14,
-                    }}
-                  >
-                    Todavía no hay reportes administrativos creados.
-                  </div>
-                ) : (
-                  recentAdminReports.map((report) => (
-                    <article
-                      key={report.id}
-                      style={{
-                        padding: "14px 16px",
-                        borderRadius: 14,
-                        border: `1px solid ${colors.border}`,
-                        background: colors.background.alt,
-                      }}
-                    >
-                      <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: colors.text.primary }}>
-                        {report.title}
-                      </h3>
-                      <p style={{ margin: "6px 0 0", fontSize: 13, color: colors.text.secondary }}>
-                        {report.status} · {report.severity} · {new Date(report.createdAt).toLocaleDateString("es-DO")}
-                      </p>
-                    </article>
-                  ))
-                )}
-              </div>
-            </aside>
-          </section>
-
-          <section
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 16,
-              flexWrap: "wrap",
-              marginBottom: 24,
-              padding: "20px 22px",
-              borderRadius: 18,
-              background: colors.background.secondary,
-              border: `1px solid ${colors.border}`,
-              boxShadow: `0 8px 24px ${colors.shadow}`,
-            }}
-          >
-            <div>
-              <h2
+              <select
+                value={period}
+                onChange={(event) => setPeriod(event.target.value as typeof period)}
                 style={{
-                  margin: 0,
-                  fontSize: 18,
-                  fontWeight: 700,
-                  color: colors.text.primary,
-                }}
-              >
-                Exportar reportes de usuarios y empresas
-              </h2>
-              <p style={{ margin: "6px 0 0", fontSize: 14, color: colors.text.secondary }}>
-                {creating
-                  ? "Actualizando reportes administrativos..."
-                  : `${adminReports.length} reporte${adminReports.length === 1 ? "" : "s"} administrativo${adminReports.length === 1 ? "" : "s"} disponible${adminReports.length === 1 ? "" : "s"} para descargar en PDF o Excel`}
-              </p>
-            </div>
-
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-              <button
-                type="button"
-                onClick={() => exportAdminReportsToPdf(adminReports)}
-                disabled={creating}
-                style={{
-                  border: "none",
+                  height: 44,
                   borderRadius: 12,
-                  padding: "12px 18px",
-                  background: "#172033",
-                  color: "#ffffff",
-                  fontWeight: 700,
-                  cursor: creating ? "not-allowed" : "pointer",
-                  opacity: creating ? 0.65 : 1,
-                }}
-              >
-                {creating ? "Preparando..." : "Descargar PDF"}
-              </button>
-              <button
-                type="button"
-                onClick={() => exportAdminReportsToExcel(adminReports)}
-                disabled={creating}
-                style={{
-                  borderRadius: 12,
-                  padding: "12px 18px",
-                  background: "#ffffff",
-                  color: colors.text.primary,
-                  fontWeight: 700,
                   border: `1px solid ${colors.border}`,
-                  cursor: creating ? "not-allowed" : "pointer",
-                  opacity: creating ? 0.65 : 1,
+                  background: "#fff",
+                  padding: "0 14px",
+                  fontSize: 14,
+                  color: colors.text,
+                  fontWeight: 600,
                 }}
               >
-                {creating ? "Preparando..." : "Descargar Excel"}
-              </button>
+                <option value="7d">Ultimos 7 dias</option>
+                <option value="30d">Ultimos 30 dias</option>
+                <option value="90d">Ultimos 90 dias</option>
+                <option value="1y">Ultimo ano</option>
+              </select>
             </div>
           </section>
-          <ReportesFilters
-            filtros={filtros}
-            onChange={setFiltros}
-            totalResultados={reportes.length}
-          />
-          <ReportesTable
-            reportes={reportes}
-            isLoading={isLoading}
-            onSelectReporte={seleccionarReporte}
-          />
+
+          <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
+            {[
+              { label: "Empresas", value: summary.totalEmpresas.toLocaleString(), accent: "#1D4ED8" },
+              { label: "Productos y servicios", value: summary.totalProductos.toLocaleString(), accent: "#7C3AED" },
+              { label: "Usuarios", value: summary.totalUsuarios.toLocaleString(), accent: "#0F766E" },
+              { label: "Ventas", value: summary.totalVentas.toLocaleString(), accent: "#D97706" },
+              { label: "Ingresos", value: formatCurrencyCompact(summary.totalIngresos), accent: "#059669" },
+            ].map((item) => (
+              <div key={item.label} style={cardStyle(item.accent)}>
+                <p style={{ margin: 0, color: colors.subtext, fontSize: 12, textTransform: "uppercase", letterSpacing: ".08em" }}>{item.label}</p>
+                <h2 style={{ margin: "12px 0 0", fontSize: 28, color: colors.text }}>{loading ? "..." : item.value}</h2>
+              </div>
+            ))}
+          </section>
+
+          <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
+            <ExportPanel title="Reporte de Empresas" description="Estado, ventas, ingresos, clientes y calificacion." rows={companyExportRows} />
+            <ExportPanel title="Reporte de Productos" description="Catalogo, tipo, precio, ventas e ingresos por item." rows={productExportRows} />
+            <ExportPanel title="Reporte de Ventas" description="Ordenes POS, estado, cliente, items y totales." rows={salesExportRows} />
+            <ExportPanel title="Reporte de Usuarios" description="Usuarios, rol, compras y gasto acumulado." rows={userExportRows} />
+          </section>
+
+          <section style={cardStyle()}>
+            <h2 style={{ margin: "0 0 16px", fontSize: 20, color: colors.text }}>Top empresas por ingresos</h2>
+            <DataTable
+              columns={["Empresa", "Estado", "Categoria", "Productos", "Ventas", "Ingresos", "Clientes", "Calificacion"]}
+              rows={companies.slice(0, 8).map((row) => [
+                row.nombre,
+                row.estado,
+                row.categoria,
+                row.productos.toLocaleString(),
+                row.ventas.toLocaleString(),
+                formatCurrencyCompact(row.ingresos),
+                row.clientes.toLocaleString(),
+                row.calificacion === null ? "N/D" : row.calificacion.toFixed(1),
+              ])}
+            />
+          </section>
+
+          <section style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 16 }}>
+            <div style={cardStyle()}>
+              <h2 style={{ margin: "0 0 16px", fontSize: 20, color: colors.text }}>Productos con mejor rendimiento</h2>
+              <DataTable
+                columns={["Producto", "Empresa", "Tipo", "Ventas", "Ingresos", "Calificacion"]}
+                rows={products.slice(0, 8).map((row) => [
+                  row.nombre,
+                  row.empresa,
+                  row.tipo === "service" ? "Servicio" : "Producto",
+                  row.ventas.toLocaleString(),
+                  formatCurrencyCompact(row.ingresos),
+                  row.calificacion === null ? "N/D" : row.calificacion.toFixed(1),
+                ])}
+              />
+            </div>
+
+            <div style={cardStyle()}>
+              <h2 style={{ margin: "0 0 16px", fontSize: 20, color: colors.text }}>Usuarios con mayor gasto</h2>
+              <DataTable
+                columns={["Usuario", "Rol", "Compras", "Gasto"]}
+                rows={users.slice(0, 8).map((row) => [
+                  row.nombre,
+                  row.rol,
+                  row.compras.toLocaleString(),
+                  formatCurrencyCompact(row.gasto),
+                ])}
+              />
+            </div>
+          </section>
+
+          <section style={cardStyle()}>
+            <h2 style={{ margin: "0 0 16px", fontSize: 20, color: colors.text }}>Ultimas ventas registradas</h2>
+            <DataTable
+              columns={["Referencia", "Fecha", "Estado", "Cliente", "Items", "Total"]}
+              rows={sales.slice(0, 10).map((row) => [
+                row.referencia,
+                new Date(row.fecha).toLocaleDateString("es-DO"),
+                row.estado,
+                row.cliente,
+                row.items.toLocaleString(),
+                formatCurrencyCompact(row.total),
+              ])}
+            />
+          </section>
         </div>
       </main>
-
-      <ReporteDetailModal
-        reporte={reporteSeleccionado}
-        isOpen={modalAbierto}
-        onClose={cerrarModal}
-        onCambiarEstado={cambiarEstado}
-        onGuardarNota={guardarNota}
-      />
     </div>
   );
 }

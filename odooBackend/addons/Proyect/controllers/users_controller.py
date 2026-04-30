@@ -114,6 +114,17 @@ class UserApiController(http.Controller):
     def _serialize_mobile_profile(self, billnova_user, res_user):
         company = self._get_effective_billnova_company(billnova_user)
         role = billnova_user.role if billnova_user and billnova_user.exists() else getattr(res_user, 'billnova_role', None)
+        avatar_url = None
+        if res_user and res_user.exists() and res_user.image_1920:
+            try:
+                encoded = (
+                    res_user.image_1920.decode('utf-8')
+                    if isinstance(res_user.image_1920, (bytes, bytearray))
+                    else str(res_user.image_1920)
+                )
+                avatar_url = f"data:image/png;base64,{encoded}"
+            except Exception:
+                avatar_url = None
         return {
             'uid': res_user.id if res_user and res_user.exists() else None,
             'billnova_user_id': billnova_user.id if billnova_user and billnova_user.exists() else None,
@@ -133,7 +144,33 @@ class UserApiController(http.Controller):
             'role': role or 'seller',
             'company_id': company.id if company else None,
             'company_name': company.name if company else None,
+            'avatar_url': avatar_url,
         }
+
+    def _decode_image_data_url(self, image_data_url):
+        if image_data_url in (None, "", False):
+            return None
+        if not isinstance(image_data_url, str):
+            return None
+
+        raw_value = image_data_url.strip()
+        if not raw_value:
+            return None
+
+        if raw_value.startswith("data:"):
+            try:
+                raw_value = raw_value.split(",", 1)[1]
+            except Exception:
+                return None
+
+        try:
+            # Validate base64, but keep the encoded payload because Odoo binary
+            # image fields expect base64 content, not raw bytes.
+            import base64
+            base64.b64decode(raw_value, validate=True)
+            return raw_value
+        except Exception:
+            return None
 
     # =========================
     # Normalizadores
@@ -599,6 +636,8 @@ class UserApiController(http.Controller):
         phone = (body.get('phone') or '').strip()
         address = (body.get('address') or '').strip()
         password = (body.get('password') or '').strip()
+        avatar_data_url = body.get('avatar') or body.get('avatar_url') or body.get('image_data_url')
+        decoded_avatar = self._decode_image_data_url(avatar_data_url)
 
         if not name:
             return self._json_response({'ok': False, 'error': 'El nombre es obligatorio'}, 400)
@@ -629,27 +668,52 @@ class UserApiController(http.Controller):
         }
         if password:
             res_user_vals['password'] = password
-        res_user.sudo().write(res_user_vals)
+        if avatar_data_url is not None:
+            if not decoded_avatar:
+                return self._json_response({'ok': False, 'error': 'Imagen de perfil invalida'}, 400)
+            res_user_vals['image_1920'] = decoded_avatar
+        try:
+            res_user.sudo().write(res_user_vals)
+        except Exception as error:
+            _logger.exception("No se pudo actualizar el perfil movil")
+            return self._json_response({
+                'ok': False,
+                'error': str(error) or 'No se pudo actualizar el perfil',
+            }, 422)
 
         if billnova_user and billnova_user.exists():
-            billnova_user.sudo().write({
-                'name': name,
-                'email': email,
-                'phone': phone,
-                'address': address,
-            })
+            try:
+                billnova_user.sudo().write({
+                    'name': name,
+                    'email': email,
+                    'phone': phone,
+                    'address': address,
+                })
+            except Exception as error:
+                _logger.exception("No se pudo actualizar el billnova.user del perfil movil")
+                return self._json_response({
+                    'ok': False,
+                    'error': str(error) or 'No se pudo actualizar el perfil',
+                }, 422)
         else:
-            billnova_user = request.env['billnova.user'].sudo().create({
-                'name': name,
-                'email': email,
-                'phone': phone,
-                'address': address,
-                'role': getattr(res_user, 'billnova_role', None) or 'seller',
-                'active': True,
-                'is_mobile_user': True,
-                'res_user_id': res_user.id,
-                'company_id': res_user.company_id.id if res_user.company_id else False,
-            })
+            try:
+                billnova_user = request.env['billnova.user'].sudo().create({
+                    'name': name,
+                    'email': email,
+                    'phone': phone,
+                    'address': address,
+                    'role': getattr(res_user, 'billnova_role', None) or 'seller',
+                    'active': True,
+                    'is_mobile_user': True,
+                    'res_user_id': res_user.id,
+                    'company_id': res_user.company_id.id if res_user.company_id else False,
+                })
+            except Exception as error:
+                _logger.exception("No se pudo crear el billnova.user del perfil movil")
+                return self._json_response({
+                    'ok': False,
+                    'error': str(error) or 'No se pudo actualizar el perfil',
+                }, 422)
 
         return self._json_response({
             'ok': True,
