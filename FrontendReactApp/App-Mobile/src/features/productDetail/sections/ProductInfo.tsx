@@ -58,15 +58,6 @@ export function ProductInfo({ product, isWishlisted, onToggleWishlist, liveRatin
       {/* Price */}
       <View style={s.priceRow}>
         <Text style={s.price}>${product.price.toFixed(2)}</Text>
-        {product.originalPrice && (
-          <Text style={s.originalPrice}>${product.originalPrice.toFixed(2)}</Text>
-        )}
-        {product.discount && (
-          <View style={s.discountBadge}>
-            <IconZap size={10} color="#10B981" fill="#10B981" />
-            <Text style={s.discountText}>{product.discount}% OFF</Text>
-          </View>
-        )}
       </View>
 
       {/* In stock badge */}
@@ -164,26 +155,6 @@ const s = StyleSheet.create({
     fontSize: t.font.xxxl,
     fontWeight: '800',
     color: t.colors.primary,
-  },
-  originalPrice: {
-    fontSize: t.font.lg,
-    fontWeight: '400',
-    color: t.colors.textDisabled,
-    textDecorationLine: 'line-through',
-  },
-  discountBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: t.colors.successSoft,
-    paddingHorizontal: t.spacing.sm,
-    paddingVertical: 3,
-    borderRadius: t.radius.full,
-  },
-  discountText: {
-    fontSize: t.font.xs,
-    fontWeight: '700',
-    color: t.colors.success,
   },
   stockRow: {
     flexDirection: 'row',

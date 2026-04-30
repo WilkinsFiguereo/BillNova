@@ -26,11 +26,9 @@ export function FeaturedCard({ product, onPress, onAddToCart }: FeaturedCardProp
           style={styles.img}
           resizeMode="cover"
         />
-        {product.badge && (
-          <View style={[styles.badge, product.badge === 'new' ? styles.badgeNew : styles.badgeSale]}>
-            <Text style={styles.badgeText}>
-              {product.badge === 'new' ? 'Nuevo' : `-${product.discount_percent}%`}
-            </Text>
+        {product.badge === 'new' && (
+          <View style={[styles.badge, styles.badgeNew]}>
+            <Text style={styles.badgeText}>Nuevo</Text>
           </View>
         )}
       </View>
@@ -79,7 +77,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8, paddingVertical: 2,
     borderRadius: radius.full,
   },
-  badgeSale: { backgroundColor: colors.error.default },
   badgeNew:  { backgroundColor: colors.success.default },
   badgeText: { color: '#fff', fontSize: 9, fontWeight: '700', letterSpacing: 0.3 },
   body: { padding: 10 },

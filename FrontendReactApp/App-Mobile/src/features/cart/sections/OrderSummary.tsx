@@ -4,11 +4,10 @@ import { View, Text, StyleSheet } from 'react-native';
 import { cartTheme as t } from '../theme/cart.theme';
 
 type Props = {
-  subtotal:    number;
-  promoSaving: number;
-  shipping:    number;
-  tax:         number;
-  total:       number;
+  subtotal: number;
+  shipping: number;
+  tax: number;
+  total: number;
 };
 
 function Row({
@@ -24,20 +23,17 @@ function Row({
   );
 }
 
-export function OrderSummary({ subtotal, promoSaving, shipping, tax, total }: Props) {
+export function OrderSummary({ subtotal, shipping, tax, total }: Props) {
   return (
     <View style={s.card}>
       <Text style={s.title}>Resumen del pedido</Text>
 
-      <Row label="Subtotal"     value={`$${subtotal.toFixed(2)}`} />
-      {promoSaving > 0 && (
-        <Row label="Descuento"  value={`-$${promoSaving.toFixed(2)}`} />
-      )}
-      <Row label="Envío"        value={shipping === 0 ? 'Gratis' : `$${shipping.toFixed(2)}`} />
-      <Row label="ITBIS (18%)"  value={`$${tax.toFixed(2)}`} />
+      <Row label="Subtotal" value={`$${subtotal.toFixed(2)}`} />
+      <Row label="Envio" value={shipping === 0 ? 'Gratis' : `$${shipping.toFixed(2)}`} />
+      <Row label="ITBIS (18%)" value={`$${tax.toFixed(2)}`} />
 
       <View style={s.divider} />
-      <Row label="Total"        value={`$${total.toFixed(2)}`} highlight />
+      <Row label="Total" value={`$${total.toFixed(2)}`} highlight />
     </View>
   );
 }

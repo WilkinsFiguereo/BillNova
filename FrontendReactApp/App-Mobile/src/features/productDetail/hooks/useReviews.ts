@@ -47,6 +47,7 @@ interface UseReviewsReturn {
 const DEFAULT_STATS: ReviewStats = { avg: 0, total: 0, distribution: {} };
 
 export function useReviews(productId: number | null): UseReviewsReturn {
+  const resolvedProductId = productId == null ? null : Math.abs(productId);
   const [reviews,       setReviews]       = useState<Review[]>([]);
   const [stats,         setStats]         = useState<ReviewStats>(DEFAULT_STATS);
   const [loading,       setLoading]       = useState(false);
@@ -58,7 +59,7 @@ export function useReviews(productId: number | null): UseReviewsReturn {
 
   // ── fetch ──────────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!productId) {
+    if (!resolvedProductId) {
       console.log(`${LOG} productId is null/undefined — skipping fetch`);
       return;
     }
@@ -67,7 +68,7 @@ export function useReviews(productId: number | null): UseReviewsReturn {
     setLoading(true);
     setError(null);
 
-    const endpoint = `/api/products/${productId}/reviews?limit=50`;
+    const endpoint = `/api/products/${resolvedProductId}/reviews?limit=50`;
     console.log(`${LOG} GET ${endpoint}`);
 
     odooClient.get<ReviewsResponse>(endpoint)
@@ -103,13 +104,13 @@ export function useReviews(productId: number | null): UseReviewsReturn {
       });
 
     return () => { cancelled = true; };
-  }, [productId, refreshKey]);
+  }, [resolvedProductId, refreshKey]);
 
   // ── submit ─────────────────────────────────────────────────────────────────
   // ⚠️  odooClient envía JSON, pero Odoo con **kwargs espera form-urlencoded.
   //     Hacemos el fetch directamente con el Content-Type correcto.
   const submitReview = useCallback(async (rating: number, comment: string): Promise<boolean> => {
-    if (!productId) {
+    if (!resolvedProductId) {
       console.warn(`${LOG} submitReview called without productId`);
       return false;
     }
@@ -118,9 +119,8 @@ export function useReviews(productId: number | null): UseReviewsReturn {
     setSubmitError(null);
     setSubmitSuccess(false);
 
-    const BASE_URL = process.env.EXPO_PUBLIC_ODOO_URL || 'http://192.168.43.4:8079';
-    const endpoint = `/api/products/${productId}/reviews`;
-    const url      = `${BASE_URL}${endpoint}`;
+    const endpoint = `/api/products/${resolvedProductId}/reviews`;
+    const url = odooClient.buildUrl(endpoint);
 
     // Odoo **kwargs lee form-urlencoded, NO json
     const body = new URLSearchParams({ rating: String(rating), comment }).toString();
@@ -179,10 +179,9 @@ export function useReviews(productId: number | null): UseReviewsReturn {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`${LOG} POST network error: ${msg}`);
       console.error(`${LOG} Full error object:`, err);
-      console.error(`${LOG} BASE_URL used: ${BASE_URL}`);
       console.error(`${LOG} Full URL: ${url}`);
       console.error(
-        `${LOG} Tip: verifica que el dispositivo/emulador alcanza ${BASE_URL} ` +
+        `${LOG} Tip: verifica que el dispositivo/emulador alcanza ${odooClient.buildUrl('')} ` +
         `y que el servidor Odoo está corriendo y acepta conexiones externas.`
       );
       setSubmitError(`Network error: ${msg}`);
@@ -191,7 +190,7 @@ export function useReviews(productId: number | null): UseReviewsReturn {
     } finally {
       setSubmitting(false);
     }
-  }, [productId]);
+  }, [resolvedProductId]);
 
   const refresh = useCallback(() => {
     console.log(`${LOG} manual refresh triggered`);

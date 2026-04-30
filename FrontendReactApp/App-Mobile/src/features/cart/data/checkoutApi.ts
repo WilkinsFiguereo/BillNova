@@ -15,7 +15,9 @@ export async function submitPosOrder(
 ): Promise<{ ok: boolean; order_id?: number; error?: string }> {
   const payload = {
     lines: items.map((item) => ({
-      product_id: Number(item.product.id),
+      // Services are represented with negative ids in the mobile UI.
+      // POS expects the real product.product id from Odoo.
+      product_id: Math.abs(Number(item.product.id)),
       qty:        item.quantity,
       price_unit: item.product.price,
     })),

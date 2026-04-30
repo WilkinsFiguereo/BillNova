@@ -7,8 +7,6 @@ export const mockProduct: Product = {
   description:
     'Engineered for audiophiles who demand more. Active noise cancellation, 40-hour battery life, and premium Hi-Res Audio support.',
   price: 189.99,
-  originalPrice: 249.99,
-  discount: 24,
   rating: 4.8,
   reviewCount: 1243,
   inStock: true,

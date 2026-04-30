@@ -36,10 +36,6 @@ export function ProductListCard({
   const fmt = (n: number) =>
     `RD$${n.toLocaleString('es-DO', { minimumFractionDigits: 0 })}`;
 
-  const origPrice = product.discount_percent
-    ? product.list_price / (1 - product.discount_percent / 100)
-    : null;
-
   return (
     <TouchableOpacity
       style={styles.card}
@@ -53,11 +49,6 @@ export function ProductListCard({
           style={styles.img}
           resizeMode="cover"
         />
-        {product.badge === 'sale' && (
-          <View style={[styles.badge, styles.badgeSale]}>
-            <Text style={styles.badgeText}>-{product.discount_percent}%</Text>
-          </View>
-        )}
         {product.badge === 'new' && (
           <View style={[styles.badge, styles.badgeNew]}>
             <Text style={styles.badgeText}>Nuevo</Text>
@@ -93,9 +84,6 @@ export function ProductListCard({
         <View style={styles.footer}>
           <View>
             <Text style={styles.price}>{fmt(product.list_price)}</Text>
-            {origPrice && origPrice > product.list_price && (
-              <Text style={styles.origPrice}>{fmt(origPrice)}</Text>
-            )}
           </View>
           <TouchableOpacity
             style={styles.addBtn}
@@ -135,7 +123,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7, paddingVertical: 2,
     borderRadius: radius.full,
   },
-  badgeSale: { backgroundColor: colors.error.default },
   badgeNew:  { backgroundColor: colors.success.default },
   badgeText: { color: '#fff', fontSize: 9, fontWeight: '700' },
 
@@ -172,10 +159,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   price:     { fontSize: 15.5, fontWeight: '800', color: colors.text.primary },
-  origPrice: {
-    fontSize: 10.5, color: colors.text.disabled,
-    textDecorationLine: 'line-through', marginTop: 1,
-  },
   addBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     backgroundColor: colors.brand[600],

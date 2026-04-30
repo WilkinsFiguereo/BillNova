@@ -64,11 +64,6 @@ export function ProductGridCard({
         </TouchableOpacity>
 
         {/* Badge */}
-        {product.badge === 'sale' && (
-          <View style={[styles.badge, styles.badgeSale]}>
-            <Text style={styles.badgeText}>-{product.discount_percent}%</Text>
-          </View>
-        )}
         {product.badge === 'new' && (
           <View style={[styles.badge, styles.badgeNew]}>
             <Text style={styles.badgeText}>Nuevo</Text>
@@ -148,7 +143,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7, paddingVertical: 2,
     borderRadius: radius.full,
   },
-  badgeSale: { backgroundColor: colors.error.default },
   badgeNew:  { backgroundColor: colors.success.default },
   badgeText: { color: '#fff', fontSize: 9, fontWeight: '700', letterSpacing: 0.3 },
 

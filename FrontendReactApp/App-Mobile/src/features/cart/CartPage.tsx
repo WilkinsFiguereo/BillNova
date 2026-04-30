@@ -12,7 +12,6 @@ import { CartItemCard }       from './ui/CartItemCard';
 import { EmptyCart }          from './ui/EmptyCart';
 import { CheckoutBar }        from './ui/CheckoutBar';
 import { FreeShippingBanner } from './sections/FreeShippingBanner';
-import { PromoCodeInput }     from './sections/PromoCodeInput';
 import { OrderSummary }       from './sections/OrderSummary';
 
 type Props = {
@@ -22,16 +21,13 @@ type Props = {
 export function CartPage({ navigation }: Props) {
   const {
     items,
-    promoInput,   setPromoInput,
-    appliedPromo, promoError,
     removingId,
-    increment,    decrement, removeItem,
-    applyPromo,   removePromo,
-    subtotal,     promoSaving, shipping, tax, total,
-    totalItems,   freeShippingRemaining, SHIPPING_THRESHOLD,
+    increment, decrement, removeItem,
+    subtotal, shipping, tax, total,
+    totalItems, freeShippingRemaining, SHIPPING_THRESHOLD,
     clearCart,
   } = useCart();
-  
+
   const isEmpty = items.length === 0;
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
@@ -42,7 +38,7 @@ export function CartPage({ navigation }: Props) {
       const result = await submitPosOrder(items, tax, total);
       if (result.ok) {
         clearCart();
-        Alert.alert('¡Pedido creado!', `Orden #${result.order_id ?? '—'}`);
+        Alert.alert('Pedido creado', `Orden #${result.order_id ?? '-'}`);
       } else {
         Alert.alert('Error', result.error ?? 'No se pudo crear el pedido');
       }
@@ -51,12 +47,10 @@ export function CartPage({ navigation }: Props) {
     }
   };
 
-  
   return (
     <SafeAreaView style={s.safe}>
       <StatusBar hidden barStyle="dark-content" backgroundColor={t.colors.bgCard} />
 
-      {/* Header */}
       <View style={s.header}>
         <TouchableOpacity
           onPress={() => navigation?.goBack()}
@@ -108,21 +102,8 @@ export function CartPage({ navigation }: Props) {
               />
             ))}
 
-            <View style={s.promoWrap}>
-              <Text style={s.sectionLabel}>Código de descuento</Text>
-              <PromoCodeInput
-                value={promoInput}
-                onChange={setPromoInput}
-                onApply={applyPromo}
-                onRemove={removePromo}
-                applied={appliedPromo}
-                error={promoError}
-              />
-            </View>
-
             <OrderSummary
               subtotal={subtotal}
-              promoSaving={promoSaving}
               shipping={shipping}
               tax={tax}
               total={total}
@@ -209,10 +190,5 @@ const s = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.6,
     marginBottom: t.spacing.md,
-  },
-  promoWrap: {
-    marginTop: t.spacing.lg,
-    marginBottom: t.spacing.lg,
-    gap: t.spacing.md,
   },
 });

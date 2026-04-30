@@ -58,6 +58,14 @@ class ProductApiController(http.Controller):
 
         return request.env["res.users"]
 
+    def _get_non_service_type_domain(self):
+        product_model = request.env["product.product"].sudo()
+        if "detailed_type" in product_model._fields:
+            return [("detailed_type", "!=", "service")]
+        if "type" in product_model._fields:
+            return [("type", "!=", "service")]
+        return []
+
     # ──────────────────────────────────────────────
     # HELPERS
     # ──────────────────────────────────────────────
@@ -358,7 +366,8 @@ class ProductApiController(http.Controller):
         }
 
     def _get_mobile_catalog_products(self):
-        products = request.env["product.product"].sudo().search([])
+        domain = self._get_non_service_type_domain()
+        products = request.env["product.product"].sudo().search(domain)
         approved_products = [
             product for product in products if self._get_product_moderation_status(product) == "approved"
         ]
@@ -478,6 +487,13 @@ class ProductApiController(http.Controller):
         product = request.env["product.product"].sudo().browse(product_id)
         if not product.exists():
             return self._json_response({"ok": False, "error": "Product not found"}, 404)
+
+        if any(
+            getattr(product, field_name, None) == "service"
+            for field_name in ("detailed_type", "type")
+            if field_name in product._fields
+        ):
+            return self._json_response({"ok": False, "error": "Product not available in mobile catalog"}, 404)
 
         if self._get_product_moderation_status(product) != "approved":
             return self._json_response({"ok": False, "error": "Product not available in mobile catalog"}, 404)

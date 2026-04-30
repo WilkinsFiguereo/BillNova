@@ -1,6 +1,7 @@
 import {
   BarChart2,
   Building2,
+  FileText,
   LayoutDashboard,
   Package,
   Settings,
@@ -38,6 +39,12 @@ export const MODERATOR_NAV_ITEMS: NavItemData[] = [
     Icon: BarChart2,
     label: "Est. empresas",
     href: "/navigation/moderation/stats_companies/page",
+  },
+  {
+    id: "reportes",
+    Icon: FileText,
+    label: "Reportes",
+    href: "/navigation/moderator/report/page",
   },
   {
     id: "config",

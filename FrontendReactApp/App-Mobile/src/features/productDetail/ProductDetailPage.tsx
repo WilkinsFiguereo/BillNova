@@ -14,33 +14,34 @@ import { useRouter } from 'expo-router';
 import { useProductDetail } from './hooks/useProductDetail';
 import { productDetailTheme as t } from './theme/productDetail.theme';
 
-import { AddToCartBar }      from './ui/AddToCartBar';
+import { AddToCartBar } from './ui/AddToCartBar';
 import { ColorSizeSelector } from './sections/ColorSizeSelector';
-import { ImageGallery }      from './sections/ImageGallery';
-import { ProductInfo }       from './sections/ProductInfo';
-import { ReviewsSection }    from './sections/ReviewsSection';
-import { useAddToCart }      from '../cart/hooks/useAddToCart';
+import { ImageGallery } from './sections/ImageGallery';
+import { ProductInfo } from './sections/ProductInfo';
+import { ReviewsSection } from './sections/ReviewsSection';
+import { useAddToCart } from '../cart/hooks/useAddToCart';
 import { IconChevronRight, IconShoppingBag } from '../../shared/ui/Icons';
 import { useReviews } from '../productDetail/hooks/useReviews';
+
 type Props = {
   productId?: number | null;
   navigation?: { goBack: () => void };
 };
 
 export function ProductDetailPage({ productId = null, navigation }: Props) {
-  const router = useRouter(); // 👈
+  const router = useRouter();
 
   const {
     product,
     isService,
     loading,
     error,
-    selectedImage,   setSelectedImage,
-    selectedColor,   setSelectedColor,
-    selectedSize,    setSelectedSize,
+    selectedImage, setSelectedImage,
+    selectedColor, setSelectedColor,
+    selectedSize, setSelectedSize,
     quantity,
-    incrementQty,    decrementQty,
-    isWishlisted,    toggleWishlist,
+    incrementQty, decrementQty,
+    isWishlisted, toggleWishlist,
     addToCart: enqueueDetailCart,
     cartAdded,
     discountedPrice,
@@ -48,12 +49,12 @@ export function ProductDetailPage({ productId = null, navigation }: Props) {
 
   const { add } = useAddToCart();
   const { stats } = useReviews(productId);
+
   const handleAddToCart = useCallback(() => {
     add({ product, quantity, color: selectedColor, size: selectedSize });
     enqueueDetailCart();
   }, [add, product, quantity, selectedColor, selectedSize, enqueueDetailCart]);
 
-  // 👈 navega al carrito sin recargar la página
   const handleGoToCart = useCallback(() => {
     router.push('/(tabs)/cart');
   }, [router]);
@@ -86,7 +87,6 @@ export function ProductDetailPage({ productId = null, navigation }: Props) {
           {isService ? 'Servicio' : 'Producto'}
         </Text>
 
-        {/* ✅ Ahora navega al carrito correctamente */}
         <TouchableOpacity
           onPress={handleGoToCart}
           activeOpacity={0.75}
@@ -112,8 +112,8 @@ export function ProductDetailPage({ productId = null, navigation }: Props) {
           product={product}
           isWishlisted={isWishlisted}
           onToggleWishlist={toggleWishlist}
-          liveRating={stats.avg}           // 👈
-          liveReviewCount={stats.total}    // 👈
+          liveRating={stats.avg}
+          liveReviewCount={stats.total}
         />
         <View style={s.divider} />
         {!isService ? (
@@ -127,9 +127,9 @@ export function ProductDetailPage({ productId = null, navigation }: Props) {
               onSizeSelect={setSelectedSize}
             />
             <View style={s.divider} />
-            <ReviewsSection productId={productId} />
           </>
         ) : null}
+        <ReviewsSection productId={productId} />
       </ScrollView>
 
       <AddToCartBar
@@ -145,7 +145,7 @@ export function ProductDetailPage({ productId = null, navigation }: Props) {
 }
 
 const s = StyleSheet.create({
-  safe:       { flex: 1, backgroundColor: t.colors.bgCard },
+  safe: { flex: 1, backgroundColor: t.colors.bgCard },
   safeLoading: {
     flex: 1,
     backgroundColor: t.colors.bgMain,
@@ -187,7 +187,7 @@ const s = StyleSheet.create({
     paddingVertical: t.spacing.sm,
   },
   errorBannerText: { color: t.colors.error, fontSize: t.font.sm, fontWeight: '600' },
-  scroll:  { flex: 1, backgroundColor: t.colors.bgMain },
+  scroll: { flex: 1, backgroundColor: t.colors.bgMain },
   divider: {
     height: 1,
     backgroundColor: t.colors.borderLight,

@@ -7,12 +7,9 @@ import type { ApiProductRecord, CartItem, Product } from '../types/productDetail
 
 function mapApiProductToDetail(product: ApiProductRecord): Product {
   const base = Number(product.list_price || 0);
-  const original = Number((base * 1.2).toFixed(2));
-  const discount = base > 0 ? Math.round((1 - base / original) * 100) : undefined;
   const imageUris = Array.isArray(product.image_urls) && product.image_urls.length > 0
     ? product.image_urls
     : [product.image_url || `https://picsum.photos/seed/prod-${product.id}-1/900/900`];
-  const primaryImage = imageUris[0];
 
   return {
     id: String(product.id),
@@ -21,8 +18,6 @@ function mapApiProductToDetail(product: ApiProductRecord): Product {
     detailType: 'product',
     description: product.description_sale || `Producto ${product.name || ''} disponible en catalogo. Contacta para mas detalles tecnicos y disponibilidad inmediata.`,
     price: base,
-    originalPrice: original > base ? original : undefined,
-    discount,
     rating: Number((4 + (product.id % 10) / 10).toFixed(1)),
     reviewCount: 80 + (product.id % 50) * 7,
     inStock: true,
