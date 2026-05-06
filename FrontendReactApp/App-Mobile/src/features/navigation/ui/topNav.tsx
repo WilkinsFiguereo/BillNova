@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Platform,
+  View, Text, TouchableOpacity, StyleSheet, Platform, Image,
 } from 'react-native';
 import {
   IconMenu, IconBriefcase, IconSearch, IconShoppingBag,
@@ -15,12 +15,16 @@ interface TopNavProps {
   onCartPress: () => void;
   onAvatarPress: () => void;
   userInitials?: string;
+  userAvatarUrl?: string | null;
+  user?: { name?: string; avatar_url?: string | null } | null;
 }
 
 export function TopNav({
   cartCount = 0, onMenuPress, onSearchPress,
-  onCartPress, onAvatarPress, userInitials = 'U',
+  onCartPress, onAvatarPress, userInitials = 'U', userAvatarUrl = null, user = null,
 }: TopNavProps) {
+  // Get avatar URL from either prop or user object
+  const avatarUrl = userAvatarUrl || user?.avatar_url || null;
   return (
     <View style={styles.nav}>
       {/* Hamburger */}
@@ -56,7 +60,11 @@ export function TopNav({
 
       {/* Avatar */}
       <TouchableOpacity style={styles.avatar} onPress={onAvatarPress} activeOpacity={0.8}>
-        <Text style={styles.avatarText}>{userInitials}</Text>
+        {avatarUrl ? (
+          <Image source={{ uri: avatarUrl }} style={styles.avatarImage} resizeMode="cover" />
+        ) : (
+          <Text style={styles.avatarText}>{userInitials}</Text>
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -117,6 +125,8 @@ const styles = StyleSheet.create({
     shadowColor: colors.brand[700],
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3, shadowRadius: 6, elevation: 3,
+    overflow: 'hidden',
   },
+  avatarImage: { width: '100%', height: '100%' },
   avatarText: { fontSize: 12, fontWeight: '700', color: '#fff' },
 });

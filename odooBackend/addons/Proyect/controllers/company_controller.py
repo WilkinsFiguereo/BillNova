@@ -964,7 +964,15 @@ class CompanyApiController(http.Controller):
             today = date.today()
             first_day_month = today.replace(day=1)
             last_day_month = (first_day_month + timedelta(days=31)).replace(day=1) - timedelta(days=1)
-            invoices = request.env["account.move"].sudo().search([("company_id", "=", company_id), ("state", "=", "posted")])
+            invoices = request.env["account.move"].sudo().search([
+                "&",
+                ("state", "=", "posted"),
+                "|",
+                ("billnova_app_company_id", "=", company_id),
+                "&",
+                ("billnova_app_company_id", "=", False),
+                ("company_id", "=", company_id),
+            ])
 
             total_ganado = 0.0
             total_perdido = 0.0

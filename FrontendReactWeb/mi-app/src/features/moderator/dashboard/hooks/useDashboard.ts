@@ -70,7 +70,7 @@ export function useDashboard(): UseDashboardReturn {
         if (!mounted) return;
 
         const productRows = buildProductAnalytics(products, orders, reviewStats, periodo);
-        const companyAnalytics = buildCompanyAnalytics(companies, productRows);
+        const companyAnalytics = buildCompanyAnalytics(companies, productRows, orders, periodo);
 
         const totalVentas = productRows.reduce((acc, row) => acc + row.analytics.unitsSold, 0);
         const totalIngresos = productRows.reduce((acc, row) => acc + row.analytics.revenue, 0);

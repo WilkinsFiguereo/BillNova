@@ -162,17 +162,27 @@ function aggregateOrdersByProduct(
 
   const previousTotals = new Map<string, number>();
 
-for (const order of orders) {
+  for (const order of orders) {
     const orderDate = safeDate(order.date);
     if (!orderDate) continue;
 
+    const normalizedOrderTotal = Number(order.total ?? 0);
+    const linesCount = order.lines.length;
+
     for (const line of order.lines) {
       const resolvedProductId = String((line as { productId?: string; product_id?: string }).productId ?? (line as { productId?: string; product_id?: string }).product_id ?? "");
-      const product = productsById.get(resolvedProductId);
+      const normalizedProductName = String(line.productName ?? "").trim().toLowerCase();
+      const product = productsById.get(resolvedProductId)
+        ?? Array.from(productsById.values()).find((candidate) => candidate.name.trim().toLowerCase() === normalizedProductName);
       if (!product) continue;
 
       const quantity = Number(line.quantity ?? 0);
-      const lineRevenue = Number(line.priceUnit ?? 0) * quantity;
+      const linePriceUnit = Number(line.priceUnit ?? 0);
+      const lineRevenue = quantity > 0 && linePriceUnit > 0
+        ? linePriceUnit * quantity
+        : linesCount > 0
+          ? normalizedOrderTotal / linesCount
+          : normalizedOrderTotal;
       const customerKey = String(order.clientEmail || order.clientName || order.id).trim().toLowerCase();
 
       soldTotals.set(product.id, (soldTotals.get(product.id) ?? 0) + quantity);
@@ -265,12 +275,17 @@ export function buildProductAnalytics(
 export function buildCompanyAnalytics(
   companies: ModeratorCompany[],
   productRows: ReturnType<typeof buildProductAnalytics>,
+  orders: ModeratorPosOrder[],
+  period: PeriodKey,
 ) {
   const companyMap = new Map<string, CompanyAnalytics>();
-  const previousTotals = new Map<string, number>();
   const customerSets = new Map<string, Set<string>>();
   const itemTypeCounts = new Map<string, { product: number; service: number }>();
-  const returnRates = new Map<string, number[]>();
+  const soldTotals = new Map<string, number>();
+  const returnTotals = new Map<string, number>();
+  const previousTotals = new Map<string, number>();
+  const periodWindow = buildPeriodWindow(period);
+  const monthlyBuckets = buildMonthlyBuckets(period);
 
   function ensure(companyId: string): CompanyAnalytics {
     const existing = companyMap.get(companyId);
@@ -281,7 +296,11 @@ export function buildCompanyAnalytics(
       revenue: 0,
       productsCount: 0,
       uniqueCustomersCount: 0,
-      monthlySales: [],
+      monthlySales: monthlyBuckets.map((bucket) => ({
+        mes: bucket.mes,
+        ventas: 0,
+        ingresos: 0,
+      })),
       growthPercent: null,
       returnRate: null,
       dominantItemType: "unknown",
@@ -289,41 +308,58 @@ export function buildCompanyAnalytics(
     companyMap.set(companyId, created);
     customerSets.set(companyId, new Set<string>());
     itemTypeCounts.set(companyId, { product: 0, service: 0 });
-    returnRates.set(companyId, []);
     return created;
+  }
+
+  for (const order of orders) {
+    const companyId = String(order.appCompanyId ?? "").trim();
+    if (!companyId) continue;
+
+    const orderDate = safeDate(order.date);
+    if (!orderDate) continue;
+
+    const company = ensure(companyId);
+    const customerKey = String(order.clientEmail || order.clientName || order.id).trim().toLowerCase();
+    const orderUnits = order.lines.reduce((sum, line) => sum + Number(line.quantity ?? 0), 0);
+    const orderRevenue = Number(order.total ?? 0);
+
+    soldTotals.set(companyId, (soldTotals.get(companyId) ?? 0) + orderUnits);
+
+    if (order.status === "cancelada") {
+      returnTotals.set(companyId, (returnTotals.get(companyId) ?? 0) + orderUnits);
+      continue;
+    }
+
+    if (order.status === "borrador") {
+      continue;
+    }
+
+    if (orderDate >= periodWindow.start) {
+      company.unitsSold += orderUnits;
+      company.revenue += orderRevenue;
+      if (customerKey) {
+        customerSets.get(companyId)?.add(customerKey);
+      }
+      const bucketIndex = monthlyBuckets.findIndex(
+        (bucket) => orderDate >= bucket.start && orderDate < bucket.end,
+      );
+      if (bucketIndex >= 0) {
+        company.monthlySales[bucketIndex].ventas += orderUnits;
+        company.monthlySales[bucketIndex].ingresos += orderRevenue;
+      }
+    } else if (orderDate >= periodWindow.previousStart && orderDate < periodWindow.previousEnd) {
+      previousTotals.set(companyId, (previousTotals.get(companyId) ?? 0) + orderUnits);
+    }
   }
 
   for (const row of productRows) {
     const companyId = row.product.companyId;
     if (!companyId) continue;
     const company = ensure(companyId);
-    company.unitsSold += row.analytics.unitsSold;
-    company.revenue += row.analytics.revenue;
     company.productsCount += 1;
-    company.uniqueCustomersCount += 0;
-    previousTotals.set(
-      companyId,
-      (previousTotals.get(companyId) ?? 0) +
-        row.analytics.monthlySales.slice(0, Math.max(0, row.analytics.monthlySales.length - 1)).reduce((acc, item) => acc + item.ventas, 0),
-    );
     const typeCounter = itemTypeCounts.get(companyId);
     if (typeCounter) {
       typeCounter[row.product.itemType] += 1;
-    }
-    row.analytics.uniqueCustomerKeys.forEach((customerKey) => customerSets.get(companyId)?.add(customerKey));
-    returnRates.get(companyId)?.push(row.analytics.returnRate ?? 0);
-
-    if (company.monthlySales.length === 0) {
-      company.monthlySales = row.analytics.monthlySales.map((item) => ({
-        mes: item.mes,
-        ventas: item.ventas,
-        ingresos: item.ingresos,
-      }));
-    } else {
-      row.analytics.monthlySales.forEach((item, index) => {
-        company.monthlySales[index].ventas += item.ventas;
-        company.monthlySales[index].ingresos += item.ingresos;
-      });
     }
   }
 
@@ -332,13 +368,11 @@ export function buildCompanyAnalytics(
   }
 
   for (const entry of companyMap.values()) {
-    const currentTotal = entry.monthlySales.reduce((acc, item) => acc + item.ventas, 0);
-    entry.growthPercent = computeGrowth(currentTotal, previousTotals.get(entry.companyId) ?? 0);
+    entry.growthPercent = computeGrowth(entry.unitsSold, previousTotals.get(entry.companyId) ?? 0);
     entry.uniqueCustomersCount = customerSets.get(entry.companyId)?.size ?? 0;
-    const companyReturnRates = returnRates.get(entry.companyId) ?? [];
-    entry.returnRate = companyReturnRates.length > 0
-      ? Number((companyReturnRates.reduce((acc, value) => acc + value, 0) / companyReturnRates.length).toFixed(1))
-      : 0;
+    const soldTotal = soldTotals.get(entry.companyId) ?? 0;
+    const returnedTotal = returnTotals.get(entry.companyId) ?? 0;
+    entry.returnRate = soldTotal > 0 ? Number(((returnedTotal / soldTotal) * 100).toFixed(1)) : 0;
     const typeCounter = itemTypeCounts.get(entry.companyId) ?? { product: 0, service: 0 };
     entry.dominantItemType =
       typeCounter.product > 0 && typeCounter.service > 0

@@ -268,6 +268,7 @@ export function OrdersPage({
         onCartPress={handleCartPress}
         onAvatarPress={onAvatarPress}
         userInitials={userInitials}
+        userAvatarUrl={user?.avatar_url ?? null}
       />
 
       <ScrollView style={s.scroll} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>

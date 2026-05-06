@@ -135,7 +135,7 @@ export function useAnalyticsReports(): UseAnalyticsReportsReturn {
         if (!mounted) return;
 
         const productRows = buildProductAnalytics(products, orders, reviewStats, period);
-        const companyAnalytics = buildCompanyAnalytics(companies, productRows);
+        const companyAnalytics = buildCompanyAnalytics(companies, productRows, orders, period);
 
         const companyRows: ModeratorReportCompanyRow[] = companies
           .map((company) => {

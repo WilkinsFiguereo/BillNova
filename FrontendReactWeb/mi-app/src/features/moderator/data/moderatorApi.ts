@@ -95,7 +95,41 @@ export interface ModeratorPosOrder {
   total: number;
   clientName: string;
   clientEmail: string;
+  appCompanyId: string;
+  appCompanyName: string;
   lines: ModeratorPosOrderLine[];
+}
+
+function normalizeOrderLine(raw: AnyObj, fallbackId: string): ModeratorPosOrderLine {
+  return {
+    id: String(raw.id ?? fallbackId),
+    productId: String(raw.productId ?? raw.product_id ?? raw.productID ?? ""),
+    productName: String(raw.productName ?? raw.product_name ?? raw.product ?? raw.name ?? ""),
+    quantity: Number(raw.quantity ?? raw.qty ?? raw.cantidad ?? 0),
+    priceUnit: Number(raw.priceUnit ?? raw.price_unit ?? raw.price ?? raw.unit_price ?? 0),
+  };
+}
+
+function fallbackOrderLine(row: AnyObj): ModeratorPosOrderLine[] {
+  const quantity = Number(row.qty ?? row.quantity ?? row.cantidad ?? 0);
+  const total = Number(row.total ?? row.subtotal ?? 0);
+  const productName = String(row.product ?? row.productName ?? row.product_name ?? "");
+  const productId = String(row.productId ?? row.product_id ?? "");
+  const priceUnit = Number(row.priceUnit ?? row.price_unit ?? (quantity > 0 ? total / quantity : total));
+
+  if (!productName && !productId && quantity <= 0 && total <= 0) {
+    return [];
+  }
+
+  return [
+    {
+      id: `${String(row.id ?? "order")}-fallback-line`,
+      productId,
+      productName,
+      quantity,
+      priceUnit,
+    },
+  ];
 }
 
 export interface ModeratorReport {
@@ -400,7 +434,10 @@ export async function apiSetCompanyModerationStatus(
 }
 
 export async function apiListModeratorPosOrders(): Promise<ModeratorPosOrder[]> {
-  const payload = await odooRequest<any>("/api/pos/orders", { method: "GET" });
+  // This endpoint changes behavior when X-Auth-Session is present and starts
+  // filtering orders as if it were a mobile user's request. For moderator/admin
+  // analytics we need the unscoped list, so we intentionally avoid odooRequest.
+  const payload = await odooGet<any>("/api/pos/orders?all_companies=1");
   const rows = unwrapArray(payload);
 
   return rows.map((row: AnyObj) => ({
@@ -409,17 +446,13 @@ export async function apiListModeratorPosOrders(): Promise<ModeratorPosOrder[]> 
     date: String(row.date ?? ""),
     status: String(row.status ?? ""),
     total: Number(row.total ?? 0),
-    clientName: String(row.client ?? row.cliente ?? ""),
-    clientEmail: String(row.clienteEmail ?? ""),
-    lines: Array.isArray(row.lines)
-? row.lines.map((line: AnyObj) => ({
-          id: String(line.id ?? ""),
-          productId: String(line.productId ?? line.product_id ?? ""),
-          productName: String(line.productName ?? line.product_name ?? ""),
-          quantity: Number(line.quantity ?? 0),
-          priceUnit: Number(line.priceUnit ?? line.price_unit ?? 0),
-        }))
-      : [],
+    clientName: String(row.client ?? row.cliente ?? row.partner_name ?? ""),
+    clientEmail: String(row.clientEmail ?? row.clienteEmail ?? row.email ?? ""),
+    appCompanyId: String(row.app_company_id ?? row.company_id ?? ""),
+    appCompanyName: String(row.app_company_name ?? row.company_name ?? ""),
+    lines: Array.isArray(row.lines) && row.lines.length > 0
+      ? row.lines.map((line: AnyObj, index: number) => normalizeOrderLine(line, `${String(row.id ?? "order")}-${index}`))
+      : fallbackOrderLine(row),
   }));
 }
 

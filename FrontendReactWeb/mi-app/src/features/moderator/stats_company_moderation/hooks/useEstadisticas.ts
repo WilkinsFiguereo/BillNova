@@ -64,7 +64,7 @@ export function useEstadisticas(): UseEstadisticasReturn {
         if (!mounted) return;
 
         const productRows = buildProductAnalytics(products, orders, reviewStats, filtros.periodo);
-        const companyAnalytics = buildCompanyAnalytics(companies, productRows);
+        const companyAnalytics = buildCompanyAnalytics(companies, productRows, orders, filtros.periodo);
 
         const rows: Empresa[] = companies.map((company) => {
           const metrics = companyAnalytics.get(company.id);
