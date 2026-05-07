@@ -42,6 +42,7 @@ export function RegisterFormSection({
                 type={field.type}
                 placeholder={field.placeholder}
                 required={field.required}
+                maxLength={field.maxLength}
                 value={values[field.name] ?? ""}
                 error={errors[field.name]}
                 onChange={onChange}

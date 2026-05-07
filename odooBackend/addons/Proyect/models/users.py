@@ -237,6 +237,83 @@ class ProyectAppUser(models.Model):
             _logger.exception("No se pudo enviar el correo de verificacion a %s", email_to)
             return False
 
+    def action_send_account_invitation_email(self, password=None, frontend_base_url=None):
+        self.ensure_one()
+        res_user = self._get_res_user_including_inactive()
+        email_to = self.email or res_user.email or res_user.login
+        if not email_to:
+            return False
+
+        verification_link = self.action_prepare_verification(frontend_base_url=frontend_base_url)
+        verification_token = self.verification_token or ''
+        is_mobile_frontend = self._is_mobile_frontend_url(frontend_base_url=frontend_base_url)
+        config = self.env['ir.config_parameter'].sudo()
+        email_from = (
+            config.get_param('mail.default.from')
+            or self.env.company.email
+            or 'no-reply@billnova.local'
+        )
+        password_html = f"<p><strong>Contrasena temporal:</strong> {password}</p>" if password else ""
+        role_labels = dict(self._fields['role'].selection)
+        role_label = role_labels.get(self.role, self.role or 'usuario')
+
+        if is_mobile_frontend:
+            body_html = f"""
+                <div style="font-family: Arial, sans-serif; color: #1f2937; line-height: 1.6;">
+                    <p>Hola {self.name or 'usuario'},</p>
+                    <p>Tu cuenta en BillNova fue creada correctamente.</p>
+                    <p><strong>Rol asignado:</strong> {role_label}</p>
+                    <p>Tus credenciales de acceso son:</p>
+                    <p><strong>Usuario / correo:</strong> {email_to}</p>
+                    {password_html}
+                    <p>Antes de iniciar sesion, primero debes verificar tu correo.</p>
+                    <p><strong>Token de verificacion:</strong></p>
+                    <p style="margin: 20px 0; font-size: 20px; font-weight: 700; letter-spacing: 1px; color: #1e3a8a;">
+                        {verification_token}
+                    </p>
+                    <p>Tambien puedes abrir la app directamente desde aqui:</p>
+                    <p style="margin: 24px 0;">
+                        <a href="{verification_link}" style="background:#1e3a8a;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:8px;display:inline-block;font-weight:700;">
+                            Abrir app y verificar
+                        </a>
+                    </p>
+                    <p>Si el boton no funciona, copia este enlace en tu telefono:</p>
+                    <p><a href="{verification_link}">{verification_link}</a></p>
+                </div>
+            """
+        else:
+            body_html = f"""
+                <div style="font-family: Arial, sans-serif; color: #1f2937; line-height: 1.6;">
+                    <p>Hola {self.name or 'usuario'},</p>
+                    <p>Tu cuenta en BillNova fue creada correctamente.</p>
+                    <p><strong>Rol asignado:</strong> {role_label}</p>
+                    <p>Tus credenciales de acceso son:</p>
+                    <p><strong>Usuario / correo:</strong> {email_to}</p>
+                    {password_html}
+                    <p>Antes de iniciar sesion, primero debes verificar tu correo:</p>
+                    <p style="margin: 24px 0;">
+                        <a href="{verification_link}" style="background:#1e3a8a;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:8px;display:inline-block;font-weight:700;">
+                            Verificar cuenta
+                        </a>
+                    </p>
+                    <p>Si el boton no funciona, abre este enlace en tu navegador:</p>
+                    <p><a href="{verification_link}">{verification_link}</a></p>
+                </div>
+            """
+
+        mail = self.env['mail.mail'].sudo().create({
+            'subject': 'Tu cuenta de BillNova fue creada',
+            'email_to': email_to,
+            'email_from': email_from,
+            'body_html': body_html,
+        })
+        try:
+            mail.send(raise_exception=True)
+            return True
+        except Exception:
+            _logger.exception("No se pudo enviar la invitacion de cuenta a %s", email_to)
+            return False
+
     def action_send_employee_invitation_email(self, company_name=None, password=None, frontend_base_url=None):
         self.ensure_one()
         res_user = self._get_res_user_including_inactive()

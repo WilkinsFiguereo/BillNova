@@ -7,6 +7,8 @@ import { useGoogleOAuth, useLogin } from "@/features/auth/login";
 import { getStoredAuthState } from "@/features/auth/login/data/storage";
 import { getUserRoleRoute } from "@/features/auth/login/hooks/useRoleGuard";
 
+const LOGIN_PASSWORD_MAX_LENGTH = 20;
+
 export default function LoginPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
@@ -107,6 +109,7 @@ export default function LoginPage() {
                       id="password"
                       name="password"
                       type={showPassword ? "text" : "password"}
+                      maxLength={LOGIN_PASSWORD_MAX_LENGTH}
                       value={values.password}
                       onChange={onFieldChange}
                       placeholder="Tu contrasena"

@@ -4,6 +4,8 @@ type LoginErrors = Partial<Record<keyof LoginPayload, string>>;
 type ForgotErrors = Partial<Record<keyof ForgotPasswordPayload, string>>;
 type ResetErrors = Partial<Record<keyof ResetPasswordPayload, string>>;
 
+const LOGIN_PASSWORD_MAX_LENGTH = 20;
+
 export function validateEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
@@ -23,6 +25,7 @@ export function validateLogin(values: LoginPayload): LoginErrors {
   const errors: LoginErrors = {};
   if (!values.username.trim()) errors.username = "El usuario es requerido";
   if (!values.password) errors.password = "La contrasena es requerida";
+  else if (values.password.length > LOGIN_PASSWORD_MAX_LENGTH) errors.password = `Maximo ${LOGIN_PASSWORD_MAX_LENGTH} caracteres`;
   return errors;
 }
 

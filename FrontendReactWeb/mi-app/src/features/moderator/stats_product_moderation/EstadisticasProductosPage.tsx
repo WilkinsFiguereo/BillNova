@@ -1,6 +1,9 @@
 "use client";
 
 import React from 'react';
+import { usePathname } from 'next/navigation';
+import { AdminSidebar } from '../../admin/dashboard/ui/AdminSidebar';
+import { ADMIN_NAV_ITEMS } from '../../admin/dashboard/data/adminNavigation.data';
 import { Sidebar } from '../../seller/dashboard/dashboards';
 import { dashboardTheme as t, globalStyles } from '../../seller/dashboard/theme/dashboard.theme';
 import { MODERATOR_NAV_ITEMS } from '../moderationNav';
@@ -25,6 +28,8 @@ const exportButtonStyle: React.CSSProperties = {
 };
 
 export function EstadisticasProductosPage() {
+  const pathname = usePathname();
+  const isAdminRoute = pathname.startsWith('/navigation/admin/');
   const {
     productos, productoSeleccionado, filtros, globales,
     loading,
@@ -41,7 +46,11 @@ export function EstadisticasProductosPage() {
     }}>
       <style>{globalStyles(t)}</style>
 
-      <Sidebar navItems={MODERATOR_NAV_ITEMS} />
+      {isAdminRoute ? (
+        <AdminSidebar navItems={ADMIN_NAV_ITEMS} />
+      ) : (
+        <Sidebar navItems={MODERATOR_NAV_ITEMS} />
+      )}
 
       <main style={{ flex: 1, overflow: 'auto', padding: '32px 28px' }}>
         <div style={{ maxWidth: 1300, margin: '0 auto' }}>

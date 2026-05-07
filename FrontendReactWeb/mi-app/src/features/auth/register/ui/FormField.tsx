@@ -17,6 +17,7 @@ interface FormFieldProps {
   required?: boolean;
   value: string;
   error?: string;
+  maxLength?: number;
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
 }
 
@@ -46,6 +47,7 @@ export function FormField({
   required,
   value,
   error,
+  maxLength,
   onChange,
 }: FormFieldProps) {
   const [showPassword, setShowPassword] = useState(false);
@@ -70,6 +72,7 @@ export function FormField({
           onChange={onChange}
           placeholder={placeholder}
           rows={3}
+          maxLength={maxLength}
           className={`${inputBase} ${borderColor}`}
         />
       ) : (
@@ -81,6 +84,7 @@ export function FormField({
           onChange={onChange}
           placeholder={placeholder}
           required={required}
+          maxLength={maxLength}
           autoComplete={getAutoComplete(name, type)}
           className={`${inputBase} ${borderColor}`}
           style={isPassword ? { paddingRight: 76 } : undefined}

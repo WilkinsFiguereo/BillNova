@@ -113,7 +113,7 @@ class UserApiController(http.Controller):
 
     def _serialize_mobile_profile(self, billnova_user, res_user):
         company = self._get_effective_billnova_company(billnova_user)
-        role = billnova_user.role if billnova_user and billnova_user.exists() else getattr(res_user, 'billnova_role', None)
+        role = billnova_user.role if billnova_user and billnova_user.exists() else None
         avatar_url = None
         if res_user and res_user.exists() and res_user.image_1920:
             try:
@@ -177,9 +177,20 @@ class UserApiController(http.Controller):
     # =========================
 
     def _normalize_role(self, role):
-        allowed_roles = {'admin', 'moderation', 'seller', 'user'}
-        normalized = (role or 'user').strip().lower()
-        return normalized if normalized in allowed_roles else 'user'
+        normalized = (role or 'seller').strip().lower()
+        aliases = {
+            'moderation': 'moderator',
+            'moderador': 'moderator',
+            'mod': 'moderator',
+            'manager': 'gerente',
+            'worker': 'worker',
+            'trabajador': 'worker',
+            'user': 'seller',
+            'usuario': 'seller',
+        }
+        normalized = aliases.get(normalized, normalized)
+        allowed_roles = {'admin', 'moderator', 'gerente', 'seller', 'worker'}
+        return normalized if normalized in allowed_roles else 'seller'
 
     def _normalize_email(self, value):
         return (value or '').strip().lower()
@@ -196,6 +207,48 @@ class UserApiController(http.Controller):
     def _sync_system_admin_role(self, user, role):
         if role == 'admin':
             user.write({'group_ids': [(4, self._system_group().id)]})
+        else:
+            user.write({'group_ids': [(3, self._system_group().id)]})
+
+    def _get_frontend_base_url(self):
+        return AuthApiController()._get_frontend_base_url()
+
+    def _get_billnova_user_for_res_user(self, user):
+        if not user or not user.exists():
+            return request.env['billnova.user']
+        return request.env['billnova.user'].sudo().with_context(active_test=False).search(
+            [('res_user_id', '=', user.id)],
+            limit=1,
+        )
+
+    def _get_user_role(self, user, billnova_user=None):
+        linked_user = billnova_user if billnova_user is not None else self._get_billnova_user_for_res_user(user)
+        if linked_user and linked_user.exists() and linked_user.role:
+            return linked_user.role
+        if user and user.exists() and user.has_group('base.group_system'):
+            return 'admin'
+        return 'seller'
+
+    def _upsert_billnova_user(self, user, *, name, email, role, active=True, phone=None, address=None, is_mobile_user=False):
+        billnova_user = self._get_billnova_user_for_res_user(user)
+        values = {
+            'name': name,
+            'email': email,
+            'role': role,
+            'active': active,
+            'is_mobile_user': is_mobile_user,
+            'res_user_id': user.id,
+        }
+        if phone is not None:
+            values['phone'] = phone
+        if address is not None:
+            values['address'] = address
+        if user.company_id:
+            values['company_id'] = user.company_id.id
+        if billnova_user and billnova_user.exists():
+            billnova_user.sudo().write(values)
+            return billnova_user
+        return request.env['billnova.user'].sudo().create(values)
 
     # =========================================================
     # ====================== RES USERS =========================
@@ -212,14 +265,17 @@ class UserApiController(http.Controller):
 
         users = request.env['res.users'].sudo().with_context(active_test=False).search([])
 
-        data = [{
-            'id': u.id,
-            'name': u.name,
-            'login': u.login,
-            'email': u.email,
-            'role': getattr(u, 'billnova_role', 'user'),
-            'active': u.active,
-        } for u in users]
+        data = []
+        for u in users:
+            billnova_user = self._get_billnova_user_for_res_user(u)
+            data.append({
+                'id': u.id,
+                'name': u.name,
+                'login': u.login,
+                'email': u.email,
+                'role': self._get_user_role(u, billnova_user),
+                'active': u.active,
+            })
 
         return self._json_response({'data': data})
 
@@ -242,7 +298,7 @@ class UserApiController(http.Controller):
             'name': user.name,
             'login': user.login,
             'email': user.email,
-            'role': getattr(user, 'billnova_role', 'user'),
+            'role': self._get_user_role(user),
             'active': user.active,
         }})
 
@@ -263,6 +319,7 @@ class UserApiController(http.Controller):
             email = (body.get('email') or login).strip().lower()
             password = body.get('password') or 'Temp1234*'
             role = self._normalize_role(body.get('role'))
+            is_active = body.get('active', True)
 
             if not name:
                 return self._json_response({'error': 'El nombre es obligatorio'}, 400)
@@ -285,14 +342,25 @@ class UserApiController(http.Controller):
                     'name': name,
                     'login': login,
                     'email': email,
-                    'billnova_role': role,
-                    'active': body.get('active', existing.active),
+                    'active': is_active,
                 })
 
                 if body.get('password'):
                     existing.write({'password': password})
 
                 self._sync_system_admin_role(existing, role)
+                billnova_user = self._upsert_billnova_user(
+                    existing,
+                    name=name,
+                    email=email,
+                    role=role,
+                    active=is_active,
+                    is_mobile_user=False,
+                )
+                billnova_user.action_send_account_invitation_email(
+                    password=password,
+                    frontend_base_url=self._get_frontend_base_url(),
+                )
 
                 return self._json_response({
                     'message': 'Usuario reutilizado',
@@ -305,14 +373,25 @@ class UserApiController(http.Controller):
                 'login': login,
                 'email': email,
                 'password': password,
-                'billnova_role': role,
-                'active': body.get('active', True),
+                'active': is_active,
             }
 
             if role == 'admin':
                 values['group_ids'] = [(4, self._system_group().id)]
 
             user = request.env['res.users'].sudo().create(values)
+            billnova_user = self._upsert_billnova_user(
+                user,
+                name=name,
+                email=email,
+                role=role,
+                active=is_active,
+                is_mobile_user=False,
+            )
+            billnova_user.action_send_account_invitation_email(
+                password=password,
+                frontend_base_url=self._get_frontend_base_url(),
+            )
 
             return self._json_response({'message': 'Usuario creado', 'id': user.id}, 201)
 
@@ -340,7 +419,9 @@ class UserApiController(http.Controller):
             name = (body.get('name') or user.name).strip()
             login = (body.get('login') or body.get('email') or user.login).strip().lower()
             email = (body.get('email') or user.email or login).strip().lower()
-            role = self._normalize_role(body.get('role', getattr(user, 'billnova_role', 'user')))
+            current_billnova_user = self._get_billnova_user_for_res_user(user)
+            role = self._normalize_role(body.get('role', self._get_user_role(user, current_billnova_user)))
+            is_active = body.get('active', user.active)
 
             duplicate = request.env['res.users'].sudo().search([
                 ('id', '!=', user.id),
@@ -354,14 +435,23 @@ class UserApiController(http.Controller):
                 'name': name,
                 'login': login,
                 'email': email,
-                'billnova_role': role,
-                'active': body.get('active', user.active),
+                'active': is_active,
             })
 
             if body.get('password'):
                 user.write({'password': body.get('password')})
 
             self._sync_system_admin_role(user, role)
+            self._upsert_billnova_user(
+                user,
+                name=name,
+                email=email,
+                role=role,
+                active=is_active,
+                phone=body.get('phone', current_billnova_user.phone if current_billnova_user else None),
+                address=body.get('address', current_billnova_user.address if current_billnova_user else None),
+                is_mobile_user=body.get('is_mobile_user', current_billnova_user.is_mobile_user if current_billnova_user else False),
+            )
 
             return self._json_response({'message': 'Usuario actualizado'})
 
@@ -388,6 +478,9 @@ class UserApiController(http.Controller):
                 "UPDATE res_users SET active = FALSE WHERE id = %s",
                 [user.id]
             )
+            linked_user = self._get_billnova_user_for_res_user(user)
+            if linked_user and linked_user.exists():
+                linked_user.sudo().write({'active': False})
             request.env.cr.commit()
 
             return self._json_response({'message': 'Usuario desactivado'})
@@ -480,7 +573,6 @@ class UserApiController(http.Controller):
                         'login': email,
                         'email': email,
                         'password': body.get('password') or 'Temp1234*',
-                        'billnova_role': role,
                     })
 
                 res_user_id = res_user.id
@@ -548,9 +640,9 @@ class UserApiController(http.Controller):
                     'name': name,
                     'login': email,
                     'email': email,
-                    'billnova_role': u.role,
                     'active': u.active,
                 })
+                self._sync_system_admin_role(u.res_user_id.sudo(), u.role)
 
             return self._json_response({'message': 'Actualizado'})
 
@@ -702,7 +794,7 @@ class UserApiController(http.Controller):
                     'email': email,
                     'phone': phone,
                     'address': address,
-                    'role': getattr(res_user, 'billnova_role', None) or 'seller',
+                    'role': 'seller',
                     'active': True,
                     'is_mobile_user': True,
                     'res_user_id': res_user.id,

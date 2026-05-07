@@ -28,6 +28,9 @@ type FormState = {
   avatar_url?: string | null;
 };
 
+const PROFILE_NAME_MAX_LENGTH = 50;
+const PROFILE_PASSWORD_MAX_LENGTH = 20;
+
 function Field({
   label,
   value,
@@ -36,6 +39,7 @@ function Field({
   secureTextEntry = false,
   multiline = false,
   editable = true,
+  maxLength,
 }: {
   label: string;
   value: string;
@@ -44,6 +48,7 @@ function Field({
   secureTextEntry?: boolean;
   multiline?: boolean;
   editable?: boolean;
+  maxLength?: number;
 }) {
   return (
     <View style={styles.fieldWrap}>
@@ -57,6 +62,7 @@ function Field({
         secureTextEntry={secureTextEntry}
         multiline={multiline}
         editable={editable}
+        maxLength={maxLength}
       />
     </View>
   );
@@ -183,6 +189,14 @@ export default function ProfileTab() {
       Alert.alert('Nombre requerido', 'Ingresa tu nombre para guardar los cambios.');
       return;
     }
+    if (form.name.trim().length > PROFILE_NAME_MAX_LENGTH) {
+      Alert.alert('Nombre demasiado largo', `El nombre puede tener maximo ${PROFILE_NAME_MAX_LENGTH} caracteres.`);
+      return;
+    }
+    if (form.password.trim().length > PROFILE_PASSWORD_MAX_LENGTH) {
+      Alert.alert('Contrasena demasiado larga', `La contrasena puede tener maximo ${PROFILE_PASSWORD_MAX_LENGTH} caracteres.`);
+      return;
+    }
     setSaving(true);
     setError(null);
 
@@ -300,7 +314,7 @@ export default function ProfileTab() {
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Datos de la cuenta</Text>
         <Field label="Usuario" value={profile?.login ?? user?.login ?? ''} editable={false} />
-        <Field label="Nombre completo" value={form.name} onChangeText={updateField('name')} placeholder="Tu nombre" />
+        <Field label="Nombre completo" value={form.name} onChangeText={updateField('name')} placeholder="Tu nombre" maxLength={PROFILE_NAME_MAX_LENGTH} />
         <Field label="Correo" value={form.email} placeholder="correo@empresa.com" editable={false} />
         <Field label="Telefono" value={form.phone} onChangeText={updateField('phone')} placeholder="Tu telefono" />
         <Field
@@ -318,6 +332,7 @@ export default function ProfileTab() {
           onChangeText={updateField('password')}
           placeholder="Deja vacio para mantener la actual"
           secureTextEntry
+          maxLength={PROFILE_PASSWORD_MAX_LENGTH}
         />
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}

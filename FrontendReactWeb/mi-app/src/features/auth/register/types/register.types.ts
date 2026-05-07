@@ -37,6 +37,7 @@ export interface FieldConfig {
   placeholder: string;
   required: boolean;
   colSpan?: "full" | "half";
+  maxLength?: number;
 }
 
 export type PasswordStrength = 0 | 1 | 2 | 3 | 4;
