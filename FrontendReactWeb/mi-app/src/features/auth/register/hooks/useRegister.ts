@@ -42,9 +42,15 @@ export function useRegister() {
       try {
         const res = await registerApi.register(state.values);
         if (res.ok) {
-          setState((prev) => ({ ...prev, isLoading: false, success: true }));
+          setState((prev) => ({
+            ...prev,
+            isLoading: false,
+            success: true,
+            serverError: res.warning ?? null,
+          }));
           const nextEmail = encodeURIComponent(res.email ?? state.values.email);
-          setTimeout(() => router.push(`/navigation/auth/verify-email?email=${nextEmail}`), 1800);
+          const nextToken = res.dev_token ? `&token=${encodeURIComponent(res.dev_token)}` : "";
+          setTimeout(() => router.push(`/navigation/auth/verify-email?email=${nextEmail}${nextToken}`), 1800);
         } else {
           setState((prev) => ({
             ...prev, isLoading: false,

@@ -1,9 +1,9 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Shield } from "lucide-react";
+import Link from "next/link";
+import { BrandBadge } from "@/components/BrandBadge";
 import { colors, font } from "../../users/theme/tokens";
 import { UserProfileSidebarSection } from "./UserProfileSidebarSection";
 import type { AdminNavItemData } from "../data/adminNavigation.data";
@@ -32,33 +32,13 @@ export function AdminSidebar({ navItems }: AdminSidebarProps) {
     >
       {/* Logo */}
       <div style={{ padding: "0 8px 28px", borderBottom: `1px solid ${colors.border}` }}>
-        <Link href="/navigation/admin/dashboard/page" style={{ textDecoration: "none" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div
-              style={{
-                width: 36,
-                height: 36,
-                background: colors.bg.alt ?? "#EFF6FF",
-                borderRadius: 999,
-                border: `1px solid ${colors.border}`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: colors.accent,
-              }}
-            >
-              <Shield size={18} />
-            </div>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: colors.text.primary }}>
-                BizAdmin
-              </div>
-              <div style={{ fontSize: 10, color: colors.text.tertiary, letterSpacing: "0.05em" }}>
-                ENTERPRISE
-              </div>
-            </div>
-          </div>
-        </Link>
+        <BrandBadge
+          href="/navigation/admin/dashboard/page"
+          title="BillNova"
+          subtitle="PANEL ADMIN"
+          titleColor={colors.text.primary}
+          subtitleColor={colors.text.tertiary}
+        />
       </div>
 
       {/* Nav Links */}

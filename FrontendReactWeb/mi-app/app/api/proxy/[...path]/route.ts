@@ -3,37 +3,69 @@ import { getOdooUrl } from "@/lib/odooApi";
 
 const ODOO_URL = getOdooUrl();
 
+function buildTargetUrl(path: string[], queryString = ""): string {
+  const pathStr = "/" + path.join("/");
+  return `${ODOO_URL}${pathStr}${queryString}`;
+}
+
+function buildForwardHeaders(request: NextRequest, extraHeaders?: HeadersInit): Headers {
+  const headers = new Headers(extraHeaders);
+  const cookie = request.headers.get("cookie");
+  const authSession = request.headers.get("x-auth-session");
+  const accept = request.headers.get("accept");
+
+  if (cookie) {
+    headers.set("cookie", cookie);
+  }
+
+  if (authSession) {
+    headers.set("x-auth-session", authSession);
+  }
+
+  if (accept) {
+    headers.set("accept", accept);
+  }
+
+  return headers;
+}
+
+function copyResponseHeaders(source: Response, target: NextResponse) {
+  const setCookie = source.headers.get("set-cookie");
+  const contentType = source.headers.get("content-type");
+
+  if (setCookie) {
+    target.headers.set("set-cookie", setCookie);
+  }
+
+  if (contentType) {
+    target.headers.set("content-type", contentType);
+  }
+}
+
+async function toNextResponse(response: Response): Promise<NextResponse> {
+  const text = await response.text();
+  const nextResponse = new NextResponse(text, { status: response.status });
+  copyResponseHeaders(response, nextResponse);
+  return nextResponse;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
   try {
     const { path } = await params;
-    const pathStr = "/" + path.join("/");
     const queryString = request.nextUrl.search;
-    const fullUrl = `${ODOO_URL}${pathStr}${queryString}`;
+    const fullUrl = buildTargetUrl(path, queryString);
 
     console.log("[PROXY GET]", fullUrl);
 
     const response = await fetch(fullUrl, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-      },
+      headers: buildForwardHeaders(request),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[PROXY GET ERROR] ${response.status}:`, errorText);
-      return NextResponse.json(
-        { error: `Backend error: ${response.status}`, details: errorText },
-        { status: response.status }
-      );
-    }
-
-    const data = await response.json();
-    return NextResponse.json(data);
+    return toNextResponse(response);
   } catch (error) {
     console.error("[PROXY GET EXCEPTION]", error);
     return NextResponse.json(
@@ -49,32 +81,20 @@ export async function POST(
 ) {
   try {
     const { path } = await params;
-    const pathStr = "/" + path.join("/");
-    const body = await request.json();
-    const fullUrl = `${ODOO_URL}${pathStr}`;
+    const body = await request.text();
+    const fullUrl = buildTargetUrl(path);
 
     console.log("[PROXY POST]", fullUrl, body);
 
     const response = await fetch(fullUrl, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-      },
-      body: JSON.stringify(body),
+      headers: buildForwardHeaders(request, {
+        "Content-Type": request.headers.get("content-type") ?? "application/json",
+      }),
+      body,
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[PROXY POST ERROR] ${response.status}:`, errorText);
-      return NextResponse.json(
-        { error: `Backend error: ${response.status}`, details: errorText },
-        { status: response.status }
-      );
-    }
-
-    const data = await response.json();
-    return NextResponse.json(data);
+    return toNextResponse(response);
   } catch (error) {
     console.error("[PROXY POST EXCEPTION]", error);
     return NextResponse.json(
@@ -90,32 +110,20 @@ export async function PUT(
 ) {
   try {
     const { path } = await params;
-    const pathStr = "/" + path.join("/");
-    const body = await request.json();
-    const fullUrl = `${ODOO_URL}${pathStr}`;
+    const body = await request.text();
+    const fullUrl = buildTargetUrl(path);
 
     console.log("[PROXY PUT]", fullUrl, body);
 
     const response = await fetch(fullUrl, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-      },
-      body: JSON.stringify(body),
+      headers: buildForwardHeaders(request, {
+        "Content-Type": request.headers.get("content-type") ?? "application/json",
+      }),
+      body,
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[PROXY PUT ERROR] ${response.status}:`, errorText);
-      return NextResponse.json(
-        { error: `Backend error: ${response.status}`, details: errorText },
-        { status: response.status }
-      );
-    }
-
-    const data = await response.json();
-    return NextResponse.json(data);
+    return toNextResponse(response);
   } catch (error) {
     console.error("[PROXY PUT EXCEPTION]", error);
     return NextResponse.json(
@@ -131,30 +139,16 @@ export async function DELETE(
 ) {
   try {
     const { path } = await params;
-    const pathStr = "/" + path.join("/");
-    const fullUrl = `${ODOO_URL}${pathStr}`;
+    const fullUrl = buildTargetUrl(path);
 
     console.log("[PROXY DELETE]", fullUrl);
 
     const response = await fetch(fullUrl, {
       method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-      },
+      headers: buildForwardHeaders(request),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[PROXY DELETE ERROR] ${response.status}:`, errorText);
-      return NextResponse.json(
-        { error: `Backend error: ${response.status}`, details: errorText },
-        { status: response.status }
-      );
-    }
-
-    const data = await response.json();
-    return NextResponse.json(data);
+    return toNextResponse(response);
   } catch (error) {
     console.error("[PROXY DELETE EXCEPTION]", error);
     return NextResponse.json(

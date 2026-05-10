@@ -66,6 +66,9 @@ export function useVerifyEmail(initialEmail = "", initialToken = "") {
     try {
       const res = await authApi.resendVerificationCode(email);
       if (res.ok) {
+        if (res.dev_token) {
+          setToken(res.dev_token);
+        }
         setMessage(res.message ?? "Correo de verificacion reenviado.");
         setCooldown(60);
         return;

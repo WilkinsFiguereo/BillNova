@@ -1,12 +1,10 @@
+import { BrandLogo } from "@/components/BrandLogo";
+
 export function CardHeader() {
   return (
     <div className="top-bar">
       <div className="brand">
-        <div className="logo-box">
-          <div className="logo-sq">
-            <div className="logo-dot" />
-          </div>
-        </div>
+        <BrandLogo size={38} priority className="welcome-brand-logo" />
         <span className="brand-name">
           Bill<span>Nova</span>
         </span>

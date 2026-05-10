@@ -80,10 +80,13 @@ export interface VerifyEmailResponse {
 export interface ResendCodeResponse {
   ok: boolean;
   message?: string;
+  warning?: string;
   error?: string;
+  delivery?: "email" | "simulated";
   code?: "OTP_TEMP_BLOCK" | "OTP_COOLDOWN" | "OTP_RESEND_LIMIT";
   retry_after_seconds?: number;
   dev_code?: string;
+  dev_token?: string;
 }
 
 export interface ActiveSession {

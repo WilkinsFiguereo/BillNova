@@ -2,7 +2,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Shield } from "lucide-react";
+import { BrandBadge } from "@/components/BrandBadge";
 import { NavItemData } from "../data/usersNavigation.data";
 import { colors, font } from "../theme/tokens";
 import { UserProfileSidebarSection } from "@/features/admin/dashboard/ui/UserProfileSidebarSection";
@@ -35,32 +35,13 @@ export function UsersSidebar({ navItems }: UsersSidebarProps) {
           marginBottom: 12,
         }}
       >
-        <Link href="/navigation/admin/dashboard/page" style={{ textDecoration: "none" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div
-              style={{
-                width: 36,
-                height: 36,
-                background: `linear-gradient(135deg, ${colors.accent}, #818cf8)`,
-                borderRadius: 10,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "white",
-              }}
-            >
-              <Shield size={18} />
-            </div>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: colors.text.primary }}>
-                BizAdmin
-              </div>
-              <div style={{ fontSize: 10, color: colors.text.tertiary, letterSpacing: "0.05em" }}>
-                ENTERPRISE
-              </div>
-            </div>
-          </div>
-        </Link>
+        <BrandBadge
+          href="/navigation/admin/dashboard/page"
+          title="BillNova"
+          subtitle="GESTION INTERNA"
+          titleColor={colors.text.primary}
+          subtitleColor={colors.text.tertiary}
+        />
       </div>
 
       <nav style={{ flex: 1 }}>

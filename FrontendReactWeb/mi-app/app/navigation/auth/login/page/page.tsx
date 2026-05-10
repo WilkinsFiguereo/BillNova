@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { BrandLogo } from "@/components/BrandLogo";
 import { useGoogleOAuth, useLogin } from "@/features/auth/login";
 import { getStoredAuthState } from "@/features/auth/login/data/storage";
 import { getUserRoleRoute } from "@/features/auth/login/hooks/useRoleGuard";
@@ -34,9 +35,7 @@ export default function LoginPage() {
 
         <div className="brand">
           <div className="brand-icon" aria-hidden>
-            <svg width="16" height="16" viewBox="0 0 14 14" fill="none">
-              <path d="M7 1L13 4v6L7 13 1 10V4L7 1z" stroke="#fff" strokeWidth="1.4" strokeLinejoin="round" />
-            </svg>
+            <BrandLogo size={40} priority className="brand-logo-image" />
           </div>
           <p className="brand-name">
             Bill<span>Nova</span>
@@ -63,9 +62,7 @@ export default function LoginPage() {
         <div className="form-wrap">
           <div className="mob-brand">
             <div className="mob-brand-icon" aria-hidden>
-              <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-                <path d="M7 1L13 4v6L7 13 1 10V4L7 1z" stroke="#fff" strokeWidth="1.4" strokeLinejoin="round" />
-              </svg>
+              <BrandLogo size={32} className="brand-logo-image" />
             </div>
             <p className="mob-brand-name">
               Bill<span>Nova</span>

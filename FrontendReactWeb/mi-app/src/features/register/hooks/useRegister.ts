@@ -55,9 +55,15 @@ export function useRegister() {
         console.info("[register] api response", res);
 
         if (res.ok) {
-          setState((prev) => ({ ...prev, isLoading: false, success: true }));
+          setState((prev) => ({
+            ...prev,
+            isLoading: false,
+            success: true,
+            serverError: res.warning ?? null,
+          }));
           const nextEmail = encodeURIComponent(state.values.email.trim().toLowerCase());
-          setTimeout(() => router.push(`/navigation/auth/verify-email?email=${nextEmail}`), 1600);
+          const nextToken = res.dev_token ? `&token=${encodeURIComponent(res.dev_token)}` : "";
+          setTimeout(() => router.push(`/navigation/auth/verify-email?email=${nextEmail}${nextToken}`), 1600);
         } else {
           setState((prev) => ({
             ...prev,

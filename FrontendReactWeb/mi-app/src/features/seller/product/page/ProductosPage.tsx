@@ -104,23 +104,30 @@ export default function ProductosPage() {
 
   const exportCSV = () => {
     const headers = ["ID", "Nombre", "SKU", "Categoria", "Stock", "Precio", "Costo", "Margen", "Proveedor", "Ultima actualizacion"];
-    const rows = productosFiltrados.map((p) => {
-      const margen = p.precio !== 0 ? ((p.precio - p.costo) / p.precio) * 100 : 0;
-      return [
-        p.id,
-        p.nombre,
-        p.sku,
-        p.categoria,
-        String(p.stock),
-        p.precio.toFixed(2),
-        p.costo.toFixed(2),
-        `${margen.toFixed(2)}%`,
-        p.proveedor,
-        p.ultimaActualizacion,
-      ];
-    });
+    const rows = [
+      ["BillNova", "Catalogo de productos"],
+      ["Generado", new Date().toLocaleString("es-DO")],
+      ["Total exportado", String(productosFiltrados.length)],
+      [],
+      headers,
+      ...productosFiltrados.map((p) => {
+        const margen = p.precio !== 0 ? ((p.precio - p.costo) / p.precio) * 100 : 0;
+        return [
+          p.id,
+          p.nombre,
+          p.sku,
+          p.categoria,
+          String(p.stock),
+          p.precio.toFixed(2),
+          p.costo.toFixed(2),
+          `${margen.toFixed(2)}%`,
+          p.proveedor,
+          p.ultimaActualizacion,
+        ];
+      }),
+    ];
 
-    const content = [headers, ...rows]
+    const content = rows
       .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
       .join("\n");
 

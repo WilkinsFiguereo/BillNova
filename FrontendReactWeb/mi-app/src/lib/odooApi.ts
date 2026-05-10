@@ -5,6 +5,7 @@ const RAW_ODOO_URL =
 
 export const ODOO_URL = RAW_ODOO_URL.replace(/\/+$/, "");
 const AUTH_API_BASE = "/api/auth";
+const NEXT_PROXY_BASE = "/api/proxy";
 
 function getStoredSessionToken(): string | undefined {
   if (typeof window === "undefined") return undefined;
@@ -28,6 +29,18 @@ export function getOdooUrl(): string {
   }
 
   return ODOO_URL;
+}
+
+function buildRequestUrl(path: string): string {
+  if (!path.startsWith("/")) {
+    throw new Error(`Invalid API path: ${path}`);
+  }
+
+  if (typeof window !== "undefined") {
+    return `${NEXT_PROXY_BASE}${path}`;
+  }
+
+  return `${ODOO_URL}${path}`;
 }
 
 export function authPath(path: string): string {
@@ -56,7 +69,7 @@ export async function odooPost<TRes>(
   body: unknown,
   options: RequestOptions = {},
 ): Promise<TRes> {
-  const response = await fetch(`${ODOO_URL}${path}`, {
+  const response = await fetch(buildRequestUrl(path), {
     method: "POST",
     credentials: "include",
     headers: {
@@ -78,7 +91,7 @@ export async function odooGet<TRes>(
   path: string,
   options: RequestOptions = {},
 ): Promise<TRes> {
-  const response = await fetch(`${ODOO_URL}${path}`, {
+  const response = await fetch(buildRequestUrl(path), {
     method: "GET",
     credentials: "include",
     cache: options.cache,
@@ -110,7 +123,7 @@ export async function odooPut<TRes>(
   body: unknown,
   options: RequestOptions = {},
 ): Promise<TRes> {
-  const response = await fetch(`${ODOO_URL}${path}`, {
+  const response = await fetch(buildRequestUrl(path), {
     method: "PUT",
     credentials: "include",
     headers: {
@@ -132,7 +145,7 @@ export async function odooDelete<TRes>(
   path: string,
   options: RequestOptions = {},
 ): Promise<TRes> {
-  const response = await fetch(`${ODOO_URL}${path}`, {
+  const response = await fetch(buildRequestUrl(path), {
     method: "DELETE",
     credentials: "include",
     headers: options.sessionToken
@@ -162,7 +175,7 @@ export async function odooRequest<TRes>(
   init?: RequestInit,
 ): Promise<TRes> {
   const sessionToken = getStoredSessionToken();
-  const res = await fetch(`${ODOO_URL}${path}`, {
+  const res = await fetch(buildRequestUrl(path), {
     ...init,
     headers: {
       "Content-Type": "application/json",

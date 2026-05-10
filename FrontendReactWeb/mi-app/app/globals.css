@@ -275,13 +275,16 @@ body {
 .brand-icon {
   width: 2.5rem;
   height: 2.5rem;
-  background: rgba(255,255,255,0.12);
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: var(--radius-md);
-  display: grid;
-  place-items: center;
-  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+}
+
+.brand-logo-image {
+  display: block;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
 }
 
 .brand-name {
@@ -467,10 +470,10 @@ body {
 .mob-brand-icon {
   width: 2rem;
   height: 2rem;
-  background: var(--brand-600);
-  border-radius: var(--radius-sm);
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .mob-brand-name {

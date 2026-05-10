@@ -4,6 +4,8 @@ import {
   FileText,
   LayoutDashboard,
   Package,
+  Settings,
+  Tag,
   TrendingUp,
   Users,
   type LucideIcon,
@@ -22,5 +24,7 @@ export const USERS_NAV_ITEMS: NavItemData[] = [
   { label: "Productos", href: "/navigation/admin/products/page", Icon: Package },
   { label: "Est. productos", href: "/navigation/admin/stats_products/page", Icon: TrendingUp },
   { label: "Est. empresas", href: "/navigation/admin/stats_companies/page", Icon: BarChart2 },
+  { label: "Categoria", href: "/navigation/admin/category/page", Icon: Tag },
   { label: "Reportes", href: "/navigation/admin/reports/page", Icon: FileText },
+  { label: "Configuracion", href: "/navigation/config/page?role=admin", Icon: Settings },
 ];
