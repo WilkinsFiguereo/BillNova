@@ -18,7 +18,11 @@ export interface RegisterResponse {
   email?: string;
   requires_verification?: boolean;
   message?: string;
+  warning?: string;
+  email_sent?: boolean;
+  delivery?: "email" | "simulated";
   dev_code?: string;
+  dev_token?: string;
   error?: string;
 }
 

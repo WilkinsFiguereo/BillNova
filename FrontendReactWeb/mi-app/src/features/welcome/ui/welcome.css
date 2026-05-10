@@ -214,18 +214,12 @@
 }
 .brand { display: flex; align-items: center; gap: .625rem; }
 
-.logo-box {
-  width: 38px; height: 38px;
-  border: 1.5px solid rgba(255,255,255,0.25); border-radius: 9px;
-  background: rgba(255,255,255,0.1);
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+.welcome-brand-logo {
+  display: block;
+  border-radius: 9px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.22);
+  flex-shrink: 0;
 }
-.logo-sq {
-  width: 18px; height: 18px;
-  border: 2px solid rgba(255,255,255,0.65); border-radius: 4px;
-  display: flex; align-items: center; justify-content: center;
-}
-.logo-dot { width: 6px; height: 6px; background: #93C5FD; border-radius: 1.5px; }
 
 .brand-name {
   font-family: var(--dis);

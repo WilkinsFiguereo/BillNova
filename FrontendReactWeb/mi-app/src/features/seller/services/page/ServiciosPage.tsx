@@ -121,19 +121,26 @@ export default function ServiciosPage() {
       "Ultima actualizacion",
     ];
 
-    const rows = serviciosFiltrados.map((s) => [
-      s.id,
-      s.nombre,
-      s.descripcion,
-      s.detalles,
-      String(s.precio),
-      s.pagoFrecuencia,
-      s.status,
-      s.imageUrl ? "Si" : "No",
-      s.ultimaActualizacion,
-    ]);
+    const rows = [
+      ["BillNova", "Catalogo de servicios"],
+      ["Generado", new Date().toLocaleString("es-DO")],
+      ["Total exportado", String(serviciosFiltrados.length)],
+      [],
+      headers,
+      ...serviciosFiltrados.map((s) => [
+        s.id,
+        s.nombre,
+        s.descripcion,
+        s.detalles,
+        String(s.precio),
+        s.pagoFrecuencia,
+        s.status,
+        s.imageUrl ? "Si" : "No",
+        s.ultimaActualizacion,
+      ]),
+    ];
 
-    const content = [headers, ...rows]
+    const content = rows
       .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
       .join("\n");
 

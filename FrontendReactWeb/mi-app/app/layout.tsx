@@ -11,6 +11,11 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "BillNova",
   description: "Plataforma empresarial para gestionar tu negocio",
+  icons: {
+    icon: "/logos/logo.png",
+    shortcut: "/logos/logo.png",
+    apple: "/logos/logo.png",
+  },
 };
 
 export default function RootLayout({

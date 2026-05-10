@@ -6,6 +6,10 @@ import { STATUS_MAP } from "../data/facturas.data";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
+import {
+  exportDatasetToExcel,
+  exportDatasetToPdf,
+} from "@/features/shared/reports/reportExport";
 
 // ─── Config ────────────────────────────────────────────────────────────
 const ODOO_BASE_URL = process.env.NEXT_PUBLIC_ODOO_URL || "http://localhost:8079";
@@ -396,6 +400,71 @@ export function useFacturasOdoo(companyId?: number): UseFacturasOdooReturn {
     showToast("Exportando facturas a Excel...", "success");
   }, [facturas, showToast]);
 
+  const exportFacturasPDFUnified = useCallback(() => {
+    if (!facturas.length) {
+      showToast("No hay facturas para exportar en PDF", "info");
+      return;
+    }
+
+    void exportDatasetToPdf({
+      title: "Reporte de facturas",
+      filename: `facturas-${new Date().toISOString().slice(0, 10)}.pdf`,
+      rows: facturas.map((factura) => ({
+        Factura: factura.numero,
+        Cliente: factura.cliente || "-",
+        Email: factura.clienteEmail || "-",
+        Telefono: factura.phone || "-",
+        Fecha: factura.fecha || "-",
+        Vencimiento: factura.fechaVencimiento || "-",
+        Estado: factura.status,
+        Subtotal: factura.subtotal,
+        Impuesto: factura.impuesto,
+        Total: factura.total,
+      })),
+      summary: [
+        { label: "Registros", value: facturas.length.toLocaleString("es-DO") },
+        { label: "Pendientes", value: facturas.filter((factura) => factura.status === "pendiente").length.toLocaleString("es-DO") },
+        { label: "Total facturado", value: `RD$ ${facturas.reduce((acc, factura) => acc + factura.total, 0).toLocaleString("es-DO")}` },
+      ],
+    });
+    showToast("Exportando facturas a PDF...", "success");
+  }, [facturas, showToast]);
+
+  const exportFacturasExcelUnified = useCallback(() => {
+    if (!facturas.length) {
+      showToast("No hay facturas para exportar en Excel", "info");
+      return;
+    }
+
+    void exportDatasetToExcel({
+      title: "Reporte de facturas",
+      filename: `facturas-${new Date().toISOString().slice(0, 10)}.xls`,
+      rows: facturas.map((factura) => ({
+        Factura: factura.numero,
+        Cliente: factura.cliente || "",
+        Email: factura.clienteEmail || "",
+        Telefono: factura.phone || "",
+        Direccion: factura.address || "",
+        Fecha: factura.fecha || "",
+        Vencimiento: factura.fechaVencimiento || "",
+        Estado: factura.status,
+        Subtotal: factura.subtotal,
+        Impuesto: factura.impuesto,
+        Total: factura.total,
+        Items: factura.items,
+        ReferenciaOdoo: factura.invoice?.reference || "",
+        EstadoOdoo: factura.invoice?.state || "",
+        EstadoPagoOdoo: factura.invoice?.payment_state || "",
+      })),
+      summary: [
+        { label: "Registros", value: facturas.length.toLocaleString("es-DO") },
+        { label: "Pendientes", value: facturas.filter((factura) => factura.status === "pendiente").length.toLocaleString("es-DO") },
+        { label: "Total facturado", value: `RD$ ${facturas.reduce((acc, factura) => acc + factura.total, 0).toLocaleString("es-DO")}` },
+      ],
+    });
+    showToast("Exportando facturas a Excel...", "success");
+  }, [facturas, showToast]);
+
   return {
     facturas,
     facturasFiltradas,
@@ -420,7 +489,7 @@ export function useFacturasOdoo(companyId?: number): UseFacturasOdooReturn {
     createInvoiceFromOrder,
     sendInvoiceEmail,
     downloadInvoicePDF,
-    exportFacturasPDF,
-    exportFacturasExcel,
+    exportFacturasPDF: exportFacturasPDFUnified,
+    exportFacturasExcel: exportFacturasExcelUnified,
   };
 }

@@ -25,6 +25,10 @@ export default function ReportesPage() {
 
   const exportCSV = () => {
     const rows = [
+      ["BillNova", "Reporte comercial"],
+      ["Generado", new Date().toLocaleString("es-DO")],
+      ["Periodo", periodo],
+      [],
       ["Metrica", "Valor"],
       ...resumen.stats.map((stat) => [stat.label, stat.value]),
       [],

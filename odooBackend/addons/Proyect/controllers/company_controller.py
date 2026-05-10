@@ -243,27 +243,46 @@ class CompanyApiController(http.Controller):
             {"month": "Mar", "sales": 0, "orders": 0},
         ]
 
+    def _normalize_role(self, role):
+        normalized = (role or "").strip().lower()
+        aliases = {
+            "moderation": "moderator",
+            "moderador": "moderator",
+            "mod": "moderator",
+            "manager": "gerente",
+            "trabajador": "worker",
+            "usuario": "seller",
+            "user": "seller",
+        }
+        normalized = aliases.get(normalized, normalized)
+        return normalized or "seller"
+
     def _map_role_to_api(self, internal_role):
+        internal_role = self._normalize_role(internal_role)
         if internal_role == "admin":
             return "Administrador"
+        if internal_role == "moderator":
+            return "Soporte"
+        if internal_role == "gerente":
+            return "Gerente"
         if internal_role == "seller":
             return "Vendedor"
         if internal_role == "worker":
             return "Trabajador"
-        if internal_role == "moderation":
-            return "Soporte"
         return "Almacen"
 
     def _map_role_to_internal(self, api_role):
         if api_role == "Administrador":
             return "admin"
+        if api_role == "Gerente":
+            return "gerente"
         if api_role == "Vendedor":
             return "seller"
         if api_role == "Trabajador":
             return "worker"
         if api_role in ("Soporte", "Contabilidad"):
-            return "moderation"
-        return "user"
+            return "moderator"
+        return "seller"
 
     def _resolve_current_billnova_user(self):
         user = self._get_current_res_user()
@@ -273,13 +292,13 @@ class CompanyApiController(http.Controller):
 
     def _current_billnova_role(self):
         billnova_user = self._resolve_current_billnova_user()
-        return billnova_user.role if billnova_user else None
+        return self._normalize_role(billnova_user.role) if billnova_user else None
 
     def _can_manage_company_settings(self):
         return self._current_billnova_role() in ("seller", "gerente", "admin")
 
     def _can_moderate_companies(self):
-        return self._current_billnova_role() in ("moderator", "moderation", "admin")
+        return self._current_billnova_role() in ("moderator", "admin")
 
     def _is_admin_user(self):
         return self._current_billnova_role() == "admin"
@@ -329,7 +348,7 @@ class CompanyApiController(http.Controller):
             return self._options_response()
 
         role = self._current_billnova_role()
-        if role not in ("admin", "moderator", "moderation"):
+        if role not in ("admin", "moderator"):
             return self._forbidden_admin_response()
 
         period = (request.httprequest.args.get("period") or "month").strip().lower()

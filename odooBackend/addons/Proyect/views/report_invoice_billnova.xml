@@ -1,0 +1,600 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <template id="report_invoice_document_billnova" inherit_id="account.report_invoice_document" priority="90">
+            <xpath expr="//t[@t-call='web.external_layout']" position="replace">
+                <t t-call="web.basic_layout">
+                    <t t-set="o" t-value="o.with_context(lang=lang)"/>
+                    <t t-set="currency" t-value="o.currency_id"/>
+                    <t t-set="document_label" t-value="'FACTURA' if o.move_type == 'out_invoice' else ('NOTA DE CREDITO' if o.move_type == 'out_refund' else 'DOCUMENTO')"/>
+                    <t t-set="status_key" t-value="'paid' if o.payment_state == 'paid' else ('partial' if o.payment_state in ('partial', 'in_payment') else ('reversed' if o.payment_state == 'reversed' else ('pending' if o.state == 'posted' else 'draft')))"/>
+                    <t t-set="status_label" t-value="'Pagada' if status_key == 'paid' else ('Parcial' if status_key == 'partial' else ('Revertida' if status_key == 'reversed' else ('Pendiente' if status_key == 'pending' else 'Borrador')))"/>
+                    <t t-set="status_class" t-value="'is-paid' if status_key == 'paid' else ('is-partial' if status_key == 'partial' else ('is-draft' if status_key == 'draft' else 'is-pending'))"/>
+                    <t t-set="lines_to_render" t-value="o.invoice_line_ids.filtered(lambda line: not line.display_type)"/>
+                    <div class="article billnova-invoice-report" t-att-data-oe-model="o and o._name" t-att-data-oe-id="o and o.id" t-att-data-oe-lang="lang">
+                        <style type="text/css">
+                            .billnova-invoice-report {
+                                font-family: 'DejaVu Sans', Arial, sans-serif;
+                                color: #13203f;
+                            }
+                            .billnova-invoice-page {
+                                padding: 18px 10px 8px;
+                            }
+                            .billnova-shell {
+                                background: #ffffff;
+                                border: 1px solid #dbe7ff;
+                                border-radius: 28px;
+                                overflow: hidden;
+                                box-shadow: 0 18px 48px rgba(19, 56, 163, 0.08);
+                            }
+                            .billnova-topbar {
+                                background: radial-gradient(circle at top left, rgba(111, 171, 255, 0.25), transparent 35%), linear-gradient(135deg, #ffffff 0%, #f5f9ff 100%);
+                                padding: 28px 32px 22px;
+                                border-bottom: 1px solid #e5ecfb;
+                            }
+                            .billnova-row {
+                                width: 100%;
+                                border-collapse: collapse;
+                            }
+                            .billnova-brand-cell,
+                            .billnova-title-cell {
+                                vertical-align: top;
+                            }
+                            .billnova-brand {
+                                display: table;
+                                width: 100%;
+                            }
+                            .billnova-brand-logo,
+                            .billnova-brand-copy {
+                                display: table-cell;
+                                vertical-align: middle;
+                            }
+                            .billnova-brand-logo {
+                                width: 92px;
+                            }
+                            .billnova-brand-logo img {
+                                width: 74px;
+                                height: 74px;
+                                border-radius: 18px;
+                                display: block;
+                            }
+                            .billnova-brand-name {
+                                margin: 0;
+                                font-size: 34px;
+                                line-height: 1;
+                                font-weight: 800;
+                                color: #0f1f4d;
+                            }
+                            .billnova-brand-tagline {
+                                margin: 8px 0 0;
+                                font-size: 14px;
+                                line-height: 1.5;
+                                color: #55627f;
+                            }
+                            .billnova-title {
+                                margin: 0;
+                                text-align: right;
+                                font-size: 42px;
+                                line-height: 1;
+                                font-weight: 800;
+                                letter-spacing: 1px;
+                                color: #0f1f4d;
+                            }
+                            .billnova-ref-box {
+                                margin-top: 20px;
+                                margin-left: auto;
+                                max-width: 290px;
+                                background: rgba(255, 255, 255, 0.9);
+                                border: 1px solid #dce7ff;
+                                border-radius: 18px;
+                                padding: 12px 18px;
+                                text-align: right;
+                                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+                            }
+                            .billnova-ref-label {
+                                font-size: 13px;
+                                color: #5e6b87;
+                                margin-right: 8px;
+                            }
+                            .billnova-ref-value {
+                                font-size: 16px;
+                                font-weight: 800;
+                                color: #2453db;
+                            }
+                            .billnova-content {
+                                padding: 24px 32px 18px;
+                            }
+                            .billnova-grid {
+                                width: 100%;
+                                border-collapse: separate;
+                                border-spacing: 18px 0;
+                                margin: 0 -18px;
+                            }
+                            .billnova-card {
+                                border: 1px solid #dee7fb;
+                                border-radius: 22px;
+                                padding: 22px 24px;
+                                background: #ffffff;
+                                box-shadow: 0 10px 24px rgba(34, 83, 219, 0.05);
+                            }
+                            .billnova-card-title {
+                                margin: 0 0 16px;
+                                font-size: 18px;
+                                font-weight: 800;
+                                color: #2453db;
+                                text-transform: uppercase;
+                            }
+                            .billnova-party-name {
+                                margin: 0 0 10px;
+                                font-size: 28px;
+                                font-weight: 800;
+                                color: #13203f;
+                            }
+                            .billnova-party-line,
+                            .billnova-meta-value,
+                            .billnova-note-text,
+                            .billnova-footer-copy {
+                                font-size: 14px;
+                                line-height: 1.55;
+                                color: #43506c;
+                            }
+                            .billnova-party-line {
+                                margin: 2px 0;
+                            }
+                            .billnova-meta-table {
+                                width: 100%;
+                                border-collapse: collapse;
+                            }
+                            .billnova-meta-table tr + tr td {
+                                border-top: 1px solid #e7eefc;
+                            }
+                            .billnova-meta-table td {
+                                padding: 13px 0;
+                                vertical-align: middle;
+                            }
+                            .billnova-meta-label {
+                                font-size: 14px;
+                                font-weight: 700;
+                                color: #22325a;
+                            }
+                            .billnova-meta-value {
+                                text-align: right;
+                            }
+                            .billnova-status-pill {
+                                display: inline-block;
+                                padding: 7px 14px;
+                                border-radius: 999px;
+                                font-size: 13px;
+                                font-weight: 800;
+                            }
+                            .billnova-status-pill.is-paid {
+                                color: #137333;
+                                background: #dff7e4;
+                            }
+                            .billnova-status-pill.is-partial {
+                                color: #945200;
+                                background: #fff2cb;
+                            }
+                            .billnova-status-pill.is-pending {
+                                color: #8a1f2d;
+                                background: #ffe3e7;
+                            }
+                            .billnova-status-pill.is-draft {
+                                color: #355180;
+                                background: #e8f0ff;
+                            }
+                            .billnova-section {
+                                margin-top: 24px;
+                            }
+                            .billnova-lines {
+                                width: 100%;
+                                border-collapse: separate;
+                                border-spacing: 0;
+                                overflow: hidden;
+                                border: 1px solid #dce5f8;
+                                border-radius: 22px;
+                            }
+                            .billnova-lines thead th {
+                                background: linear-gradient(90deg, #1748cf 0%, #2457dd 100%);
+                                color: #ffffff;
+                                font-size: 15px;
+                                font-weight: 800;
+                                padding: 16px 18px;
+                                text-align: left;
+                            }
+                            .billnova-lines thead th.is-right,
+                            .billnova-lines tbody td.is-right {
+                                text-align: right;
+                            }
+                            .billnova-lines tbody td {
+                                padding: 18px;
+                                border-top: 1px solid #edf2fd;
+                                vertical-align: middle;
+                                font-size: 14px;
+                                color: #263553;
+                            }
+                            .billnova-lines tbody tr:first-child td {
+                                border-top: none;
+                            }
+                            .billnova-line-product {
+                                display: table;
+                                width: 100%;
+                            }
+                            .billnova-line-thumb,
+                            .billnova-line-copy {
+                                display: table-cell;
+                                vertical-align: middle;
+                            }
+                            .billnova-line-thumb {
+                                width: 66px;
+                            }
+                            .billnova-line-thumb img,
+                            .billnova-line-thumb span {
+                                width: 52px;
+                                height: 52px;
+                                border-radius: 14px;
+                                display: inline-block;
+                                background: #edf3ff;
+                                border: 1px solid #dce7ff;
+                                text-align: center;
+                                line-height: 52px;
+                                font-weight: 800;
+                                color: #2453db;
+                            }
+                            .billnova-line-name {
+                                margin: 0;
+                                font-size: 15px;
+                                font-weight: 800;
+                                color: #13203f;
+                            }
+                            .billnova-line-sku {
+                                margin: 4px 0 0;
+                                font-size: 12px;
+                                color: #71809c;
+                            }
+                            .billnova-bottom-grid {
+                                width: 100%;
+                                border-collapse: separate;
+                                border-spacing: 18px 0;
+                                margin: 26px -18px 0;
+                            }
+                            .billnova-subtitle {
+                                margin: 0 0 14px;
+                                font-size: 17px;
+                                font-weight: 800;
+                                color: #2453db;
+                                text-transform: uppercase;
+                            }
+                            .billnova-summary-card {
+                                border: 1px solid #dce5f8;
+                                border-radius: 22px;
+                                padding: 22px 24px;
+                                background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+                                box-shadow: 0 14px 32px rgba(28, 72, 194, 0.07);
+                            }
+                            .billnova-summary-table {
+                                width: 100%;
+                                border-collapse: collapse;
+                            }
+                            .billnova-summary-table td {
+                                padding: 9px 0;
+                                font-size: 15px;
+                                color: #263553;
+                            }
+                            .billnova-summary-table td:last-child {
+                                text-align: right;
+                                font-weight: 700;
+                            }
+                            .billnova-total-row td {
+                                border-top: 1px solid #d9e4fb;
+                                padding-top: 16px;
+                                font-size: 16px;
+                                font-weight: 800;
+                                color: #123cc4;
+                            }
+                            .billnova-total-amount {
+                                font-size: 31px;
+                                line-height: 1;
+                                color: #1d4fd8;
+                            }
+                            .billnova-summary-pill {
+                                margin-top: 14px;
+                                display: inline-block;
+                                padding: 8px 14px;
+                                border-radius: 999px;
+                                background: #e0f7e7;
+                                color: #137333;
+                                font-size: 13px;
+                                font-weight: 700;
+                            }
+                            .billnova-footer {
+                                margin-top: 24px;
+                                border-top: 1px solid #e6edfb;
+                                background: linear-gradient(180deg, #ffffff 0%, #f7faff 100%);
+                                padding: 22px 32px 26px;
+                            }
+                            .billnova-footer-table {
+                                width: 100%;
+                                border-collapse: separate;
+                                border-spacing: 18px 0;
+                            }
+                            .billnova-footer-brand {
+                                display: table;
+                                width: 100%;
+                            }
+                            .billnova-footer-brand-logo,
+                            .billnova-footer-brand-copy {
+                                display: table-cell;
+                                vertical-align: middle;
+                            }
+                            .billnova-footer-brand-logo {
+                                width: 82px;
+                            }
+                            .billnova-footer-brand-logo img {
+                                width: 64px;
+                                height: 64px;
+                                display: block;
+                                border-radius: 16px;
+                            }
+                            .billnova-footer-name {
+                                margin: 0 0 8px;
+                                font-size: 20px;
+                                font-weight: 800;
+                                color: #17328c;
+                            }
+                            .billnova-footer-copy p {
+                                margin: 3px 0;
+                            }
+                            .billnova-footer-thanks {
+                                text-align: right;
+                            }
+                            .billnova-footer-thanks-title {
+                                margin: 0 0 8px;
+                                font-size: 26px;
+                                font-weight: 800;
+                                color: #17328c;
+                            }
+                            .billnova-footer-thanks p {
+                                margin: 3px 0;
+                            }
+                            .billnova-muted {
+                                color: #71809c;
+                            }
+                        </style>
+
+                        <div class="page billnova-invoice-page">
+                            <div class="billnova-shell">
+                                <div class="billnova-topbar">
+                                    <table class="billnova-row">
+                                        <tr>
+                                            <td class="billnova-brand-cell" style="width:58%;">
+                                                <div class="billnova-brand">
+                                                    <div class="billnova-brand-logo">
+                                                        <img src="/Proyect/static/src/img/billnova-bn-logo.png" alt="BillNova"/>
+                                                    </div>
+                                                    <div class="billnova-brand-copy">
+                                                        <p class="billnova-brand-name">BillNova</p>
+                                                        <p class="billnova-brand-tagline">Ecommerce inteligente,<br/>facturacion simple.</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="billnova-title-cell" style="width:42%;">
+                                                <h1 class="billnova-title">
+                                                    <t t-out="document_label"/>
+                                                </h1>
+                                                <div class="billnova-ref-box">
+                                                    <span class="billnova-ref-label">N&#176; de factura:</span>
+                                                    <span class="billnova-ref-value" t-field="o.name"/>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+
+                                <div class="billnova-content">
+                                    <table class="billnova-grid">
+                                        <tr>
+                                            <td style="width:48%; vertical-align:top;">
+                                                <div class="billnova-card">
+                                                    <p class="billnova-card-title">Facturar a</p>
+                                                    <p class="billnova-party-name" t-field="o.partner_id.name"/>
+                                                    <div class="billnova-party-line">
+                                                        <t t-if="o.partner_id.street"><span t-field="o.partner_id.street"/></t>
+                                                        <t t-if="o.partner_id.street2">, <span t-field="o.partner_id.street2"/></t>
+                                                    </div>
+                                                    <div class="billnova-party-line">
+                                                        <t t-if="o.partner_id.city"><span t-field="o.partner_id.city"/></t>
+                                                        <t t-if="o.partner_id.state_id">, <span t-field="o.partner_id.state_id.name"/></t>
+                                                        <t t-if="o.partner_id.country_id">, <span t-field="o.partner_id.country_id.name"/></t>
+                                                    </div>
+                                                    <div class="billnova-party-line" t-if="o.partner_id.email">
+                                                        <span t-field="o.partner_id.email"/>
+                                                    </div>
+                                                    <div class="billnova-party-line" t-if="o.partner_id.phone">
+                                                        <span t-field="o.partner_id.phone"/>
+                                                    </div>
+                                                    <div class="billnova-party-line" t-if="o.partner_id.vat">
+                                                        NIF / RNC: <span t-field="o.partner_id.vat"/>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td style="width:52%; vertical-align:top;">
+                                                <div class="billnova-card">
+                                                    <table class="billnova-meta-table">
+                                                        <tr>
+                                                            <td class="billnova-meta-label">Fecha de emision</td>
+                                                            <td class="billnova-meta-value">
+                                                                <span t-field="o.invoice_date"/>
+                                                            </td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td class="billnova-meta-label">Fecha de vencimiento</td>
+                                                            <td class="billnova-meta-value">
+                                                                <span t-field="o.invoice_date_due"/>
+                                                            </td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td class="billnova-meta-label">Metodo de pago</td>
+                                                            <td class="billnova-meta-value">
+                                                                <span t-if="o.invoice_payment_term_id" t-field="o.invoice_payment_term_id.name"/>
+                                                                <span t-elif="o.payment_reference" t-field="o.payment_reference"/>
+                                                                <span t-else="">Por definir</span>
+                                                            </td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td class="billnova-meta-label">Estado</td>
+                                                            <td class="billnova-meta-value">
+                                                                <span class="billnova-status-pill" t-att-class="'billnova-status-pill ' + status_class">
+                                                                    <t t-out="status_label"/>
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </table>
+
+                                    <div class="billnova-section">
+                                        <table class="billnova-lines">
+                                            <thead>
+                                                <tr>
+                                                    <th>Producto</th>
+                                                    <th class="is-right">Cantidad</th>
+                                                    <th class="is-right">Precio unitario</th>
+                                                    <th class="is-right">Total</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr t-foreach="lines_to_render" t-as="line">
+                                                    <td>
+                                                        <div class="billnova-line-product">
+                                                            <div class="billnova-line-thumb">
+                                                                <img t-if="line.product_id and line.product_id.image_128" t-att-src="image_data_uri(line.product_id.image_128)" alt="Producto"/>
+                                                                <span t-else="">BN</span>
+                                                            </div>
+                                                            <div class="billnova-line-copy">
+                                                                <p class="billnova-line-name">
+                                                                    <span t-field="line.name"/>
+                                                                </p>
+                                                                <p class="billnova-line-sku" t-if="line.product_id and line.product_id.default_code">
+                                                                    SKU: <span t-field="line.product_id.default_code"/>
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td class="is-right">
+                                                        <span t-field="line.quantity"/>
+                                                    </td>
+                                                    <td class="is-right">
+                                                        <span t-field="line.price_unit" t-options='{"widget": "monetary", "display_currency": currency}'/>
+                                                    </td>
+                                                    <td class="is-right">
+                                                        <span t-field="line.price_subtotal" t-options='{"widget": "monetary", "display_currency": currency}'/>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <table class="billnova-bottom-grid">
+                                        <tr>
+                                            <td style="width:50%; vertical-align:top;">
+                                                <div class="billnova-card">
+                                                    <p class="billnova-subtitle">Informacion adicional</p>
+                                                    <div class="billnova-note-text">
+                                                        <p t-if="o.invoice_origin"><strong>Origen:</strong> <span t-field="o.invoice_origin"/></p>
+                                                        <p t-if="o.ref"><strong>Referencia:</strong> <span t-field="o.ref"/></p>
+                                                        <p t-if="o.partner_shipping_id and o.partner_shipping_id != o.partner_id">
+                                                            <strong>Envio:</strong>
+                                                            <span t-field="o.partner_shipping_id.name"/>,
+                                                            <span t-if="o.partner_shipping_id.street" t-field="o.partner_shipping_id.street"/>,
+                                                            <span t-if="o.partner_shipping_id.city" t-field="o.partner_shipping_id.city"/>
+                                                        </p>
+                                                        <p t-if="o.narration">
+                                                            <strong>Notas:</strong>
+                                                        </p>
+                                                        <div t-if="o.narration" t-field="o.narration"/>
+                                                        <p t-if="not o.invoice_origin and not o.ref and not o.narration and not (o.partner_shipping_id and o.partner_shipping_id != o.partner_id)" class="billnova-muted">
+                                                            Gracias por tu compra en BillNova. Si tienes alguna duda, contactanos a nuestro equipo de soporte.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td style="width:50%; vertical-align:top;">
+                                                <div class="billnova-summary-card">
+                                                    <table class="billnova-summary-table">
+                                                        <tr>
+                                                            <td>Subtotal</td>
+                                                            <td><span t-field="o.amount_untaxed" t-options='{"widget": "monetary", "display_currency": currency}'/></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>Impuestos</td>
+                                                            <td><span t-field="o.amount_tax" t-options='{"widget": "monetary", "display_currency": currency}'/></td>
+                                                        </tr>
+                                                        <tr t-if="o.amount_total != o.amount_residual and o.payment_state in ('partial', 'paid', 'in_payment')">
+                                                            <td>Pagado</td>
+                                                            <td><span t-out="o.amount_total - o.amount_residual" t-options='{"widget": "monetary", "display_currency": currency}'/></td>
+                                                        </tr>
+                                                        <tr class="billnova-total-row">
+                                                            <td>Total</td>
+                                                            <td class="billnova-total-amount"><span t-field="o.amount_total" t-options='{"widget": "monetary", "display_currency": currency}'/></td>
+                                                        </tr>
+                                                    </table>
+                                                    <div class="billnova-summary-pill" t-if="o.payment_state == 'paid' and o.invoice_date">
+                                                        Factura pagada el <span t-field="o.invoice_date"/>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+
+                                <div class="billnova-footer">
+                                    <table class="billnova-footer-table">
+                                        <tr>
+                                            <td style="width:58%; vertical-align:middle;">
+                                                <div class="billnova-footer-brand">
+                                                    <div class="billnova-footer-brand-logo">
+                                                        <img src="/Proyect/static/src/img/billnova-bn-logo.png" alt="BillNova"/>
+                                                    </div>
+                                                    <div class="billnova-footer-brand-copy">
+                                                        <p class="billnova-footer-name">
+                                                            <t t-out="o.company_id.name or 'BillNova Ecommerce S.L.'"/>
+                                                        </p>
+                                                        <div class="billnova-footer-copy">
+                                                            <p t-if="o.company_id.partner_id and o.company_id.partner_id.vat">
+                                                                NIF / RNC: <span t-field="o.company_id.partner_id.vat"/>
+                                                            </p>
+                                                            <p t-if="o.company_id.partner_id and o.company_id.partner_id.contact_address">
+                                                                <span t-field="o.company_id.partner_id.contact_address"/>
+                                                            </p>
+                                                            <p>
+                                                                <span t-if="o.company_id.website" t-field="o.company_id.website"/>
+                                                                <t t-if="o.company_id.email"> | <span t-field="o.company_id.email"/></t>
+                                                                <t t-if="o.company_id.phone"> | <span t-field="o.company_id.phone"/></t>
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td style="width:42%; vertical-align:middle;">
+                                                <div class="billnova-footer-thanks">
+                                                    <p class="billnova-footer-thanks-title">Gracias por confiar en BillNova</p>
+                                                    <div class="billnova-footer-copy">
+                                                        <p>Escala tu operacion con una factura clara, moderna y profesional.</p>
+                                                        <p>Documento generado desde tu ecosistema BillNova.</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </t>
+            </xpath>
+        </template>
+    </data>
+</odoo>

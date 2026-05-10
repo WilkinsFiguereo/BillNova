@@ -929,7 +929,7 @@ class AuthApiController(http.Controller):
             email=email,
         )
         self._log_all_users_overview('register_billnova_user_after_create')
-        return {
+        response_payload = {
             'ok': True,
             'status': 201,
             'user_id': user.id,
@@ -937,7 +937,13 @@ class AuthApiController(http.Controller):
             'email': email,
             'requires_verification': True,
             'email_sent': bool(email_sent),
+            'delivery': 'email' if email_sent else 'simulated',
         }
+        if not email_sent:
+            response_payload['warning'] = 'No se pudo enviar el correo de verificacion. Usa el token temporal para continuar.'
+            response_payload['dev_token'] = mobile_user.verification_token
+
+        return response_payload
 
     @http.route('/api/auth/register', type='http', auth='public', methods=['POST', 'OPTIONS'], csrf=False)
     def register(self):
@@ -1594,8 +1600,23 @@ class AuthApiController(http.Controller):
         if mobile_user.active and mobile_user.email_verified_at:
             return self._json_response({'ok': True, 'message': 'La cuenta ya esta verificada.'}, status=200)
 
-        mobile_user.action_send_verification_email(frontend_base_url=self._get_frontend_base_url())
-        return self._json_response({'ok': True, 'message': 'Te enviamos un nuevo correo de verificacion.'}, status=200)
+        sent = mobile_user.action_send_verification_email(frontend_base_url=self._get_frontend_base_url())
+        if sent:
+            return self._json_response(
+                {'ok': True, 'message': 'Te enviamos un nuevo correo de verificacion.', 'delivery': 'email'},
+                status=200,
+            )
+
+        return self._json_response(
+            {
+                'ok': True,
+                'message': 'No se pudo enviar el correo. Usa el token temporal para continuar en este entorno.',
+                'delivery': 'simulated',
+                'warning': 'SMTP no esta configurado o no responde.',
+                'dev_token': mobile_user.verification_token,
+            },
+            status=200,
+        )
 
     @http.route('/api/auth/session', type='http', auth='public', methods=['GET', 'OPTIONS'], csrf=False)
     def session(self):
